@@ -1,0 +1,7 @@
+% attendu : {RH:treble() LH:bass()}
+% Pas de note : les portées s'affichent vides, avec leur clé.
+X:1
+%%score {RH LH}
+V:RH clef=treble
+V:LH clef=bass
+K:C
