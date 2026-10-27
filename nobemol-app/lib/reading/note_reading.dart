@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:notation/notation.dart';
+import 'package:notation/core.dart';
 
 /// Portée(s) affichée(s) par un exercice de lecture.
 enum StaffSetup { treble, bass, alto, tenor, grand }
@@ -36,6 +36,17 @@ class NoteReadingParams {
     reserveAbove: ledgerLines + 2.5,
     reserveBelow: ledgerLines + 2.5,
   );
+
+  // Clé de la session (sessionProvider) : comparée par valeur.
+  @override
+  bool operator ==(Object other) =>
+      other is NoteReadingParams &&
+      other.staff == staff &&
+      other.ledgerLines == ledgerLines &&
+      other.accidentals == accidentals;
+
+  @override
+  int get hashCode => Object.hash(staff, ledgerLines, accidentals);
 }
 
 /// Une question : une note à nommer.

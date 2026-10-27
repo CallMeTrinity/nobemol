@@ -1,0 +1,30 @@
+id: ledger-lines
+title: Les lignes supplémentaires
+skills: [note-reading.ledger-lines]
+level: 2
+theory:
+  - text: >-
+      Quand une note sort de la portée, on ajoute de petites lignes :
+      les lignes supplémentaires. On continue à lire de proche en proche.
+    abc: |
+      X:1
+      K:C
+      D C B,
+  - text: >-
+      Le do central se pose sur la 1re ligne supplémentaire, sous la portée.
+      C'est le do du milieu du clavier.
+    abc: |
+      X:1
+      K:C
+      C
+  - text: >-
+      Au-dessus de la portée : sol juste au-dessus de la 5e ligne,
+      puis la sur la 1re ligne supplémentaire.
+    abc: |
+      X:1
+      K:C
+      g a
+exercise:
+  type: note-reading
+  staff: treble
+  ledger-lines: 1

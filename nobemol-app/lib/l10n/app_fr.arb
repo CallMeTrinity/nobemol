@@ -10,6 +10,16 @@
   "levelReadsBothDescription": "Grande portée, une ligne supplémentaire",
   "levelFluentTitle": "Je lis couramment",
   "levelFluentDescription": "Grande portée, deux lignes supplémentaires, altérations",
+  "homeLessons": "Leçons",
+  "lessonLevel": "Niveau {level}",
+  "@lessonLevel": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
+  "lessonPrevious": "Précédent",
+  "lessonNext": "Suivant",
+  "lessonPractice": "S'entraîner",
   "readingTitle": "Lecture de notes",
   "readingProgress": "{current} / {total}",
   "@readingProgress": {

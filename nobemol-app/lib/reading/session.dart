@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:notation/notation.dart';
 
 import 'package:nobemol/reading/note_reading.dart';
-import 'package:nobemol/reading/start_level.dart';
 
 /// Nombre de notes par session.
 const sessionLength = 20;
@@ -20,9 +19,12 @@ final randomProvider = Provider<Random>((ref) => Random());
 /// Horloge du chrono, remplaçable en test.
 final clockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
 
-/// Session de lecture en cours pour un point de départ.
+/// Session de lecture en cours pour des paramètres d'exercice (point de
+/// départ ou leçon).
 final sessionProvider = NotifierProvider.autoDispose
-    .family<SessionNotifier, SessionState, StartLevel>(SessionNotifier.new);
+    .family<SessionNotifier, SessionState, NoteReadingParams>(
+      SessionNotifier.new,
+    );
 
 enum SessionPhase {
   /// En attente d'une réponse.
@@ -63,16 +65,16 @@ class SessionState {
 }
 
 class SessionNotifier extends Notifier<SessionState> {
-  SessionNotifier(this.level);
+  SessionNotifier(this.params);
 
-  final StartLevel level;
+  final NoteReadingParams params;
 
   late NoteGenerator _generator;
   Timer? _timer;
 
   @override
   SessionState build() {
-    _generator = NoteGenerator(level.params, ref.watch(randomProvider));
+    _generator = NoteGenerator(params, ref.watch(randomProvider));
     ref.onDispose(() => _timer?.cancel());
     return SessionState(
       question: _generator.next(),

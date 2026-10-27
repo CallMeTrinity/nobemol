@@ -1,0 +1,39 @@
+id: treble-clef
+title: La clé de sol
+skills: [note-reading.treble]
+level: 1
+theory:
+  - text: >-
+      Une portée a cinq lignes, comptées de bas en haut.
+      Les notes se posent sur les lignes ou dans les interlignes,
+      les espaces entre deux lignes.
+    abc: |
+      X:1
+      K:C
+  - text: >-
+      La clé de sol s'enroule autour de la 2e ligne.
+      La note posée sur cette ligne est un sol.
+    abc: |
+      X:1
+      K:C
+      G
+  - text: >-
+      À partir du sol, on lit de proche en proche.
+      Juste en dessous, dans l'interligne : fa. Juste au-dessus : la.
+    abc: |
+      X:1
+      K:C
+      F G A
+  - text: "Sur les lignes, de bas en haut : mi, sol, si, ré, fa."
+    abc: |
+      X:1
+      K:C
+      E G B d f
+  - text: "Dans les interlignes, de bas en haut : fa, la, do, mi."
+    abc: |
+      X:1
+      K:C
+      F A c e
+exercise:
+  type: note-reading
+  staff: treble
