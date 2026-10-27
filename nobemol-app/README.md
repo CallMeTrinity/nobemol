@@ -7,13 +7,22 @@ Appli Flutter (Android + web) et moteur de rendu de notation.
 ```
 nobemol-app/
 ├── pubspec.yaml          appli + racine du workspace pub (un seul pubspec.lock)
+├── assets/
+│   ├── skills.yaml       arbre de compétences
+│   └── lessons/          une leçon par fichier YAML (voir doc/lessons.md)
+├── doc/lessons.md        format des leçons
 ├── lib/
 │   ├── l10n/             textes (app_fr.arb), AppLocalizations généré par pub get
-│   ├── home/             choix du point de départ
+│   ├── home/             choix du point de départ, liste des leçons
+│   ├── lessons/          lecture du contenu (Dart pur) et écran de théorie
 │   └── reading/          lecture de notes : générateur, session, écran
+├── tool/validate_content.dart  validateur du contenu, lancé en CI
 └── packages/notation/    moteur de rendu de notation (publiable)
+    ├── doc/abc.md        sous-ensemble ABC accepté par le parser
     ├── fonts/            Bravura + licence OFL
-    ├── lib/src/          model -> layout (glyph.g.dart généré) -> render
+    ├── lib/core.dart     Dart pur : abc -> model -> layout (glyph.g.dart généré)
+    ├── lib/notation.dart core + render (Flutter)
+    ├── test/abc/         exemples ABC valides et invalides, joués comme tests
     └── tool/bravura.dart télécharge Bravura et génère glyph.g.dart
 ```
 
@@ -33,7 +42,10 @@ flutter analyze           # appli + package notation
 flutter test              # tests de l'appli
 flutter run -d chrome     # itération rapide sur le moteur
 flutter run               # appareil Android ou émulateur
+dart run tool/validate_content.dart  # après modification d'une leçon
 ```
+
+Le validateur et `lib/lessons/` (hors écrans) n'importent pas Flutter : ils passent par `package:notation/core.dart`, pas `notation.dart`. Sinon `dart run` échoue (`dart:ui` absent).
 
 Depuis `packages/notation/` :
 

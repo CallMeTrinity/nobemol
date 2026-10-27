@@ -47,6 +47,9 @@ Application mobile pour apprendre et réviser le solfège. Le but n'est pas d'af
 | Police musicale | Bravura (SMuFL) | Boîtes englobantes et points d'ancrage des glyphes. Les métadonnées utiles sont **générées en Dart** (pas de JSON brut embarqué). SMuFL permet de changer de police (Leland, Petaluma) sans toucher au layout. |
 | Format des leçons | **Un fichier YAML par leçon**, ABC compris (`abc: \|`) | La musique (ABC) et la pédagogie (exercice) restent séparées, mais en champs et pas en fichiers. Pas d'ABC multi-ligne échappé dans du JSON. |
 | Validation du contenu | Validateur Dart qui utilise **notre** parser, lancé en CI | Vérifie l'ABC, le schéma, l'existence des cibles et des compétences. |
+| Sous-ensemble ABC | **Strict** : tout ce qui sort du sous-ensemble est une erreur, jamais ignoré. Une hauteur s'écrit d'une seule façon (`c`, pas `C'`) | Une leçon qui passe le validateur s'affiche comme prévu. Spécification : [doc/abc.md](nobemol-app/packages/notation/doc/abc.md). |
+| Indexation des cibles | **Base 1** (`measure`, `event`) | Les leçons sont écrites à la main par des musiciens : « mesure 1, 2e note ». Conversion une seule fois, au chargement. |
+| Moteur sans Flutter | `package:notation/core.dart` (abc, modèle, layout) à côté de `notation.dart` (rendu) | Le validateur tourne avec `dart run`, sans `dart:ui`. Préfigure le découpage `notation_core` / `notation_flutter`. |
 | Stockage des leçons (MVP) | Embarquées dans l'appli | Du texte : ~1000 leçons pèsent environ 100 à 200 Ko compressées. |
 | Noms des notes | Modèle en **lettres** (comme l'ABC), affichage **do-ré-mi** | Réglage C-D-E ajoutable plus tard sans refonte. |
 | Gestion d'état | **Riverpod 3, sans codegen** | Réglages, score, chrono et progression dès le MVP. Pas de `build_runner` pour l'état. |
@@ -66,7 +69,8 @@ Application mobile pour apprendre et réviser le solfège. Le but n'est pas d'af
 nobemol/                        repo : doc, identité, CI
 ├── .github/workflows/          un workflow par projet
 └── nobemol-app/                appli Flutter + racine du workspace pub
-    ├── assets/lessons/         leçons en YAML (ABC + exercice)
+    ├── assets/lessons/         leçons en YAML (théorie avec ABC + exercice)
+    ├── assets/skills.yaml      arbre de compétences
     ├── packages/notation/      moteur de rendu (publiable)
     │   └── tool/               génération des métadonnées Bravura (suit le package)
     └── tool/                   validateur de contenu
@@ -131,7 +135,9 @@ exercise:
     - { staff: RH, measure: 1, event: 2 }
 ```
 
-Les index `measure` et `event` sont fragiles si l'ABC change : le validateur vérifie que chaque cible existe. Convention d'indexation (base 0 ou 1) à fixer une fois pour toutes.
+Les index `measure` et `event` sont fragiles si l'ABC change : le validateur vérifie que chaque cible existe. Ils comptent à partir de 1.
+
+Cet exemple vise l'étape 3 et plus (mesures, armure, nuances). Le format réellement accepté aujourd'hui est décrit dans [doc/lessons.md](nobemol-app/doc/lessons.md) : à l'étape 2, l'ABC vit dans les pages de théorie et l'exercice est la lecture paramétrique.
 
 ## Feuille de route
 
@@ -161,8 +167,6 @@ Voir [ROADMAP.md](ROADMAP.md) : étapes, tâches et état d'avancement.
 
 ## Questions ouvertes
 
-- Quel sous-ensemble ABC exactement pour l'étape 2 ? (à écrire avant le parser, surtout `%%score` / `V:`)
-- Indexation des cibles : base 0 ou base 1 ?
 - Algorithme de révision espacée : reprendre celui de Recto, Leitner simple, ou FSRS ?
 - Arbre de compétences : quelles compétences, dans quel ordre, avec quels prérequis ?
 - Algorithme du test de positionnement (post-MVP).

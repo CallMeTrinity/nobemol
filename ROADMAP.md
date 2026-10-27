@@ -10,7 +10,7 @@ Le produit et les décisions techniques sont dans [IDEA.md](IDEA.md).
 |---|---|---|---|
 | 0 | Setup du repo | | Fait |
 | 1 | Modèle avec grande portée, rendu portée + clé + **une note** | **MVP** : lecture de notes | En cours |
-| 2 | Parser ABC (sous-ensemble) + validateur | Leçons écrites en texte | |
+| 2 | Parser ABC (sous-ensemble) + validateur | Leçons écrites en texte | En cours |
 | 3 | Mesures, chiffrage, armure, barres, hampes, **alignement entre portées** | Lecture de courtes phrases | |
 | 4 | Silences, points, ligatures, liaisons de prolongation | Exercices de rythme | |
 | 5 | Décorations : nuances, articulations, termes | Apprentissage des symboles | |
@@ -35,7 +35,7 @@ Le produit et les décisions techniques sont dans [IDEA.md](IDEA.md).
 - [x] Layout en interlignes vers une liste de dessin : portée, clé, accolade et barre initiale (grande portée), une note avec lignes supplémentaires et altération
 - [x] Rendu : `CustomPainter` + fonction unique `drawGlyph`
 - [x] Tests unitaires : position sur la portée en fonction de la clé et de la hauteur
-- [ ] Premiers golden tests : écrits, images à générer sur la CI (workflow `goldens.yml`)
+- [x] Premiers golden tests : écrits, images à générer sur la CI (workflow `goldens.yml`)
 
 ### Appli
 
@@ -48,15 +48,17 @@ Le produit et les décisions techniques sont dans [IDEA.md](IDEA.md).
 
 ## Étape 2 : leçons en texte
 
-- [ ] **Écrire le sous-ensemble ABC avant le parser** : grammaire + fichiers d'exemple, surtout `%%score` / `V:`
-- [ ] Parser ABC vers le modèle, tests unitaires sur les fichiers d'exemple
-- [ ] Format de leçon YAML (`abc: |` + exercice), chargement depuis `assets/lessons/`
-- [ ] Validateur Dart dans `tool/`, lancé en CI : ABC, schéma, existence des cibles et des compétences
-- [ ] Fixer l'indexation des cibles (base 0 ou 1)
-- [ ] Premier arbre de compétences (tags `note-reading.treble`, etc.)
-- [ ] Premiers écrans de théorie (« voici la clé de sol »)
+- [x] **Écrire le sous-ensemble ABC avant le parser** : grammaire + fichiers d'exemple, surtout `%%score` / `V:` ([doc/abc.md](nobemol-app/packages/notation/doc/abc.md), `test/abc/`)
+- [x] Parser ABC vers le modèle, tests unitaires sur les fichiers d'exemple
+- [x] Format de leçon YAML (théorie avec `abc: |` + exercice), chargement depuis `assets/lessons/` ([doc/lessons.md](nobemol-app/doc/lessons.md))
+- [x] Validateur Dart dans `tool/`, lancé en CI : ABC, schéma, existence des compétences. Les cibles arrivent avec `identify-note` (étape 3)
+- [x] Fixer l'indexation des cibles : **base 1**
+- [x] Premier arbre de compétences (`assets/skills.yaml`, branche `note-reading.*`)
+- [x] Premiers écrans de théorie : 5 leçons (clé de sol, clé de fa, lignes supplémentaires, altérations, grande portée)
 
 **Terminé quand** : une leçon écrite à la main dans un fichier YAML s'affiche dans l'appli, et une leçon invalide fait échouer la CI.
+
+À vérifier : la CI GitHub échoue bien sur une leçon invalide (vérifié en local : `dart run tool/validate_content.dart` sort en code 1).
 
 ## Étape 3 : courtes phrases
 
@@ -64,7 +66,7 @@ Le produit et les décisions techniques sont dans [IDEA.md](IDEA.md).
 - [ ] Hampes (direction, longueur)
 - [ ] Layout horizontal en **colonnes temporelles** communes à tout le système
 - [ ] Barres de mesure qui traversent la grande portée
-- [ ] Exercice `identify-note` sur une note ciblée
+- [ ] Exercice `identify-note` sur une note ciblée : cibles `{ staff, measure, event }` en base 1, vérifiées par le validateur
 
 ## Étape 4 : rythme
 

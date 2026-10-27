@@ -59,6 +59,10 @@ jobs:
 
       - run: flutter analyze
 
+      # Leçons et arbre de compétences : schéma, ABC, compétences citées.
+      - name: Validation du contenu
+        run: dart run tool/validate_content.dart
+
       - name: Tests du package notation
         run: flutter test
         working-directory: nobemol-app/packages/notation
