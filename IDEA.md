@@ -53,7 +53,8 @@ Application mobile pour apprendre et réviser le solfège. Le but n'est pas d'af
 | Persistance | **Drift** (progression, révision), `shared_preferences` (réglages) | Requêtes « cartes dues », migrations, maîtrise par compétence pour le futur test. Hive et Isar écartés (projets d'origine abandonnés). |
 | Navigation | `go_router` | Standard, maintenu par l'équipe Flutter. |
 | i18n | `gen-l10n` (ARB) dès le départ, FR seul | Peu coûteux maintenant, pénible à rattraper. |
-| Repo | Monorepo `app/` + `packages/notation/`, **pub workspaces** | Pas besoin de Melos pour deux packages. |
+| Repo | Monorepo. La racine ne contient que le générique (doc, identité, CI). Tout Flutter vit dans `nobemol-app/` | Place libre pour un futur back-office Symfony à côté. |
+| Workspace Flutter | **pub workspaces**, racine = `nobemol-app/pubspec.yaml`, membre `packages/notation` | Un seul `pubspec.lock`. Pas besoin de Melos pour deux packages. |
 | Version Flutter | Figée (FVM ou mise) | Même version en local et en CI. |
 | Lint | `very_good_analysis` (package), `flutter_lints` (appli) | Strict là où c'est publiable. |
 | Tests | Unitaires (parser, layout) + **golden tests** (rendu) | Goldens générés sur une seule plateforme (CI Linux) : le rendu des polices varie selon l'OS. |
@@ -62,11 +63,12 @@ Application mobile pour apprendre et réviser le solfège. Le but n'est pas d'af
 ## Architecture
 
 ```
-nobemol/
-├── app/                    appli Flutter
-│   └── assets/lessons/     leçons en YAML (ABC + exercice)
-├── packages/notation/      moteur de rendu (publiable)
-└── tool/                   validateur de contenu, génération des métadonnées Bravura
+nobemol/                        repo : doc, identité, CI
+├── .github/workflows/          un workflow par projet
+└── nobemol-app/                appli Flutter + racine du workspace pub
+    ├── assets/lessons/         leçons en YAML (ABC + exercice)
+    ├── packages/notation/      moteur de rendu (publiable)
+    └── tool/                   validateur de contenu, génération des métadonnées Bravura
 
 leçon YAML -> parser ABC -> modèle -> layout -> liste de dessin -> CustomPainter
 générateur d'exercice ──────────^

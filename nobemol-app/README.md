@@ -1,17 +1,32 @@
-# nobemol
+# nobemol-app
 
-A new Flutter project.
+Appli Flutter (Android + web) et moteur de rendu de notation.
 
-## Getting Started
+## Structure
 
-This project is a starting point for a Flutter application.
+```
+nobemol-app/
+├── pubspec.yaml          appli + racine du workspace pub (un seul pubspec.lock)
+├── lib/                  code de l'appli
+└── packages/notation/    moteur de rendu de notation (publiable)
+```
 
-A few resources to get you started if this is your first Flutter project:
+## Prérequis
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- **Flutter 3.47.8** (stable). Même version que la CI (`../.github/workflows/flutter.yml`) : changer les deux en même temps.
+- Android Studio avec le SDK, les **Android SDK Command-line Tools** et les licences acceptées (`flutter doctor --android-licenses`).
+- Java 17.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Commandes
+
+Depuis `nobemol-app/` :
+
+```sh
+flutter pub get           # résout tout le workspace
+flutter analyze           # appli + package notation
+flutter test              # tests de l'appli
+flutter run -d chrome     # itération rapide sur le moteur
+flutter run               # appareil Android ou émulateur
+```
+
+Tests du moteur, depuis `packages/notation/` : `flutter test`.
