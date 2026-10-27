@@ -134,19 +134,7 @@ Les index `measure` et `event` sont fragiles si l'ABC change : le validateur vé
 
 ## Feuille de route
 
-| Étape | Moteur | Appli débloquée |
-|---|---|---|
-| 1 | Modèle avec grande portée, rendu portée + clé + **une note** (lignes supplémentaires, altération) | MVP : lecture de notes (7 boutons do à si, score, chrono) |
-| 2 | Parser ABC (sous-ensemble) + tests | Leçons écrites en texte |
-| 3 | Mesures, chiffrage, armure, barres, hampes, **alignement entre portées** | Lecture de courtes phrases |
-| 4 | Silences, points, ligatures, liaisons de prolongation | Exercices de rythme |
-| 5 | Décorations : nuances, articulations, termes | Apprentissage des symboles |
-| Plus tard | Accords, n-olets, liaisons d'expression | Au besoin |
-
-Côté appli, en parallèle :
-- Réglages : clé de sol, clé de fa ou grande portée, tessiture, altérations.
-- Révision espacée des erreurs (logique réutilisable depuis Recto).
-- Plus tard : intervalles, rythme tapé, oreille (jouer un son), détection au micro.
+Voir [ROADMAP.md](ROADMAP.md) : étapes, tâches et état d'avancement.
 
 ## Risques identifiés
 
