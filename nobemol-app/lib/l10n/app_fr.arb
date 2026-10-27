@@ -1,0 +1,50 @@
+{
+  "@@locale": "fr",
+  "appTitle": "Nobémol",
+  "homeQuestion": "Par où commencer ?",
+  "levelBeginnerTitle": "Je débute",
+  "levelBeginnerDescription": "Clé de sol, notes sur la portée",
+  "levelKnowsTrebleTitle": "Je connais la clé de sol",
+  "levelKnowsTrebleDescription": "Clé de fa, notes sur la portée",
+  "levelReadsBothTitle": "Je lis les deux clés",
+  "levelReadsBothDescription": "Grande portée, une ligne supplémentaire",
+  "levelFluentTitle": "Je lis couramment",
+  "levelFluentDescription": "Grande portée, deux lignes supplémentaires, altérations",
+  "readingTitle": "Lecture de notes",
+  "readingProgress": "{current} / {total}",
+  "@readingProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "readingScore": "{count, plural, =0{Aucune bonne réponse} =1{1 bonne réponse} other{{count} bonnes réponses}}",
+  "@readingScore": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "resultTitle": "Session terminée",
+  "resultScore": "{correct} / {total}",
+  "@resultScore": {
+    "placeholders": {
+      "correct": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "resultTime": "Temps : {time}",
+  "@resultTime": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "resultRestart": "Recommencer",
+  "resultChangeLevel": "Changer de niveau",
+  "noteC": "do",
+  "noteD": "ré",
+  "noteE": "mi",
+  "noteF": "fa",
+  "noteG": "sol",
+  "noteA": "la",
+  "noteB": "si"
+}

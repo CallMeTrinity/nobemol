@@ -1,0 +1,93 @@
+# Feuille de route
+
+Le produit et les décisions techniques sont dans [IDEA.md](IDEA.md).
+
+**Règle de base** : le moteur avance au rythme de l'appli. On n'implémente une fonctionnalité de gravure que si un exercice en a besoin.
+
+## Vue d'ensemble
+
+| Étape | Moteur | Appli débloquée | État |
+|---|---|---|---|
+| 0 | Setup du repo | | Fait |
+| 1 | Modèle avec grande portée, rendu portée + clé + **une note** | **MVP** : lecture de notes | En cours |
+| 2 | Parser ABC (sous-ensemble) + validateur | Leçons écrites en texte | |
+| 3 | Mesures, chiffrage, armure, barres, hampes, **alignement entre portées** | Lecture de courtes phrases | |
+| 4 | Silences, points, ligatures, liaisons de prolongation | Exercices de rythme | |
+| 5 | Décorations : nuances, articulations, termes | Apprentissage des symboles | |
+| Plus tard | Accords, n-olets, liaisons d'expression | Au besoin | |
+
+## Étape 0 : setup
+
+- [x] Monorepo : racine générique, tout Flutter dans `nobemol-app/`
+- [x] Workspace pub (`nobemol-app/pubspec.yaml`), package `packages/notation`
+- [x] Identifiant `fr.antoninpamart.nobemol`, plateformes Android + web
+- [x] Lint : `very_good_analysis` (package), `flutter_lints` (appli)
+- [x] CI GitHub Actions : analyze, tests, build APK (Flutter 3.47.8, `ubuntu-24.04`)
+
+## Étape 1 : une note sur une portée (MVP)
+
+### Moteur
+
+- [x] Structure `lib/src/{model,layout,render}`, retrait du `Calculator` du template
+- [x] Modèle : `Pitch` (degré diatonique + octave + altération), `Clef` (ligne et hauteur de référence : sol, fa, ut alto, ut ténor)
+- [x] Modèle : System > StaffGroup > Staff, grande portée prévue dès maintenant
+- [x] Bravura : police embarquée + script `tool/` qui génère les métadonnées Dart des glyphes utilisés
+- [x] Layout en interlignes vers une liste de dessin : portée, clé, accolade et barre initiale (grande portée), une note avec lignes supplémentaires et altération
+- [x] Rendu : `CustomPainter` + fonction unique `drawGlyph`
+- [x] Tests unitaires : position sur la portée en fonction de la clé et de la hauteur
+- [ ] Premiers golden tests : écrits, images à générer sur la CI (workflow `goldens.yml`)
+
+### Appli
+
+- [x] Riverpod, `go_router`, `gen-l10n` (FR)
+- [x] Générateur d'exercice paramétrique : clé, tessiture, lignes supplémentaires, altérations
+- [x] Écran de lecture de notes : 7 boutons do à si, score, chrono
+- [x] Choix manuel du point de départ (« je débute », « je connais la clé de sol »...)
+
+**Terminé quand** : l'APK tourne sur un vrai téléphone et une session de lecture se joue en clé de sol, en clé de fa et sur la grande portée.
+
+## Étape 2 : leçons en texte
+
+- [ ] **Écrire le sous-ensemble ABC avant le parser** : grammaire + fichiers d'exemple, surtout `%%score` / `V:`
+- [ ] Parser ABC vers le modèle, tests unitaires sur les fichiers d'exemple
+- [ ] Format de leçon YAML (`abc: |` + exercice), chargement depuis `assets/lessons/`
+- [ ] Validateur Dart dans `tool/`, lancé en CI : ABC, schéma, existence des cibles et des compétences
+- [ ] Fixer l'indexation des cibles (base 0 ou 1)
+- [ ] Premier arbre de compétences (tags `note-reading.treble`, etc.)
+- [ ] Premiers écrans de théorie (« voici la clé de sol »)
+
+**Terminé quand** : une leçon écrite à la main dans un fichier YAML s'affiche dans l'appli, et une leçon invalide fait échouer la CI.
+
+## Étape 3 : courtes phrases
+
+- [ ] Mesures, chiffrage, armure, barres de mesure
+- [ ] Hampes (direction, longueur)
+- [ ] Layout horizontal en **colonnes temporelles** communes à tout le système
+- [ ] Barres de mesure qui traversent la grande portée
+- [ ] Exercice `identify-note` sur une note ciblée
+
+## Étape 4 : rythme
+
+- [ ] Silences, points, ligatures, liaisons de prolongation
+- [ ] Exercices de rythme
+
+## Étape 5 : symboles et termes
+
+- [ ] Nuances, articulations, termes (police de texte pour « dolce », « cresc. »)
+- [ ] Exercices sur les symboles et les termes
+
+## En parallèle
+
+- [ ] Réglages : clé de sol, clé de fa ou grande portée, tessiture, altérations
+- [ ] Révision espacée des erreurs avec Drift. Algorithme à choisir : celui de Recto, Leitner ou FSRS
+- [ ] Journal de comparaison Flutter / React Native (dans [IDEA.md](IDEA.md))
+
+## Plus tard
+
+- Accords, n-olets, liaisons d'expression
+- Test de positionnement adaptatif
+- Réglage des noms de notes C-D-E
+- Audio : jouer une note (soundfont piano seule ou synthèse), puis intervalles, oreille, rythme tapé
+- Détection de hauteur au micro (projet à part)
+- Back-office Symfony, quand le contenu devra être servi à distance
+- Publication du package `notation` (découpage `notation_core` / `notation_flutter`)

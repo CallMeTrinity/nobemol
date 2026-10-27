@@ -15,6 +15,8 @@ jobs:
   check:
     # Image figée : les golden tests dépendent du rendu des polices.
     runs-on: ubuntu-24.04
+    env:
+      NDK_VERSION: 28.2.13676358
     steps:
       - uses: actions/checkout@v7
 
@@ -29,6 +31,29 @@ jobs:
           flutter-version: 3.47.8
           channel: stable
           cache: true
+
+      # NDK exigé par Flutter (flutter.ndkVersion), absent de l'image
+      # ubuntu-24.04 (27.3, 29.0, 30.0). Sans ces deux steps, Gradle le
+      # télécharge en plein build et l'extraction échoue par moments.
+      # À changer avec la version de Flutter.
+      - name: Cache du NDK
+        id: ndk-cache
+        uses: actions/cache@v6
+        with:
+          path: /usr/local/lib/android/sdk/ndk/${{ env.NDK_VERSION }}
+          key: ndk-${{ env.NDK_VERSION }}
+
+      - name: Installation du NDK
+        if: steps.ndk-cache.outputs.cache-hit != 'true'
+        env:
+          SDKMANAGER: /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager
+        run: |
+          for attempt in 1 2 3; do
+            yes | "$SDKMANAGER" --install "ndk;$NDK_VERSION" > /dev/null && exit 0
+            echo "Échec de l'installation du NDK (tentative $attempt)"
+            rm -rf "/usr/local/lib/android/sdk/ndk/$NDK_VERSION"
+          done
+          exit 1
 
       - run: flutter pub get
 

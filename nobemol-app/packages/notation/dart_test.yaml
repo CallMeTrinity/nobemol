@@ -1,0 +1,3 @@
+tags:
+  # Comparaison d'images : générées sous Linux uniquement (voir goldens.yml).
+  golden:

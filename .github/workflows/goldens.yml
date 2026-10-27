@@ -1,0 +1,46 @@
+name: Goldens
+
+# Régénère les golden tests du moteur sur la plateforme de la CI et les
+# committe sur la branche. À lancer après un changement de rendu volontaire :
+# - à la main (Actions > Goldens), une fois ce fichier présent sur main ;
+# - ou en poussant un commit dont le message contient [goldens].
+on:
+  workflow_dispatch:
+  # Pas de filtre paths : un commit vide doit pouvoir déclencher le workflow.
+  # Le job est ignoré sans [goldens] dans le message (voir `if`).
+  push:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: nobemol-app/packages/notation
+
+jobs:
+  update:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.message, '[goldens]')
+    # Même image et même Flutter que flutter.yml : sinon les pixels diffèrent.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.8
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - run: flutter test --tags golden --update-goldens
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add test
+          git diff --cached --quiet || git commit -m "test: régénérer les goldens"
+          git push
