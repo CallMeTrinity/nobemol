@@ -6,8 +6,9 @@ name: Goldens
 # - ou en poussant un commit dont le message contient [goldens].
 on:
   workflow_dispatch:
+  # Pas de filtre paths : un commit vide doit pouvoir déclencher le workflow.
+  # Le job est ignoré sans [goldens] dans le message (voir `if`).
   push:
-    paths: ['nobemol-app/packages/notation/**']
 
 permissions:
   contents: write
