@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-40 -24 428 146" width="856" height="292" role="img" aria-label="Nobémol">
+  <title>Nobémol</title>
+  <rect x="-40" y="-24" width="428" height="146" fill="#F4EEE2"/>
+  <g fill="none" stroke="#1C2033" stroke-width="10" stroke-linecap="butt" stroke-linejoin="miter">
+    <path d="M5 74V54a15 15 0 0 1 30 0v20"/>
+    <circle cx="72" cy="54" r="15"/>
+    <path d="M165 54H199.36M194.52 57.75A15 15 0 1 0 189.64 65.49"/>
+    <path d="M178 25L186 15" stroke-width="9"/>
+    <path d="M217 74V52a13 13 0 0 1 26 0v22M243 52a13 13 0 0 1 26 0v22"/>
+    <circle cx="306" cy="54" r="15"/>
+    <path d="M343 8V74"/>
+  </g>
+  <g transform="translate(76 0)">
+    <path d="M62 66L72 64V94H62Z" fill="#EF5B36"/>
+    <path fill="#1C2033" fill-rule="evenodd" d="M28 8H38V36.182L72 30V70L28 78ZM38 46.182L62 41.818V61.818L38 66.182Z"/>
+  </g>
+</svg>
