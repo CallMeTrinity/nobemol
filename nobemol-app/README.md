@@ -19,7 +19,7 @@ nobemol-app/
 
 ## Prérequis
 
-- **Flutter 3.47.8** (stable). Même version que la CI (`../.github/workflows/flutter.yml`) : changer les deux en même temps.
+- **Flutter 3.47.8** (stable). Même version que la CI (`../.github/workflows/flutter.yml` et `goldens.yml`) : changer partout en même temps, ainsi que `NDK_VERSION` dans `flutter.yml` (valeur de `flutter.ndkVersion`).
 - Android Studio avec le SDK, les **Android SDK Command-line Tools** et les licences acceptées (`flutter doctor --android-licenses`).
 - Java 17.
 
