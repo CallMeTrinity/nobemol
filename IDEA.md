@@ -68,7 +68,8 @@ nobemol/                        repo : doc, identité, CI
 └── nobemol-app/                appli Flutter + racine du workspace pub
     ├── assets/lessons/         leçons en YAML (ABC + exercice)
     ├── packages/notation/      moteur de rendu (publiable)
-    └── tool/                   validateur de contenu, génération des métadonnées Bravura
+    │   └── tool/               génération des métadonnées Bravura (suit le package)
+    └── tool/                   validateur de contenu
 
 leçon YAML -> parser ABC -> modèle -> layout -> liste de dessin -> CustomPainter
 générateur d'exercice ──────────^

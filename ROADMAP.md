@@ -9,7 +9,7 @@ Le produit et les décisions techniques sont dans [IDEA.md](IDEA.md).
 | Étape | Moteur | Appli débloquée | État |
 |---|---|---|---|
 | 0 | Setup du repo | | Fait |
-| 1 | Modèle avec grande portée, rendu portée + clé + **une note** | **MVP** : lecture de notes | À faire |
+| 1 | Modèle avec grande portée, rendu portée + clé + **une note** | **MVP** : lecture de notes | En cours |
 | 2 | Parser ABC (sous-ensemble) + validateur | Leçons écrites en texte | |
 | 3 | Mesures, chiffrage, armure, barres, hampes, **alignement entre portées** | Lecture de courtes phrases | |
 | 4 | Silences, points, ligatures, liaisons de prolongation | Exercices de rythme | |
@@ -28,21 +28,21 @@ Le produit et les décisions techniques sont dans [IDEA.md](IDEA.md).
 
 ### Moteur
 
-- [ ] Structure `lib/src/{model,layout,render}`, retrait du `Calculator` du template
-- [ ] Modèle : `Pitch` (degré diatonique + octave + altération), `Clef` (ligne et hauteur de référence : sol, fa, ut alto, ut ténor)
-- [ ] Modèle : System > StaffGroup > Staff, grande portée prévue dès maintenant
-- [ ] Bravura : police embarquée + script `tool/` qui génère les métadonnées Dart des glyphes utilisés
-- [ ] Layout en interlignes vers une liste de dessin : portée, clé, accolade et barre initiale (grande portée), une note avec lignes supplémentaires et altération
-- [ ] Rendu : `CustomPainter` + fonction unique `drawGlyph`
-- [ ] Tests unitaires : position sur la portée en fonction de la clé et de la hauteur
-- [ ] Premiers golden tests
+- [x] Structure `lib/src/{model,layout,render}`, retrait du `Calculator` du template
+- [x] Modèle : `Pitch` (degré diatonique + octave + altération), `Clef` (ligne et hauteur de référence : sol, fa, ut alto, ut ténor)
+- [x] Modèle : System > StaffGroup > Staff, grande portée prévue dès maintenant
+- [x] Bravura : police embarquée + script `tool/` qui génère les métadonnées Dart des glyphes utilisés
+- [x] Layout en interlignes vers une liste de dessin : portée, clé, accolade et barre initiale (grande portée), une note avec lignes supplémentaires et altération
+- [x] Rendu : `CustomPainter` + fonction unique `drawGlyph`
+- [x] Tests unitaires : position sur la portée en fonction de la clé et de la hauteur
+- [ ] Premiers golden tests : écrits, images à générer sur la CI (workflow `goldens.yml`)
 
 ### Appli
 
-- [ ] Riverpod, `go_router`, `gen-l10n` (FR)
-- [ ] Générateur d'exercice paramétrique : clé, tessiture, lignes supplémentaires, altérations
-- [ ] Écran de lecture de notes : 7 boutons do à si, score, chrono
-- [ ] Choix manuel du point de départ (« je débute », « je connais la clé de sol »...)
+- [x] Riverpod, `go_router`, `gen-l10n` (FR)
+- [x] Générateur d'exercice paramétrique : clé, tessiture, lignes supplémentaires, altérations
+- [x] Écran de lecture de notes : 7 boutons do à si, score, chrono
+- [x] Choix manuel du point de départ (« je débute », « je connais la clé de sol »...)
 
 **Terminé quand** : l'APK tourne sur un vrai téléphone et une session de lecture se joue en clé de sol, en clé de fa et sur la grande portée.
 
