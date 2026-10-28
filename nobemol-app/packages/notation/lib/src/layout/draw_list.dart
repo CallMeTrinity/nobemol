@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:notation/src/layout/glyph.g.dart';
+import 'package:notation/src/layout/text_font.g.dart';
 import 'package:notation/src/model/system.dart';
 
 /// Rectangle en interlignes, axe y vers le bas.
@@ -44,11 +45,16 @@ class Box {
 
 /// Élément de la liste de dessin, en interlignes, axe y vers le bas.
 sealed class DrawCommand {
-  const new({this.event});
+  const new({this.event, this.decoration});
 
   /// Événement dessiné (tête, altération, hampe), `null` pour le reste. Permet
   /// de colorer une note.
   final EventRef? event;
+
+  /// Événement dont la commande dessine une décoration (nuance, articulation,
+  /// soufflet, texte), `null` pour le reste. Permet de colorer un signe sans
+  /// sa note. Un soufflet appartient à sa première note.
+  final EventRef? decoration;
 
   /// Rectangle occupé.
   Box get bounds;
@@ -64,6 +70,7 @@ class GlyphCommand extends DrawCommand {
     this.scaleX = 1,
     this.scaleY = 1,
     super.event,
+    super.decoration,
   });
 
   /// Glyphe.
@@ -93,7 +100,15 @@ class GlyphCommand extends DrawCommand {
 /// Segment droit à bouts carrés (lignes de portée, barres).
 class LineCommand extends DrawCommand {
   /// Crée un segment de ([x1], [y1]) à ([x2], [y2]).
-  const new(this.x1, this.y1, this.x2, this.y2, this.thickness, {super.event});
+  const new(
+    this.x1,
+    this.y1,
+    this.x2,
+    this.y2,
+    this.thickness, {
+    super.event,
+    super.decoration,
+  });
 
   /// Abscisse de départ.
   final double x1;
@@ -192,4 +207,40 @@ class TieCommand extends DrawCommand {
       math.max(y + endThickness / 2, peak),
     );
   }
+}
+
+/// Texte en italique, dans la police des textes ([TextFont]), posé sur sa
+/// ligne de base. Sans crénage : sa largeur est la somme des chasses.
+class TextCommand extends DrawCommand {
+  /// Crée un texte qui commence en [x], sur la ligne de base [y].
+  const new(this.text, this.x, this.y, {required this.size, super.decoration});
+
+  /// Texte.
+  final String text;
+
+  /// Abscisse du début.
+  final double x;
+
+  /// Ordonnée de la ligne de base.
+  final double y;
+
+  /// Taille du em, en interlignes.
+  final double size;
+
+  /// Largeur. Un caractère absent des métriques compte comme un « n ».
+  double get width =>
+      text.runes.fold<double>(
+        0,
+        (width, code) =>
+            width + (TextFont.advances[code] ?? TextFont.advances[0x6E]!),
+      ) *
+      size;
+
+  @override
+  Box get bounds => Box(
+    x,
+    y - TextFont.ascender * size,
+    x + width,
+    y + TextFont.descender * size,
+  );
 }

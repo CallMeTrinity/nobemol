@@ -4,6 +4,7 @@ import 'package:notation/src/layout/draw_list.dart';
 import 'package:notation/src/layout/layout.dart';
 import 'package:notation/src/model/system.dart';
 import 'package:notation/src/render/draw_glyph.dart';
+import 'package:notation/src/render/draw_text.dart';
 
 /// Dessine un [SystemLayout]. Seule conversion des interlignes en pixels.
 class NotationPainter extends CustomPainter {
@@ -13,6 +14,7 @@ class NotationPainter extends CustomPainter {
     required this.staffSpace,
     required this.color,
     this.highlights = const {},
+    this.decorationHighlights = const {},
   });
 
   /// Liste de dessin.
@@ -26,6 +28,10 @@ class NotationPainter extends CustomPainter {
 
   /// Couleur propre à certains événements (note ciblée, correction).
   final Map<EventRef, Color> highlights;
+
+  /// Couleur propre aux décorations de certains événements (signe ciblé),
+  /// sans leur note.
+  final Map<EventRef, Color> decorationHighlights;
 
   /// Taille en pixels du dessin complet.
   Size get size =>
@@ -42,7 +48,10 @@ class NotationPainter extends CustomPainter {
       ..translate(-layout.bounds.left * s, -layout.bounds.top * s);
 
     for (final command in layout.commands) {
-      final color = highlights[command.event] ?? this.color;
+      final color =
+          highlights[command.event] ??
+          decorationHighlights[command.decoration] ??
+          this.color;
       switch (command) {
         case GlyphCommand():
           drawGlyph(
@@ -75,6 +84,14 @@ class NotationPainter extends CustomPainter {
           );
         case TieCommand():
           canvas.drawPath(_tiePath(command, s), fill..color = color);
+        case TextCommand():
+          drawText(
+            canvas,
+            command.text,
+            Offset(command.x * s, command.y * s),
+            fontSize: command.size * s,
+            color: color,
+          );
       }
     }
 
@@ -86,7 +103,8 @@ class NotationPainter extends CustomPainter {
       oldDelegate.layout != layout ||
       oldDelegate.staffSpace != staffSpace ||
       oldDelegate.color != color ||
-      !mapEquals(oldDelegate.highlights, highlights);
+      !mapEquals(oldDelegate.highlights, highlights) ||
+      !mapEquals(oldDelegate.decorationHighlights, decorationHighlights);
 }
 
 /// Contour d'une liaison : deux arcs de Bézier, l'extérieur puis

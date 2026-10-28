@@ -1,0 +1,5 @@
+% erreur : 5:2 deux articulations sur la même note
+X:1
+L:1/4
+K:C
+.!accent!C

@@ -129,6 +129,122 @@ enum Glyph {
   /// 16th (semiquaver) rest.
   rest16th(codepoint: 0xE4E7, bBoxSW: (0.0, -2.0), bBoxNE: (1.28, 0.716)),
 
+  /// Staccato above.
+  articStaccatoAbove(
+    codepoint: 0xE4A2,
+    bBoxSW: (0.0, 0.0),
+    bBoxNE: (0.336, 0.336),
+  ),
+
+  /// Staccato below.
+  articStaccatoBelow(
+    codepoint: 0xE4A3,
+    bBoxSW: (0.0, -0.336),
+    bBoxNE: (0.336, 0.0),
+  ),
+
+  /// Tenuto above.
+  articTenutoAbove(
+    codepoint: 0xE4A4,
+    bBoxSW: (-0.004, 0.0),
+    bBoxNE: (1.352, 0.192),
+  ),
+
+  /// Tenuto below.
+  articTenutoBelow(
+    codepoint: 0xE4A5,
+    bBoxSW: (-0.004, -0.192),
+    bBoxNE: (1.352, 0.0),
+  ),
+
+  /// Accent above.
+  articAccentAbove(
+    codepoint: 0xE4A0,
+    bBoxSW: (0.0, 0.004),
+    bBoxNE: (1.356, 0.98),
+  ),
+
+  /// Accent below.
+  articAccentBelow(
+    codepoint: 0xE4A1,
+    bBoxSW: (0.0, -0.976),
+    bBoxNE: (1.356, 0.0),
+  ),
+
+  /// Fermata above.
+  fermataAbove(
+    codepoint: 0xE4C0,
+    bBoxSW: (0.012, -0.012),
+    bBoxNE: (2.42, 1.316),
+  ),
+
+  /// Fermata below.
+  fermataBelow(codepoint: 0xE4C1, bBoxSW: (0.012, -1.328), bBoxNE: (2.42, 0.0)),
+
+  /// ppp.
+  dynamicPPP(
+    codepoint: 0xE52A,
+    bBoxSW: (-0.368, -0.568),
+    bBoxNE: (4.292, 1.096),
+    opticalCenter: (2.368, 0.0),
+  ),
+
+  /// pp.
+  dynamicPP(
+    codepoint: 0xE52B,
+    bBoxSW: (-0.328, -0.568),
+    bBoxNE: (2.912, 1.096),
+    opticalCenter: (1.708, 0.0),
+  ),
+
+  /// Piano.
+  dynamicPiano(
+    codepoint: 0xE520,
+    bBoxSW: (-0.356, -0.568),
+    bBoxNE: (1.464, 1.096),
+    opticalCenter: (1.22, 0.0),
+  ),
+
+  /// mp.
+  dynamicMP(
+    codepoint: 0xE52C,
+    bBoxSW: (-0.08, -0.568),
+    bBoxNE: (3.3, 1.096),
+    opticalCenter: (1.848, 0.0),
+  ),
+
+  /// mf.
+  dynamicMF(
+    codepoint: 0xE52D,
+    bBoxSW: (-0.08, -0.66),
+    bBoxNE: (3.272, 1.724),
+    opticalCenter: (1.796, 0.0),
+  ),
+
+  /// Forte.
+  dynamicForte(
+    codepoint: 0xE522,
+    bBoxSW: (-0.564, -0.608),
+    bBoxNE: (1.456, 1.776),
+    opticalCenter: (1.256, 0.0),
+  ),
+
+  /// ff.
+  dynamicFF(
+    codepoint: 0xE52F,
+    bBoxSW: (-0.54, -0.608),
+    bBoxNE: (2.44, 1.776),
+    opticalCenter: (1.852, 0.0),
+  ),
+
+  /// fff.
+  dynamicFFF(
+    codepoint: 0xE530,
+    bBoxSW: (-0.62, -0.608),
+    bBoxNE: (3.32, 1.776),
+    opticalCenter: (2.472, 0.0),
+  ),
+
   /// Time signature 0.
   timeSig0(codepoint: 0xE080, bBoxSW: (0.08, -1.0), bBoxNE: (1.8, 1.004)),
 
@@ -167,6 +283,7 @@ enum Glyph {
     this.stemDownNW,
     this.stemUpNW,
     this.stemDownSW,
+    this.opticalCenter,
   });
 
   /// Codepoint dans la police.
@@ -189,6 +306,9 @@ enum Glyph {
 
   /// Attache d'un crochet sur une hampe vers le bas (x, y).
   final (double, double)? stemDownSW;
+
+  /// Centre visuel, pour centrer une nuance sous sa note (x, y).
+  final (double, double)? opticalCenter;
 }
 
 /// Valeurs de gravure par défaut de Bravura, en interlignes.
@@ -228,4 +348,7 @@ abstract final class EngravingDefaults {
 
   /// `tieMidpointThickness`.
   static const tieMidpointThickness = 0.22;
+
+  /// `hairpinThickness`.
+  static const hairpinThickness = 0.16;
 }

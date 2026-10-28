@@ -46,11 +46,33 @@ final List<String> _glyphs = [
   'restQuarter',
   'rest8th',
   'rest16th',
+  'articStaccatoAbove',
+  'articStaccatoBelow',
+  'articTenutoAbove',
+  'articTenutoBelow',
+  'articAccentAbove',
+  'articAccentBelow',
+  'fermataAbove',
+  'fermataBelow',
+  'dynamicPPP',
+  'dynamicPP',
+  'dynamicPiano',
+  'dynamicMP',
+  'dynamicMF',
+  'dynamicForte',
+  'dynamicFF',
+  'dynamicFFF',
   for (var digit = 0; digit <= 9; digit++) 'timeSig$digit',
 ];
 
 /// Points d'ancrage utilisés par le moteur, s'ils existent pour le glyphe.
-const _anchors = ['stemUpSE', 'stemDownNW', 'stemUpNW', 'stemDownSW'];
+const _anchors = [
+  'stemUpSE',
+  'stemDownNW',
+  'stemUpNW',
+  'stemDownSW',
+  'opticalCenter',
+];
 
 /// Valeurs de gravure par défaut utilisées par le moteur.
 const _engravingDefaults = [
@@ -66,6 +88,7 @@ const _engravingDefaults = [
   'beamSpacing',
   'tieEndpointThickness',
   'tieMidpointThickness',
+  'hairpinThickness',
 ];
 
 Future<void> main() async {
@@ -151,6 +174,7 @@ String _generate(Map<String, dynamic> metadata, Map<String, dynamic> names) {
     ..writeln('    this.stemDownNW,')
     ..writeln('    this.stemUpNW,')
     ..writeln('    this.stemDownSW,')
+    ..writeln('    this.opticalCenter,')
     ..writeln('  });')
     ..writeln()
     ..writeln('  /// Codepoint dans la police.')
@@ -173,6 +197,9 @@ String _generate(Map<String, dynamic> metadata, Map<String, dynamic> names) {
     ..writeln()
     ..writeln("  /// Attache d'un crochet sur une hampe vers le bas (x, y).")
     ..writeln('  final (double, double)? stemDownSW;')
+    ..writeln()
+    ..writeln('  /// Centre visuel, pour centrer une nuance sous sa note (x, y).')
+    ..writeln('  final (double, double)? opticalCenter;')
     ..writeln('}')
     ..writeln()
     ..writeln('/// Valeurs de gravure par défaut de Bravura, en interlignes.')

@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 import 'package:notation/src/model/clef.dart';
+import 'package:notation/src/model/decoration.dart';
 import 'package:notation/src/model/fraction.dart';
 import 'package:notation/src/model/key_signature.dart';
 import 'package:notation/src/model/pitch.dart';
@@ -39,13 +40,20 @@ enum NoteValue {
 /// Ce qui occupe du temps dans une mesure : une note ou un silence. Les
 /// accords viendront s'ajouter.
 sealed class Event {
-  const new({required this.value, required this.dotted});
+  const new({
+    required this.value,
+    required this.dotted,
+    this.decorations = const [],
+  });
 
   /// Figure.
   final NoteValue value;
 
   /// Vrai si la figure est pointée : sa durée est multipliée par 3/2.
   final bool dotted;
+
+  /// Signes attachés, dans l'ordre d'écriture.
+  final List<Decoration> decorations;
 
   /// Durée, en rondes.
   Fraction get duration =>
@@ -59,6 +67,7 @@ class Note extends Event {
     this.pitch, {
     super.value = NoteValue.whole,
     super.dotted = false,
+    super.decorations,
     this.tiedToNext = false,
     this.beamedToNext = false,
   });
@@ -78,7 +87,11 @@ class Note extends Event {
 /// Silence : une figure, sans hauteur.
 class Rest extends Event {
   /// Crée un silence, une pause par défaut.
-  const new({super.value = NoteValue.whole, super.dotted = false});
+  const new({
+    super.value = NoteValue.whole,
+    super.dotted = false,
+    super.decorations,
+  });
 }
 
 /// Barre de mesure, nommée comme en MusicXML.

@@ -37,6 +37,16 @@ K:C
 C2 z2 EF G2 | A3 B c2- c2 | z4 G4 |]
 ```
 
+Des signes : nuances, soufflet, articulations, termes :
+
+```abc
+X:1
+M:4/4
+L:1/4
+K:C
+!p! C D !crescendo(! E F | G A B !crescendo)! !f! c | .c .G !tenuto!E "_dim." C | !fermata!C4 |]
+```
+
 Une grande portée en mesures :
 
 ```abc
@@ -51,7 +61,7 @@ V:LH clef=bass
 C, G, | C,2 |]
 ```
 
-## Grammaire (étape 4)
+## Grammaire (étape 5)
 
 ```ebnf
 morceau      = { ligne-vide | commentaire } , en-tête , corps ;
@@ -70,7 +80,16 @@ tonalité     = lettre-note , [ "#" | "b" ] , [ "m" ] ;
 lettre-note  = "C" | "D" | "E" | "F" | "G" | "A" | "B" ;
 
 corps        = { champ-V | ligne-musique | commentaire } ;
-ligne-musique = { espace } , { ( note | silence | barre ) , { espace } } ;
+ligne-musique = { espace } , { ( événement | barre ) , { espace } } ;
+événement    = { annotation , { espace } } , { décoration , { espace } } ,
+               ( note | silence ) ;
+
+annotation   = '"' , ( "^" | "_" ) , texte , '"' ;
+texte        = caractère-texte , { caractère-texte } ;
+décoration   = "." | "!" , nom-décoration , "!" ;
+nom-décoration = nuance | "tenuto" | "accent" | "fermata"
+               | "crescendo(" | "crescendo)" | "diminuendo(" | "diminuendo)" ;
+nuance       = "ppp" | "pp" | "p" | "mp" | "mf" | "f" | "ff" | "fff" ;
 
 note         = [ altération ] , ( grave , { "," } | aiguë , { "'" } ) ,
                [ durée ] , [ "-" ] ;
@@ -86,7 +105,9 @@ id-voix      = ( lettre | chiffre | "_" ) , { lettre | chiffre | "_" } ;
 commentaire  = "%" , { caractère } ;
 ```
 
-Les espaces sont libres autour des notes, des silences, des barres et des éléments de `%%score`. Pas d'espace entre une note et sa durée, ni entre la durée et `-`. Une seule exception : les croches et les doubles croches **collées** sont reliées par une ligature (voir Ligatures).
+Les espaces sont libres autour des notes, des silences, des barres et des éléments de `%%score`, et entre une décoration et sa note. Pas d'espace entre une note et sa durée, ni entre la durée et `-`. Une seule exception : les croches et les doubles croches **collées** sont reliées par une ligature (voir Ligatures).
+
+`caractère-texte` : une lettre (accents compris), un chiffre, une espace, `.`, `,`, `'` ou `-`.
 
 ## Règles
 
@@ -133,6 +154,42 @@ Les espaces sont libres autour des notes, des silences, des barres et des élém
 - La liaison peut traverser une barre et une fin de ligne. Elle ne traverse pas un silence.
 - Les deux notes ont la même hauteur. La note d'arrivée s'écrit **sans altération** : `^F2-F`, comme sur la partition, où l'altération ne se répète pas. Deux hauteurs différentes, c'est une liaison d'expression (plus tard).
 - Refusé : `-` sans note d'arrivée (fin du morceau), `-` après un silence.
+
+### Décorations
+
+Une décoration s'écrit **devant** sa note (ou son silence), avant l'altération : `!p!^F`. Elle s'applique à la note qui suit, même après une espace : `!p! C`.
+
+| ABC | Signe | Place |
+|---|---|---|
+| `!ppp!` `!pp!` `!p!` `!mp!` `!mf!` `!f!` `!ff!` `!fff!` | nuances | sous la portée, centrée sous la note |
+| `!crescendo(!` ... `!crescendo)!` | soufflet qui s'ouvre (crescendo) | sous la portée, sur la ligne des nuances |
+| `!diminuendo(!` ... `!diminuendo)!` | soufflet qui se ferme (diminuendo) | idem |
+| `.` | staccato (point) | côté tête de note, à l'opposé de la hampe |
+| `!tenuto!` | tenuto (trait) | idem |
+| `!accent!` | accent (`>`) | idem, hors de la portée |
+| `!fermata!` | point d'orgue | au-dessus de la portée |
+
+- **Une seule écriture** par signe : `.` pour le staccato (pas `!staccato!`), `!accent!` (pas `!>!` ni `!emphasis!`), `!fermata!` (pas `H`), `!crescendo(!` (pas `!<(!`).
+- Une note porte **une nuance** et **une articulation** au plus (`.`, `!tenuto!`, `!accent!` ou `!fermata!`), et pas deux fois la même décoration.
+- Un silence ne porte que `!fermata!` et des annotations.
+- Une décoration collée ne coupe pas une ligature : `C!p!D` avec `L:1/8` donne deux croches liées. Une espace la coupe, comme toujours.
+- Une décoration qui n'est suivie d'aucune note sur la même ligne est une erreur : `!p! |`, `!p!` en fin de ligne.
+- Les nuances, les soufflets et les annotations `_` d'une portée sont alignés sur une même ligne, sous la note la plus basse. Pour la grande portée, la ligne de la portée du haut tombe entre les deux portées.
+
+#### Soufflets
+
+- `!crescendo(!` devant la note où il commence, `!crescendo)!` devant la note où il finit, **dans la même voix**. Le soufflet couvre les deux notes et peut traverser des barres. Idem pour `!diminuendo(!` et `!diminuendo)!`.
+- Il commence après la nuance de sa première note et finit avant celle de sa dernière note : `!p! !crescendo(! C D E !crescendo)! !f! F`.
+- Un soufflet peut finir là où le suivant commence : `!crescendo)! !diminuendo(! c`.
+- Refusé : un soufflet qui ne se ferme pas, une fin sans début ou d'un autre type, deux soufflets ouverts en même temps, un soufflet sur une seule note, une nuance ou une annotation `_` au milieu d'un soufflet (le finir sur cette note).
+- Un soufflet relie des notes, pas des silences.
+
+### Annotations (termes)
+
+- `"^texte"` écrit le texte **au-dessus** de la portée, `"_texte"` **en dessous**, en italique, aligné sur le début de la note : `"^rit." C`, `"_dolce" E`. C'est ainsi qu'on écrit les termes (« dolce », « cresc. », « a tempo »).
+- Une note ou un silence porte une annotation au-dessus et une en dessous au plus.
+- Les annotations se placent **avant** les décorations : `"_dolce" !p! C`, pas `!p! "_dolce" C` (ordre de l'ABC standard).
+- Refusé : texte sans `^` ni `_` (en ABC, c'est un accord chiffré : `"Am"`), autres positions (`"<"`, `">"`, `"@"`), texte vide, espace au début ou à la fin, caractère hors de la liste.
 
 ### Mesures et barres
 
@@ -185,13 +242,14 @@ Une voix ABC = une portée du modèle (`Staff.id` = identifiant de la voix).
 | Silences de plusieurs mesures, silences invisibles | `Z`, `x` | non prévu |
 | Triples croches, doubles points | `C/` avec `L:1/16`, `C7` avec `L:1/16` | plus tard |
 | Ligature à travers un silence | `CzD` avec `L:1/8` | non prévu |
-| Décorations | `!p!`, `.C` | 5 |
+| Autres décorations | `!trill!`, `!sfz!`, `!segno!`, `!wedge!` | au besoin |
+| Plusieurs articulations sur une note | `.!accent!C` | au besoin |
 | Accords, n-olets, liaisons | `[CEG]`, `(3`, `(CD)` | plus tard |
 | Levée (première mesure incomplète) | `C \| D E F G \|` | plus tard |
 | Reprises, fins alternatives | `\|:`, `:\|`, `\|1` | non prévu |
 | Chiffrages symboliques | `M:C`, `M:C\|` | non prévu |
 | Modes | `K:Dmix` | non prévu |
-| Annotations, accords chiffrés | `"Am"` | non prévu |
+| Accords chiffrés, annotations `<` `>` `@` | `"Am"`, `"<texte"` | non prévu |
 | Champs dans la ligne | `[V:RH]`, `[K:G]` | non prévu |
 | Crochets et barres dans `%%score` | `[S A]`, `(S A)`, `S \| A` | non prévu |
 

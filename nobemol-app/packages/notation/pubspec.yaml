@@ -26,3 +26,9 @@ flutter:
     - family: Bravura
       fonts:
         - asset: fonts/Bravura.otf
+    # Edwin Italic (MuseScore), licence SIL OFL (fonts/Edwin-OFL.txt), pour
+    # les termes. Mise à jour : dart run tool/edwin.dart
+    - family: Edwin
+      fonts:
+        - asset: fonts/Edwin-Italic.otf
+          style: italic
