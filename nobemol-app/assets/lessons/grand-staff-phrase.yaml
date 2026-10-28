@@ -1,0 +1,52 @@
+id: grand-staff-phrase
+title: La grande portée en mesures
+skills: [note-reading.grand, note-reading.phrases]
+level: 3
+theory:
+  - text: >-
+      Sur la grande portée, les barres de mesure traversent les deux
+      portées. Les notes alignées verticalement se jouent en même temps.
+    abc: |
+      X:1
+      %%score {RH LH}
+      M:3/4
+      L:1/4
+      K:C
+      V:RH
+      e2 g | f2 d | c2 c |]
+      V:LH clef=bass
+      C, E, G, | D, F, G, | C,2 C, |]
+  - text: >-
+      Une blanche en haut, deux noires en bas : la deuxième noire tombe
+      au milieu de la blanche.
+    abc: |
+      X:1
+      %%score {RH LH}
+      M:2/4
+      L:1/4
+      K:C
+      V:RH
+      c2 |]
+      V:LH clef=bass
+      C, G, |]
+exercise:
+  type: identify-note
+  abc: |
+    X:1
+    %%score {RH LH}
+    M:3/4
+    L:1/4
+    K:C
+    V:RH
+    e2 g | f2 d | c2 B | c2 c |]
+    V:LH clef=bass
+    C, E, G, | D, F, A, | G,2 G,, | C,2 C, |]
+  targets:
+    - { staff: RH, measure: 1, event: 1 }
+    - { staff: LH, measure: 1, event: 2 }
+    - { staff: RH, measure: 1, event: 2 }
+    - { staff: RH, measure: 2, event: 2 }
+    - { staff: LH, measure: 2, event: 3 }
+    - { staff: RH, measure: 3, event: 2 }
+    - { staff: LH, measure: 3, event: 2 }
+    - { staff: LH, measure: 4, event: 1 }

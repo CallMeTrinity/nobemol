@@ -1,0 +1,54 @@
+id: key-signature
+title: L'armure
+skills: [note-reading.key-signatures]
+level: 3
+theory:
+  - text: >-
+      L'armure se place juste après la clé. Ses dièses ou ses bémols
+      valent pour tout le morceau, à toutes les octaves.
+    abc: |
+      X:1
+      K:D
+  - text: >-
+      Ici, un dièse sur la ligne du fa : tous les fa sont des fa dièse,
+      même sans signe devant la note. On la lit toujours fa.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:G
+      G A B c | d e f g |]
+  - text: >-
+      Même principe avec les bémols. Un bémol sur la ligne du si :
+      tous les si sont des si bémol.
+    abc: |
+      X:1
+      M:3/4
+      L:1/4
+      K:F
+      F A c | B2 A | G2 F |]
+  - text: >-
+      Un bécarre annule l'armure jusqu'à la barre de mesure. Le deuxième
+      fa de la mesure reste un fa bécarre.
+    abc: |
+      X:1
+      M:3/4
+      L:1/4
+      K:G
+      G =F F | G2 G |]
+exercise:
+  type: identify-note
+  abc: |
+    X:1
+    M:3/4
+    L:1/4
+    K:D
+    D F A | d2 c | B2 A |]
+  targets:
+    - { measure: 1, event: 1 }
+    - { measure: 1, event: 2 }
+    - { measure: 1, event: 3 }
+    - { measure: 2, event: 1 }
+    - { measure: 2, event: 2 }
+    - { measure: 3, event: 1 }
+    - { measure: 3, event: 2 }

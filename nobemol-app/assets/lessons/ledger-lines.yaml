@@ -8,6 +8,7 @@ theory:
       les lignes supplémentaires. On continue à lire de proche en proche.
     abc: |
       X:1
+      L:1/1
       K:C
       D C B,
   - text: >-
@@ -15,6 +16,7 @@ theory:
       C'est le do du milieu du clavier.
     abc: |
       X:1
+      L:1/1
       K:C
       C
   - text: >-
@@ -22,6 +24,7 @@ theory:
       puis la sur la 1re ligne supplémentaire.
     abc: |
       X:1
+      L:1/1
       K:C
       g a
 exercise:

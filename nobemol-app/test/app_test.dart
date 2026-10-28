@@ -166,4 +166,56 @@ void main() {
     expect(session.answered, 0);
     expect(session.question.system.staves.single.clef, Clef.treble);
   });
+
+  testWidgets('une leçon identify-note : notes ciblées dans une phrase', (
+    tester,
+  ) async {
+    await startSession(
+      tester,
+      'Mesures et figures de notes',
+      expectReading: false,
+    );
+    while (find.text('Suivant').evaluate().isNotEmpty) {
+      await tester.tap(find.text('Suivant'));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.text("S'entraîner"));
+    await tester.pumpAndSettle();
+
+    final exercise =
+        content.lesson('measures')!.exercise as IdentifyNoteExercise;
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ReadingScreen)),
+    );
+    final view = tester.widget<NotationView>(find.byType(NotationView));
+    expect(view.highlights.keys, [exercise.targets.first]);
+    // La cible doit se voir parmi les autres notes, dans le thème de
+    // l'appli : un écart net sur au moins une composante, pas juste deux
+    // couleurs différentes.
+    final target = view.highlights.values.single;
+    final ink = view.color!;
+    final gap = [
+      (target.r - ink.r).abs(),
+      (target.g - ink.g).abs(),
+      (target.b - ink.b).abs(),
+    ].reduce(max);
+    expect(gap, greaterThan(0.4));
+
+    for (var i = 0; i < exercise.length; i++) {
+      final question = container.read(sessionProvider(exercise)).question;
+      expect(question.target, exercise.targets[i]);
+      expect(question.system, same(exercise.system));
+      now = now.add(const Duration(seconds: 2));
+      await tester.tap(find.byKey(ValueKey('note-${question.answer.name}')));
+      await tester.pump();
+      await tester.pump(wrongAnswerDelay);
+    }
+    await tester.pumpAndSettle();
+
+    expect(find.text('Session terminée'), findsOneWidget);
+    expect(
+      find.text('${exercise.length} / ${exercise.length}'),
+      findsOneWidget,
+    );
+  });
 }

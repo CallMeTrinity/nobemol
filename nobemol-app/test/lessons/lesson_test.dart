@@ -18,6 +18,7 @@ theory:
   - text: Avec musique.
     abc: |
       X:1
+      L:1/1
       K:C
       G
 exercise:
@@ -69,7 +70,7 @@ exercise:
   test('erreur ABC située dans le fichier YAML', () {
     expect(
       () => parse(valid.replaceFirst('      G\n', '      G2\n')),
-      error(11, 8, 'theory[2].abc : durée non supportée (étape 3)'),
+      error(12, 7, "theory[2].abc : durée plus longue qu'une ronde"),
     );
   });
 
@@ -77,7 +78,7 @@ exercise:
     expect(
       () => parse(
         valid.replaceFirst(
-          '    abc: |\n      X:1\n      K:C\n      G\n',
+          '    abc: |\n      X:1\n      L:1/1\n      K:C\n      G\n',
           '    abc: "X:1"\n',
         ),
       ),
@@ -88,7 +89,7 @@ exercise:
   test('champ inconnu : faute de frappe', () {
     expect(
       () => parse(valid.replaceFirst('ledger-lines', 'ledger_lines')),
-      error(15, 3, '« ledger_lines » inconnu'),
+      error(16, 3, '« ledger_lines » inconnu'),
     );
   });
 
@@ -120,15 +121,19 @@ exercise:
     );
     expect(
       () => parse(valid.replaceFirst('staff: grand', 'staff: piano')),
-      error(14, 10, 'piano'),
+      error(15, 10, 'piano'),
+    );
+    expect(
+      () => parse(valid.replaceFirst('note-reading\n', 'quiz\n')),
+      error(14, 9, '« quiz » inconnu (note-reading, identify-note)'),
     );
     expect(
       () => parse(valid.replaceFirst('note-reading\n', 'identify-note\n')),
-      error(13, 9, 'identify-note'),
+      error(15, 3, '« staff » inconnu'),
     );
     expect(
       () => parse(valid.replaceFirst('accidentals: true', 'accidentals: oui')),
-      error(16, 16, 'true ou false'),
+      error(17, 16, 'true ou false'),
     );
   });
 
@@ -149,5 +154,112 @@ exercise:
       () => parse('id: [x\n'),
       throwsA(isA<ContentException>().having((e) => e.line, 'line', isNotNull)),
     );
+  });
+
+  group('identify-note', () {
+    const identify = '''
+id: test-lesson
+title: Test
+skills: [note-reading.treble]
+level: 1
+theory:
+  - text: Texte.
+exercise:
+  type: identify-note
+  abc: |
+    X:1
+    %%score {RH LH}
+    M:2/4
+    L:1/4
+    K:G
+    V:RH
+    B d | g2 |]
+    V:LH clef=bass
+    G, D, | G,,2 |]
+  targets:
+    - { staff: RH, measure: 1, event: 2 }
+    - { staff: LH, measure: 2, event: 1 }
+''';
+
+    test('cibles en base 1, converties en index', () {
+      final exercise = parse(identify).exercise as IdentifyNoteExercise;
+      expect(exercise.system.staves, hasLength(2));
+      expect(exercise.targets, const [
+        EventRef(staff: 0, measure: 0, event: 1),
+        EventRef(staff: 1, measure: 1, event: 0),
+      ]);
+      expect(exercise.length, 2);
+    });
+
+    test('une seule portée : staff facultatif', () {
+      final exercise =
+          parse(
+                identify
+                    .replaceFirst(
+                      RegExp(r'    %%score(.|\n)*  targets:'),
+                      '    L:1/4\n    K:C\n    C D\n  targets:',
+                    )
+                    .replaceFirst(RegExp(r'    - \{ staff: RH.*\n'), '')
+                    .replaceFirst(
+                      'staff: LH, measure: 2, event: 1',
+                      'measure: 1, event: 2',
+                    ),
+              ).exercise
+              as IdentifyNoteExercise;
+      expect(exercise.targets, const [
+        EventRef(staff: 0, measure: 0, event: 1),
+      ]);
+    });
+
+    test('staff obligatoire avec plusieurs portées', () {
+      expect(
+        () => parse(identify.replaceFirst('staff: RH, ', '')),
+        error(20, 7, 'plusieurs portées (RH, LH)'),
+      );
+    });
+
+    test('portée inconnue', () {
+      expect(
+        () => parse(identify.replaceFirst('staff: RH', 'staff: XX')),
+        error(20, 16, 'portée « XX » absente'),
+      );
+    });
+
+    test('mesure et événement hors du morceau', () {
+      expect(
+        () => parse(identify.replaceFirst('measure: 1', 'measure: 3')),
+        error(20, 29, 'measure : entier de 1 à 2'),
+      );
+      expect(
+        () => parse(identify.replaceFirst('event: 1 }', 'event: 2 }')),
+        error(21, 39, 'event : entier de 1 à 1'),
+      );
+    });
+
+    test('cible en double', () {
+      expect(
+        () => parse(
+          identify.replaceFirst(
+            '{ staff: LH, measure: 2, event: 1 }',
+            '{ staff: RH, measure: 1, event: 2 }',
+          ),
+        ),
+        error(21, 7, 'en double'),
+      );
+    });
+
+    test('erreur de mesure dans l’ABC de l’exercice', () {
+      expect(
+        () => parse(identify.replaceFirst('B d | g2 |]', 'B d | g |]')),
+        error(16, 13, 'exercise.abc : mesure 2 incomplète'),
+      );
+    });
+
+    test('champs manquants', () {
+      expect(
+        () => parse(identify.replaceFirst(RegExp(r'  targets:(.|\n)*'), '')),
+        error(8, 3, '« targets » manquant'),
+      );
+    });
   });
 }

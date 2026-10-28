@@ -8,6 +8,7 @@ theory:
       demi-ton. Ils s'écrivent devant la note, à la même hauteur.
     abc: |
       X:1
+      L:1/1
       K:C
       ^F _B
   - text: >-
@@ -15,11 +16,13 @@ theory:
       du fa. C'est toujours un fa.
     abc: |
       X:1
+      L:1/1
       K:C
       F ^F
   - text: "Le bécarre annule un dièse ou un bémol."
     abc: |
       X:1
+      L:1/1
       K:C
       ^F =F
 exercise:

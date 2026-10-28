@@ -12,45 +12,46 @@ import 'package:nobemol/reading/note_reading.dart';
 
 const _rightColor = Color(0xFF2E7D32);
 
-/// Écran de lecture de notes : une note, 7 boutons, score et chrono.
+/// Écran de lecture de notes : une note (seule ou ciblée dans une phrase),
+/// 7 boutons, score et chrono.
 class ReadingScreen extends ConsumerWidget {
-  const ReadingScreen({super.key, required this.params});
+  const ReadingScreen({super.key, required this.exercise});
 
-  final NoteReadingParams params;
+  final ReadingExercise exercise;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final session = ref.watch(sessionProvider(params));
+    final session = ref.watch(sessionProvider(exercise));
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.readingTitle)),
       body: SafeArea(
         child: session.phase == SessionPhase.finished
-            ? _Results(params: params, session: session)
-            : _Exercise(params: params, session: session),
+            ? _Results(exercise: exercise, session: session)
+            : _Exercise(exercise: exercise, session: session),
       ),
     );
   }
 }
 
 class _Exercise extends ConsumerWidget {
-  const _Exercise({required this.params, required this.session});
+  const _Exercise({required this.exercise, required this.session});
 
-  final NoteReadingParams params;
+  final ReadingExercise exercise;
   final SessionState session;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final notifier = ref.read(sessionProvider(params).notifier);
+    final notifier = ref.read(sessionProvider(exercise).notifier);
 
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          LinearProgressIndicator(value: session.answered / sessionLength),
+          LinearProgressIndicator(value: session.answered / exercise.length),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -67,8 +68,14 @@ class _Exercise extends ConsumerWidget {
                 child: NotationView(
                   system: session.question.system,
                   staffSpace: 24,
-                  options: params.layoutOptions,
+                  options: exercise.layoutOptions,
                   color: theme.colorScheme.onSurface,
+                  highlights: {
+                    ?session.question.target: _targetColor(
+                      session,
+                      theme.colorScheme,
+                    ),
+                  },
                 ),
               ),
             ),
@@ -76,7 +83,7 @@ class _Exercise extends ConsumerWidget {
           Text(
             l10n.readingProgress(
               session.answered + (session.phase == SessionPhase.asking ? 1 : 0),
-              sessionLength,
+              exercise.length,
             ),
             style: theme.textTheme.labelLarge,
           ),
@@ -101,6 +108,16 @@ class _Exercise extends ConsumerWidget {
     );
   }
 }
+
+/// Note ciblée : couleur d'accent pendant la question, puis verte ou rouge à
+/// la correction. Pas `primary` : dans le thème de l'appli, c'est l'encre
+/// des notes.
+Color _targetColor(SessionState session, ColorScheme scheme) =>
+    switch (session.phase) {
+      SessionPhase.asking => scheme.secondary,
+      _ when session.choice == session.question.answer => _rightColor,
+      _ => scheme.error,
+    };
 
 class _NoteButton extends StatelessWidget {
   const _NoteButton({
@@ -140,9 +157,9 @@ class _NoteButton extends StatelessWidget {
 }
 
 class _Results extends ConsumerWidget {
-  const _Results({required this.params, required this.session});
+  const _Results({required this.exercise, required this.session});
 
-  final NoteReadingParams params;
+  final ReadingExercise exercise;
   final SessionState session;
 
   @override
@@ -164,7 +181,7 @@ class _Results extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            l10n.resultScore(session.correct, sessionLength),
+            l10n.resultScore(session.correct, exercise.length),
             style: text.displayMedium,
             textAlign: TextAlign.center,
           ),
@@ -175,7 +192,7 @@ class _Results extends ConsumerWidget {
           ),
           const SizedBox(height: 32),
           FilledButton(
-            onPressed: () => ref.invalidate(sessionProvider(params)),
+            onPressed: () => ref.invalidate(sessionProvider(exercise)),
             child: Text(l10n.resultRestart),
           ),
           const SizedBox(height: 8),

@@ -84,4 +84,26 @@ void main() {
     );
     expect(question.answer, DiatonicStep.f);
   });
+
+  test('identify-note : les cibles dans l’ordre, avec leur hauteur', () {
+    final system = parseAbc('X:1\nM:2/4\nL:1/4\nK:G\nB d | f2 |]\n');
+    const targets = [
+      EventRef(staff: 0, measure: 1, event: 0),
+      EventRef(staff: 0, measure: 0, event: 0),
+    ];
+    final questions = IdentifyNoteExercise(
+      system: system,
+      targets: targets,
+    ).questions(Random(1));
+
+    final first = questions.next();
+    final second = questions.next(previous: first);
+    expect(first.target, targets[0]);
+    // f en sol majeur : écrit sans altération, la réponse est fa.
+    expect(first.pitch, const Pitch(DiatonicStep.f, 5));
+    expect(first.answer, DiatonicStep.f);
+    expect(second.target, targets[1]);
+    expect(second.answer, DiatonicStep.b);
+    expect(second.system, same(system));
+  });
 }
