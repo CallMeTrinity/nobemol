@@ -35,6 +35,7 @@ class NotationPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final s = staffSpace;
     final line = Paint()..strokeCap = StrokeCap.butt;
+    final fill = Paint();
 
     canvas
       ..save()
@@ -61,6 +62,19 @@ class NotationPainter extends CustomPainter {
               ..color = color
               ..strokeWidth = command.thickness * s,
           );
+        case BeamCommand(:final x1, :final y1, :final x2, :final y2):
+          final half = command.thickness / 2;
+          canvas.drawPath(
+            Path()
+              ..moveTo(x1 * s, (y1 - half) * s)
+              ..lineTo(x2 * s, (y2 - half) * s)
+              ..lineTo(x2 * s, (y2 + half) * s)
+              ..lineTo(x1 * s, (y1 + half) * s)
+              ..close(),
+            fill..color = color,
+          );
+        case TieCommand():
+          canvas.drawPath(_tiePath(command, s), fill..color = color);
       }
     }
 
@@ -73,4 +87,33 @@ class NotationPainter extends CustomPainter {
       oldDelegate.staffSpace != staffSpace ||
       oldDelegate.color != color ||
       !mapEquals(oldDelegate.highlights, highlights);
+}
+
+/// Contour d'une liaison : deux arcs de Bézier, l'extérieur puis
+/// l'intérieur, écartés de l'épaisseur au milieu et aux bouts.
+Path _tiePath(TieCommand tie, double s) {
+  final sign = tie.height.sign;
+
+  // Un arc cubique symétrique monte aux 3/4 de ses points de contrôle.
+  void arc(Path path, double end, double peak, {required bool back}) {
+    final control = tie.y + end + (peak - end) * 4 / 3;
+    final (from, to) = back ? (tie.x2, tie.x1) : (tie.x1, tie.x2);
+    final step = (to - from) / 4;
+    path.cubicTo(
+      (from + step) * s,
+      control * s,
+      (to - step) * s,
+      control * s,
+      to * s,
+      (tie.y + end) * s,
+    );
+  }
+
+  final end = tie.endThickness / 2;
+  final mid = tie.midThickness / 2;
+  final path = Path()..moveTo(tie.x1 * s, (tie.y + sign * end) * s);
+  arc(path, sign * end, tie.height + sign * mid, back: false);
+  path.lineTo(tie.x2 * s, (tie.y - sign * end) * s);
+  arc(path, -sign * end, tie.height - sign * mid, back: true);
+  return path..close();
 }

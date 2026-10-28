@@ -156,4 +156,40 @@ void main() {
       'key_signatures_flats',
     );
   });
+
+  testWidgets('rythme : silences, points, ligatures, liaisons', skip: _skip, (
+    tester,
+  ) async {
+    await expectGolden(
+      tester,
+      parseAbc(
+        'X:1\nM:4/4\nL:1/8\nK:C\nC2 z2 EF G2 | A3 B c2- c2 | z4 G4 |]\n',
+      ),
+      'rhythm_treble',
+    );
+  });
+
+  testWidgets('doubles croches, tronçon, pause centrée', skip: _skip, (
+    tester,
+  ) async {
+    await expectGolden(
+      tester,
+      parseAbc('X:1\nM:2/4\nL:1/16\nK:C\nCDEF G2AB | c3B A2 z2 | z8 |]\n'),
+      'rhythm_sixteenths',
+    );
+  });
+
+  testWidgets('grande portée : rythmes différents', skip: _skip, (
+    tester,
+  ) async {
+    await expectGolden(
+      tester,
+      parseAbc(
+        'X:1\n%%score {RH LH}\nM:3/4\nL:1/8\nK:G\n'
+        'V:RH\nB2 cd e2 | d4 z2 |]\n'
+        'V:LH clef=bass\nG,,4 D,2- | D,2 B,,G,, z2 |]\n',
+      ),
+      'rhythm_grand_staff',
+    );
+  });
 }

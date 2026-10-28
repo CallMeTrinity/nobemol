@@ -5,7 +5,7 @@ import 'package:notation/src/model/key_signature.dart';
 import 'package:notation/src/model/pitch.dart';
 import 'package:notation/src/model/time_signature.dart';
 
-/// Figure de note, sans point (les points arrivent avec le rythme).
+/// Figure de note ou de silence, sans le point.
 enum NoteValue {
   /// Ronde.
   whole(Fraction(1)),
@@ -14,36 +14,71 @@ enum NoteValue {
   half(Fraction(1, 2)),
 
   /// Noire.
-  quarter(Fraction(1, 4));
+  quarter(Fraction(1, 4)),
+
+  /// Croche.
+  eighth(Fraction(1, 8)),
+
+  /// Double croche.
+  sixteenth(Fraction(1, 16));
 
   new(this.duration);
 
   /// Durée, en rondes.
   final Fraction duration;
+
+  /// Nombre de crochets d'une note isolée, ou de ligatures dans un groupe :
+  /// 0 jusqu'à la noire.
+  int get flags => switch (this) {
+    eighth => 1,
+    sixteenth => 2,
+    _ => 0,
+  };
 }
 
-/// Ce qui occupe du temps dans une mesure. Les silences et les accords
-/// viendront s'ajouter aux notes.
+/// Ce qui occupe du temps dans une mesure : une note ou un silence. Les
+/// accords viendront s'ajouter.
 sealed class Event {
-  const new();
+  const new({required this.value, required this.dotted});
+
+  /// Figure.
+  final NoteValue value;
+
+  /// Vrai si la figure est pointée : sa durée est multipliée par 3/2.
+  final bool dotted;
 
   /// Durée, en rondes.
-  Fraction get duration;
+  Fraction get duration =>
+      dotted ? value.duration * const Fraction(3, 2) : value.duration;
 }
 
 /// Note : une hauteur et une figure.
 class Note extends Event {
   /// Crée une note, ronde par défaut.
-  const new(this.pitch, {this.value = NoteValue.whole});
+  const new(
+    this.pitch, {
+    super.value = NoteValue.whole,
+    super.dotted = false,
+    this.tiedToNext = false,
+    this.beamedToNext = false,
+  });
 
   /// Hauteur.
   final Pitch pitch;
 
-  /// Figure.
-  final NoteValue value;
+  /// Vrai si une liaison de prolongation la relie à la note suivante de la
+  /// portée, de même hauteur.
+  final bool tiedToNext;
 
-  @override
-  Fraction get duration => value.duration;
+  /// Vrai si une ligature la relie à la note suivante de la mesure. Seules
+  /// les croches et les valeurs plus courtes en ont une.
+  final bool beamedToNext;
+}
+
+/// Silence : une figure, sans hauteur.
+class Rest extends Event {
+  /// Crée un silence, une pause par défaut.
+  const new({super.value = NoteValue.whole, super.dotted = false});
 }
 
 /// Barre de mesure, nommée comme en MusicXML.
@@ -104,6 +139,16 @@ class Staff {
   /// Toutes les notes, de gauche à droite.
   Iterable<Note> get notes =>
       measures.expand((measure) => measure.events).whereType<Note>();
+
+  /// Tous les événements avec leur mesure et leur index dans la mesure, de
+  /// gauche à droite.
+  Iterable<({int measure, int event, Event value})> get events sync* {
+    for (final (measureIndex, measure) in measures.indexed) {
+      for (final (eventIndex, event) in measure.events.indexed) {
+        yield (measure: measureIndex, event: eventIndex, value: event);
+      }
+    }
+  }
 }
 
 /// Signe qui regroupe les portées d'un groupe.
@@ -196,5 +241,38 @@ class System {
     final events = measures[ref.measure].events;
     if (ref.event < 0 || ref.event >= events.length) return null;
     return events[ref.event];
+  }
+
+  /// Notes liées par des liaisons de prolongation à la note désignée par
+  /// [ref], elle comprise, de gauche à droite. Un seul élément pour une note
+  /// sans liaison ou un silence, vide si [ref] n'existe pas.
+  List<EventRef> tieChain(EventRef ref) {
+    switch (event(ref)) {
+      case null:
+        return const [];
+      case Rest():
+        return [ref];
+      case Note():
+    }
+    final staff = staves.elementAt(ref.staff);
+    final refs = [
+      for (final (:measure, :event, value: _) in staff.events)
+        EventRef(staff: ref.staff, measure: measure, event: event),
+    ];
+    final events = staff.events.map((entry) => entry.value).toList();
+    bool tied(int index) => switch (events[index]) {
+      Note(:final tiedToNext) => tiedToNext,
+      Rest() => false,
+    };
+
+    var first = refs.indexOf(ref);
+    while (first > 0 && tied(first - 1)) {
+      first--;
+    }
+    var last = first;
+    while (last < events.length - 1 && tied(last)) {
+      last++;
+    }
+    return refs.sublist(first, last + 1);
   }
 }

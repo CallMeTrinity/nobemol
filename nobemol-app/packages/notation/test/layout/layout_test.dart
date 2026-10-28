@@ -340,4 +340,206 @@ void main() {
       hasLength(3),
     );
   });
+
+  group('silences', () {
+    double y(SystemLayout layout, Glyph glyph) =>
+        glyphs(layout, glyph).single.y;
+
+    test('pause sous la 4e ligne, demi-pause sur la 3e, soupir centré', () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\nz4 z2 z z/ z/4\n'));
+      expect(y(layout, Glyph.restWhole), 1);
+      expect(y(layout, Glyph.restHalf), 2);
+      expect(y(layout, Glyph.restQuarter), 2);
+      expect(y(layout, Glyph.rest8th), 2);
+      expect(y(layout, Glyph.rest16th), 2);
+    });
+
+    test("silence d'une mesure entière : centré entre les barres", () {
+      final layout = layoutSystem(
+        parse('M:2/4\nL:1/4\nK:C\nC D | z2 | E F |]\n'),
+      );
+      final rest = glyphs(layout, Glyph.restHalf).single.bounds;
+      final barlines = layout.commands
+          .whereType<LineCommand>()
+          .where(
+            (c) =>
+                c.thickness == EngravingDefaults.thinBarlineThickness &&
+                c.x1 == c.x2 &&
+                c.x1 > 1,
+          )
+          .map((c) => c.x1)
+          .toList();
+      expect(
+        (rest.left + rest.right) / 2,
+        closeTo((barlines[0] + barlines[1]) / 2, 0.1),
+      );
+    });
+
+    test('point dans le 3e interligne', () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\nz3/2\n'));
+      final dot = glyphs(layout, Glyph.augmentationDot).single;
+      expect(dot.y, 1.5);
+      expect(
+        dot.bounds.left,
+        greaterThan(glyphs(layout, Glyph.restQuarter).single.bounds.right),
+      );
+    });
+  });
+
+  group('points', () {
+    test("sur une ligne, le point monte dans l'interligne", () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\nG3/2\n'));
+      // Sol4 sur la 2e ligne (y = 3) : point dans le 2e interligne.
+      expect(glyphs(layout, Glyph.augmentationDot).single.y, 2.5);
+    });
+
+    test('dans un interligne, le point reste à la hauteur de la tête', () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\nA3/2\n'));
+      expect(glyphs(layout, Glyph.augmentationDot).single.y, 2.5);
+    });
+
+    test('le point pousse la note suivante', () {
+      final layout = layoutSystem(parse('L:1/16\nK:C\nA3 B\n'));
+      final dot = glyphs(layout, Glyph.augmentationDot).single.bounds;
+      final heads = glyphs(layout, Glyph.noteheadBlack).toList();
+      expect(heads[1].x, greaterThan(dot.right));
+    });
+  });
+
+  group('crochets', () {
+    test('hampe vers le haut : crochet au bout, à droite', () {
+      final layout = layoutSystem(parse('L:1/8\nK:C\nG\n'));
+      final flag = glyphs(layout, Glyph.flag8thUp).single;
+      final stem = layout.commands.whereType<LineCommand>().singleWhere(
+        (c) => c.thickness == EngravingDefaults.stemThickness,
+      );
+      expect(flag.x, closeTo(stem.x1 - stem.thickness / 2, 1e-9));
+      expect(flag.bounds.top, closeTo(stem.y2, 0.1));
+    });
+
+    test('hampe vers le bas : crochet de double croche en bas', () {
+      final layout = layoutSystem(parse('L:1/16\nK:C\nc\n'));
+      expect(glyphs(layout, Glyph.flag16thDown), hasLength(1));
+    });
+
+    test('le crochet pousse la note suivante', () {
+      final layout = layoutSystem(parse('L:1/16\nK:C\nE z\n'));
+      final flag = glyphs(layout, Glyph.flag16thUp).single.bounds;
+      final rest = glyphs(layout, Glyph.rest16th).single.bounds;
+      expect(rest.left, greaterThan(flag.right));
+    });
+  });
+
+  group('ligatures', () {
+    Iterable<BeamCommand> beams(SystemLayout layout) =>
+        layout.commands.whereType<BeamCommand>();
+    List<LineCommand> stems(SystemLayout layout) => layout.commands
+        .whereType<LineCommand>()
+        .where((c) => c.thickness == EngravingDefaults.stemThickness)
+        .toList();
+    bool hasFlags(SystemLayout layout) => layout.commands
+        .whereType<GlyphCommand>()
+        .any((c) => c.glyph.name.startsWith('flag'));
+
+    test('croches collées : une ligature, pas de crochet', () {
+      final layout = layoutSystem(parse('L:1/8\nK:C\nCDEF\n'));
+      expect(beams(layout), hasLength(1));
+      expect(hasFlags(layout), isFalse);
+    });
+
+    test('les hampes finissent sur le bord de la ligature', () {
+      final layout = layoutSystem(parse('L:1/8\nK:C\nCDEF\n'));
+      final beam = beams(layout).single;
+      double beamEdge(double x) =>
+          beam.y1 +
+          (beam.y2 - beam.y1) * (x - beam.x1) / (beam.x2 - beam.x1) -
+          beam.thickness / 2;
+      for (final stem in stems(layout)) {
+        expect(stem.y2, closeTo(beamEdge(stem.x1), 1e-9));
+      }
+    });
+
+    test('pente limitée à un interligne', () {
+      final layout = layoutSystem(parse("L:1/8\nK:C\nCc'\n"));
+      final beam = beams(layout).single;
+      expect((beam.y2 - beam.y1).abs(), lessThanOrEqualTo(1 + 1e-9));
+    });
+
+    test('à plat si une note intérieure est plus près de la ligature', () {
+      final layout = layoutSystem(parse('L:1/8\nK:C\nDAEF\n'));
+      final beam = beams(layout).single;
+      expect(beam.y1, beam.y2);
+    });
+
+    test('la note la plus éloignée de la ligne du milieu fixe le sens', () {
+      // Do4 est plus loin de la ligne du milieu que sol5 : hampes en haut.
+      final layout = layoutSystem(parse('L:1/8\nK:C\nCg\n'));
+      for (final stem in stems(layout)) {
+        expect(stem.y2, lessThan(stem.y1));
+      }
+    });
+
+    test('hampe la plus courte : une octave', () {
+      final layout = layoutSystem(parse('L:1/8\nK:C\nCDEF\n'));
+      final lengths = stems(layout).map((s) => s.y1 - s.y2);
+      expect(lengths.reduce(math.min), closeTo(3.5 - 0.168, 1e-9));
+    });
+
+    test('doubles croches : deuxième ligature', () {
+      final layout = layoutSystem(parse('L:1/16\nK:C\nCDEF\n'));
+      expect(beams(layout), hasLength(2));
+    });
+
+    test('croche pointée et double croche : tronçon vers la gauche', () {
+      final layout = layoutSystem(parse('L:1/16\nK:C\nC3D\n'));
+      final [primary, stub] = beams(layout).toList();
+      expect(stub.x2, closeTo(primary.x2, 1e-9));
+      expect(stub.x2 - stub.x1, lessThan(primary.x2 - primary.x1));
+    });
+
+    test('une espace sépare deux groupes', () {
+      final layout = layoutSystem(parse('L:1/8\nK:C\nCD EF\n'));
+      expect(beams(layout), hasLength(2));
+    });
+  });
+
+  group('liaisons de prolongation', () {
+    TieCommand tie(SystemLayout layout) =>
+        layout.commands.whereType<TieCommand>().single;
+
+    test('hampe vers le haut : liaison en dessous', () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\nE-E\n'));
+      final head = glyphs(layout, Glyph.noteheadBlack).first;
+      expect(tie(layout).y, greaterThan(head.y));
+      expect(tie(layout).height, greaterThan(0));
+    });
+
+    test('hampe vers le bas : liaison au-dessus', () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\nc-c\n'));
+      final head = glyphs(layout, Glyph.noteheadBlack).first;
+      expect(tie(layout).y, lessThan(head.y));
+      expect(tie(layout).height, lessThan(0));
+    });
+
+    test('relie les deux têtes, à travers la barre', () {
+      final layout = layoutSystem(parse('M:2/4\nL:1/2\nK:C\nc- | c |]\n'));
+      final [from, to] = glyphs(layout, Glyph.noteheadHalf).toList();
+      final line = tie(layout);
+      expect(line.x1, greaterThan(from.x));
+      expect(line.x1, lessThan(from.bounds.right));
+      expect(line.x2, greaterThan(to.x));
+      expect(line.x2, lessThan(to.bounds.right));
+    });
+
+    test('part après le point', () {
+      final layout = layoutSystem(parse('L:1/8\nK:C\nA3-A\n'));
+      final dot = glyphs(layout, Glyph.augmentationDot).single.bounds;
+      expect(tie(layout).x1, greaterThan(dot.right));
+    });
+
+    test('appartient à la première note', () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\nE-E\n'));
+      expect(tie(layout).event, const EventRef(staff: 0, measure: 0, event: 0));
+    });
+  });
 }

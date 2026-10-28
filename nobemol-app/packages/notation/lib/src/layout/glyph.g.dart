@@ -79,6 +79,56 @@ enum Glyph {
     bBoxNE: (0.988, 0.508),
   ),
 
+  /// Augmentation dot.
+  augmentationDot(codepoint: 0xE1E7, bBoxSW: (0.0, -0.2), bBoxNE: (0.4, 0.2)),
+
+  /// Combining flag 1 (8th) above.
+  flag8thUp(
+    codepoint: 0xE240,
+    bBoxSW: (0.0, -3.24),
+    bBoxNE: (1.056, 0.036),
+    stemUpNW: (0.0, -0.04),
+  ),
+
+  /// Combining flag 1 (8th) below.
+  flag8thDown(
+    codepoint: 0xE241,
+    bBoxSW: (0.0, -0.056),
+    bBoxNE: (1.224, 3.232),
+    stemDownSW: (0.0, 0.132),
+  ),
+
+  /// Combining flag 2 (16th) above.
+  flag16thUp(
+    codepoint: 0xE242,
+    bBoxSW: (0.0, -3.252),
+    bBoxNE: (1.116, 0.008),
+    stemUpNW: (0.0, -0.088),
+  ),
+
+  /// Combining flag 2 (16th) below.
+  flag16thDown(
+    codepoint: 0xE243,
+    bBoxSW: (0.0, -0.036),
+    bBoxNE: (1.164, 3.248026),
+    stemDownSW: (0.0, 0.128),
+  ),
+
+  /// Whole (semibreve) rest.
+  restWhole(codepoint: 0xE4E3, bBoxSW: (0.0, -0.54), bBoxNE: (1.128, 0.036)),
+
+  /// Half (minim) rest.
+  restHalf(codepoint: 0xE4E4, bBoxSW: (0.0, -0.008), bBoxNE: (1.128, 0.568)),
+
+  /// Quarter (crotchet) rest.
+  restQuarter(codepoint: 0xE4E5, bBoxSW: (0.004, -1.5), bBoxNE: (1.08, 1.492)),
+
+  /// Eighth (quaver) rest.
+  rest8th(codepoint: 0xE4E6, bBoxSW: (0.0, -1.004), bBoxNE: (0.988, 0.696)),
+
+  /// 16th (semiquaver) rest.
+  rest16th(codepoint: 0xE4E7, bBoxSW: (0.0, -2.0), bBoxNE: (1.28, 0.716)),
+
   /// Time signature 0.
   timeSig0(codepoint: 0xE080, bBoxSW: (0.08, -1.0), bBoxNE: (1.8, 1.004)),
 
@@ -115,6 +165,8 @@ enum Glyph {
     required this.bBoxNE,
     this.stemUpSE,
     this.stemDownNW,
+    this.stemUpNW,
+    this.stemDownSW,
   });
 
   /// Codepoint dans la police.
@@ -131,6 +183,12 @@ enum Glyph {
 
   /// Attache d'une hampe vers le bas (x, y).
   final (double, double)? stemDownNW;
+
+  /// Attache d'un crochet sur une hampe vers le haut (x, y).
+  final (double, double)? stemUpNW;
+
+  /// Attache d'un crochet sur une hampe vers le bas (x, y).
+  final (double, double)? stemDownSW;
 }
 
 /// Valeurs de gravure par défaut de Bravura, en interlignes.
@@ -158,4 +216,16 @@ abstract final class EngravingDefaults {
 
   /// `stemThickness`.
   static const stemThickness = 0.12;
+
+  /// `beamThickness`.
+  static const beamThickness = 0.5;
+
+  /// `beamSpacing`.
+  static const beamSpacing = 0.25;
+
+  /// `tieEndpointThickness`.
+  static const tieEndpointThickness = 0.1;
+
+  /// `tieMidpointThickness`.
+  static const tieMidpointThickness = 0.22;
 }

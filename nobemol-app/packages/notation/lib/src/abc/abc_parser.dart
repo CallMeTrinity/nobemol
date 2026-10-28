@@ -34,9 +34,28 @@ class _Voice {
   /// Événements de la mesure en cours.
   final events = <Event>[];
 
-  /// Position de la dernière note, pour une mesure finale sans barre.
+  /// Position du dernier événement, pour une mesure finale sans barre.
   int lastLine = 0;
   int lastColumn = 0;
+
+  /// Liaison de prolongation qui attend sa note d'arrivée : hauteur de
+  /// départ et position du `-`.
+  ({Pitch pitch, int line, int column})? tie;
+
+  /// Dernier événement lu, dans la mesure en cours ou la précédente.
+  Event? get lastEvent => events.lastOrNull ?? measures.lastOrNull?.events.last;
+
+  /// Remplace la dernière note de la mesure en cours.
+  void updateLastNote({bool? tiedToNext, bool? beamedToNext}) {
+    final note = events.last as Note;
+    events.last = Note(
+      note.pitch,
+      value: note.value,
+      dotted: note.dotted,
+      tiedToNext: tiedToNext ?? note.tiedToNext,
+      beamedToNext: beamedToNext ?? note.beamedToNext,
+    );
+  }
 }
 
 /// Élément de `%%score` : une voix seule ou des voix sous accolade.
@@ -66,9 +85,14 @@ const Map<String, int> _majorFifths = {
   'B': 5,
 };
 
-/// Figures acceptées, par durée en rondes.
-final Map<Fraction, NoteValue> _noteValues = {
-  for (final value in NoteValue.values) value.duration: value,
+/// Figures acceptées, pointées ou non, par durée en rondes. La ronde
+/// pointée dépasse la ronde : refusée.
+final Map<Fraction, ({NoteValue value, bool dotted})> _noteValues = {
+  for (final value in NoteValue.values) ...{
+    value.duration: (value: value, dotted: false),
+    if (value != NoteValue.whole)
+      value.duration * const Fraction(3, 2): (value: value, dotted: true),
+  },
 };
 
 const Map<String, Clef> _clefs = {
@@ -461,14 +485,25 @@ class _Parser {
     final voice = _current ??= _anonymousVoice(content);
     var index = 0;
 
+    // Vrai si l'élément précédent est collé à celui-ci (même ligne, sans
+    // espace ni barre) : deux croches collées sont ligaturées.
+    var glued = false;
+
     while (index < content.length) {
       final char = content[index];
       if (char == ' ' || char == '\t') {
         index++;
+        glued = false;
         continue;
       }
       if (char == '|') {
         index = _barline(voice, content, index);
+        glued = false;
+        continue;
+      }
+      if (char == 'z') {
+        index = _rest(voice, content, index, glued: glued);
+        glued = true;
         continue;
       }
 
@@ -506,16 +541,91 @@ class _Parser {
 
       final (multiplier, end) = _duration(content, index);
       index = end;
+      final pitch = Pitch(_steps[upper]!, octave, accidental: accidental);
+      final (:value, :dotted) = _noteValue(multiplier, noteColumn);
+      _arriveTie(voice, pitch, noteColumn);
+
+      final previous = voice.lastEvent;
+      if (glued && value.flags > 0) {
+        if (previous is Rest && previous.value.flags > 0) {
+          throw _restInBeam(noteColumn);
+        }
+        if (previous is Note && previous.value.flags > 0) {
+          voice.updateLastNote(beamedToNext: true);
+        }
+      }
       voice
-        ..events.add(
-          Note(
-            Pitch(_steps[upper]!, octave, accidental: accidental),
-            value: _noteValue(multiplier, noteColumn),
-          ),
-        )
+        ..events.add(Note(pitch, value: value, dotted: dotted))
         ..lastLine = _line
         ..lastColumn = noteColumn;
+
+      if (index < content.length && content[index] == '-') {
+        voice
+          ..updateLastNote(tiedToNext: true)
+          ..tie = (pitch: pitch, line: _line, column: index + 1);
+        index++;
+      }
+      glued = true;
     }
+  }
+
+  /// Lit le silence qui commence à [index] et renvoie l'index qui le suit.
+  int _rest(_Voice voice, String content, int index, {required bool glued}) {
+    final column = index + 1;
+    if (voice.tie case final tie?) {
+      throw AbcException(
+        'liaison de prolongation suivie d’un silence : '
+        'elle relie deux notes de même hauteur',
+        line: tie.line,
+        column: tie.column,
+      );
+    }
+    final (multiplier, end) = _duration(content, index + 1);
+    final (:value, :dotted) = _noteValue(multiplier, column, rest: true);
+    final previous = voice.lastEvent;
+    if (glued &&
+        value.flags > 0 &&
+        previous is Note &&
+        previous.value.flags > 0) {
+      throw _restInBeam(column);
+    }
+    if (end < content.length && content[end] == '-') {
+      throw _error('liaison de prolongation après un silence', end + 1);
+    }
+    voice
+      ..events.add(Rest(value: value, dotted: dotted))
+      ..lastLine = _line
+      ..lastColumn = column;
+    return end;
+  }
+
+  AbcException _restInBeam(int column) => _error(
+    'silence collé à une croche : séparer par une espace, '
+    'une ligature ne traverse pas un silence',
+    column,
+  );
+
+  /// Vérifie que [pitch] peut terminer la liaison qui attend dans [voice],
+  /// s'il y en a une.
+  void _arriveTie(_Voice voice, Pitch pitch, int column) {
+    final tie = voice.tie;
+    if (tie == null) return;
+    final from = tie.pitch;
+    if (pitch.step != from.step || pitch.octave != from.octave) {
+      throw _error(
+        'liaison de prolongation entre deux hauteurs différentes '
+        "(liaison d'expression : plus tard)",
+        column,
+      );
+    }
+    if (pitch.accidental != null) {
+      throw _error(
+        "note d'arrivée d'une liaison avec une altération : "
+        "l'écrire sans, elle garde celle de la note de départ",
+        column,
+      );
+    }
+    voice.tie = null;
   }
 
   /// Lit la barre qui commence à [index], ferme la mesure en cours et
@@ -545,7 +655,7 @@ class _Parser {
       throw _error(
         voice.measures.isEmpty
             ? 'barre de mesure avant la première note'
-            : 'mesure vide (silences : étape 4)',
+            : 'mesure vide : écrire un silence (z)',
         column,
       );
     }
@@ -611,8 +721,13 @@ class _Parser {
     return (Fraction(numerator, value), denominator.end);
   }
 
-  /// Figure d'une note de durée [multiplier] × `L:`.
-  NoteValue _noteValue(Fraction multiplier, int column) {
+  /// Figure d'une note (ou d'un silence si [rest]) de durée [multiplier] ×
+  /// `L:`.
+  ({NoteValue value, bool dotted}) _noteValue(
+    Fraction multiplier,
+    int column, {
+    bool rest = false,
+  }) {
     final unit = _unit;
     if (unit == null) {
       throw _error(
@@ -623,15 +738,17 @@ class _Parser {
     final duration = unit * multiplier;
     if (_noteValues[duration] case final value?) return value;
 
-    final numerator = duration.reduced.numerator;
     throw _error(switch (duration) {
-      _ when numerator == 3 || numerator == 7 =>
-        'note pointée non supportée (étape 4)',
-      _ when duration < NoteValue.quarter.duration =>
-        'croche et valeurs plus courtes non supportées (étape 4)',
       _ when duration > NoteValue.whole.duration =>
         "durée plus longue qu'une ronde non supportée",
-      _ => 'durée de $duration de ronde non supportée',
+      _ when duration < NoteValue.sixteenth.duration =>
+        'triple croche et valeurs plus courtes non supportées',
+      _ when duration.reduced.numerator == 7 => 'double point non supporté',
+      _ when rest =>
+        'durée de $duration de ronde non supportée : écrire deux silences',
+      _ =>
+        'durée de $duration de ronde non supportée : '
+            'écrire deux notes liées (C2-C)',
     }, column);
   }
 
@@ -680,6 +797,13 @@ class _Parser {
   void _closeVoices() {
     final time = _time;
     for (final voice in _voices.values) {
+      if (voice.tie case final tie?) {
+        throw AbcException(
+          "liaison de prolongation sans note d'arrivée",
+          line: tie.line,
+          column: tie.column,
+        );
+      }
       if (voice.events.isEmpty) continue;
       if (time == null) {
         voice.measures.add(Measure(List.unmodifiable(voice.events)));
@@ -764,9 +888,12 @@ String _unexpected(String content, int index) {
     '[' => 'accord non supporté (plus tard)',
     ']' => 'caractère inattendu « ] »',
     '/' => 'durée sans note : pas d’espace entre une note et sa durée',
-    'z' || 'Z' || 'x' || 'X' => 'silence non supporté (étape 4)',
-    '-' => 'liaison de prolongation non supportée (étape 4)',
-    '>' || '<' => 'rythme pointé non supporté (étape 4)',
+    'Z' => 'silence de plusieurs mesures non supporté : écrire z et sa durée',
+    'x' => 'silence invisible non supporté',
+    '-' =>
+      'liaison de prolongation sans note de départ : coller « - » à la '
+          'note',
+    '>' || '<' => 'rythme pointé non supporté : écrire les durées (C3/2 D/)',
     '!' || '+' || '.' || '~' => 'décoration non supportée (étape 5)',
     '(' || ')' => "liaison d'expression ou n-olet non supporté (plus tard)",
     '{' || '}' => "note d'ornement non supportée",
