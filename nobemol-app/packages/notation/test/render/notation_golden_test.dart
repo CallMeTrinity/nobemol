@@ -40,8 +40,12 @@ void main() {
     );
   }
 
-  Staff staff(Clef clef, Pitch pitch) =>
-      Staff(clef: clef, notes: [Note(pitch)]);
+  Staff staff(Clef clef, Pitch pitch) => Staff(
+    clef: clef,
+    measures: [
+      Measure([Note(pitch)]),
+    ],
+  );
 
   testWidgets('clé de sol, do central', skip: _skip, (tester) async {
     await expectGolden(
@@ -92,13 +96,64 @@ void main() {
       tester,
       System([
         StaffGroup.grand(
-          upper: const [Note(Pitch(DiatonicStep.a, 3))],
+          upper: const [
+            Measure([Note(Pitch(DiatonicStep.a, 3))]),
+          ],
           lower: const [
-            Note(Pitch(DiatonicStep.f, 2, accidental: Accidental.doubleSharp)),
+            Measure([
+              Note(
+                Pitch(DiatonicStep.f, 2, accidental: Accidental.doubleSharp),
+              ),
+            ]),
           ],
         ),
       ]),
       'grand_staff',
+    );
+  });
+
+  testWidgets('phrase : armure, chiffrage, hampes, barres', skip: _skip, (
+    tester,
+  ) async {
+    await expectGolden(
+      tester,
+      parseAbc('X:1\nM:4/4\nL:1/4\nK:Bb\nB, D F B | d f b2 | =e2 _A2 |]\n'),
+      'phrase_treble',
+    );
+  });
+
+  testWidgets(
+    'grande portée : colonnes communes et barres traversantes',
+    skip: _skip,
+    (tester) async {
+      await expectGolden(
+        tester,
+        parseAbc(
+          'X:1\n%%score {RH LH}\nM:3/4\nL:1/4\nK:D\n'
+          "V:RH\nf2 a | ^g a b | d'2 a |]\n"
+          'V:LH clef=bass\nD,2 A,, | E, F, G, | A,,2 D, |]\n',
+        ),
+        'phrase_grand_staff',
+      );
+    },
+  );
+
+  testWidgets('armures sur les quatre clés', skip: _skip, (tester) async {
+    await expectGolden(
+      tester,
+      parseAbc(
+        'X:1\n%%score A B C D\n'
+        'V:A\nV:B clef=bass\nV:C clef=alto\nV:D clef=tenor\nK:C#\n',
+      ),
+      'key_signatures_sharps',
+    );
+    await expectGolden(
+      tester,
+      parseAbc(
+        'X:1\n%%score A B C D\n'
+        'V:A\nV:B clef=bass\nV:C clef=alto\nV:D clef=tenor\nK:Cb\n',
+      ),
+      'key_signatures_flats',
     );
   });
 }

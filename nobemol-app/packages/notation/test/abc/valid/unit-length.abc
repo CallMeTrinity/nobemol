@@ -1,0 +1,7 @@
+% attendu : treble 2/2(C4:2 D4:4 E4:4 | F4)
+% L:1/2 : la blanche est l'unité, D/ est une noire et F2 une ronde.
+X:1
+M:2/2
+L:1/2
+K:C
+C D/ E/ | F2

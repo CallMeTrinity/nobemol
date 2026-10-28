@@ -1,0 +1,8 @@
+% attendu : treble 3b 4/4(E4:2 B4:2 | E5 |])
+% Mi bémol majeur : l'armure porte les bémols, les notes restent écrites sans
+% altération.
+X:1
+M:4/4
+L:1/4
+K:Eb
+E2 B2 | e4 |]

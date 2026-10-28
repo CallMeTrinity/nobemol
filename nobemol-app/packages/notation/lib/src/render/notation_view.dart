@@ -11,6 +11,7 @@ class NotationView extends StatelessWidget {
     this.staffSpace = 10,
     this.options = const LayoutOptions(),
     this.color,
+    this.highlights = const {},
     super.key,
   });
 
@@ -26,6 +27,9 @@ class NotationView extends StatelessWidget {
   /// Couleur de la notation.
   final Color? color;
 
+  /// Couleur propre à certains événements (note ciblée, correction).
+  final Map<EventRef, Color> highlights;
+
   @override
   Widget build(BuildContext context) {
     final painter = NotationPainter(
@@ -35,6 +39,7 @@ class NotationView extends StatelessWidget {
           color ??
           DefaultTextStyle.of(context).style.color ??
           const Color(0xFF000000),
+      highlights: highlights,
     );
     return CustomPaint(size: painter.size, painter: painter);
   }

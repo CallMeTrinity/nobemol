@@ -2,6 +2,7 @@
 
 % Commentaires et lignes vides admis avant X:, lignes vides admises à la fin.
 X:1 % numéro du morceau
+L:1/1
 K:C
 CD   E % notes collées ou espacées
 % commentaire entre deux lignes de musique

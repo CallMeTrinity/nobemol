@@ -1,0 +1,12 @@
+% erreur : 5:3 « LH » a 1 mesure(s)
+X:1
+%%score {RH LH}
+V:RH
+V:LH clef=bass
+M:2/4
+L:1/4
+K:C
+V:RH
+c d | e f |
+V:LH
+C, D, |

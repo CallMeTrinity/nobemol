@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:notation/src/layout/glyph.g.dart';
+import 'package:notation/src/model/system.dart';
 
 /// Rectangle en interlignes, axe y vers le bas.
 class Box {
@@ -43,7 +44,11 @@ class Box {
 
 /// Élément de la liste de dessin, en interlignes, axe y vers le bas.
 sealed class DrawCommand {
-  const new();
+  const new({this.event});
+
+  /// Événement dessiné (tête, altération, hampe), `null` pour le reste. Permet
+  /// de colorer une note.
+  final EventRef? event;
 
   /// Rectangle occupé.
   Box get bounds;
@@ -52,7 +57,14 @@ sealed class DrawCommand {
 /// Glyphe de la police musicale, posé sur son origine SMuFL.
 class GlyphCommand extends DrawCommand {
   /// Crée un glyphe à l'origine ([x], [y]).
-  const new(this.glyph, this.x, this.y, {this.scaleX = 1, this.scaleY = 1});
+  const new(
+    this.glyph,
+    this.x,
+    this.y, {
+    this.scaleX = 1,
+    this.scaleY = 1,
+    super.event,
+  });
 
   /// Glyphe.
   final Glyph glyph;
@@ -81,7 +93,7 @@ class GlyphCommand extends DrawCommand {
 /// Segment droit à bouts carrés (lignes de portée, barres).
 class LineCommand extends DrawCommand {
   /// Crée un segment de ([x1], [y1]) à ([x2], [y2]).
-  const new(this.x1, this.y1, this.x2, this.y2, this.thickness);
+  const new(this.x1, this.y1, this.x2, this.y2, this.thickness, {super.event});
 
   /// Abscisse de départ.
   final double x1;

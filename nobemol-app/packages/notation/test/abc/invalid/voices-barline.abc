@@ -1,0 +1,12 @@
+% erreur : 5:3 mesure 2 : la voix « LH » ne finit pas
+X:1
+%%score {RH LH}
+V:RH
+V:LH clef=bass
+M:2/4
+L:1/2
+K:C
+V:RH
+c | d |]
+V:LH
+C, | D, |

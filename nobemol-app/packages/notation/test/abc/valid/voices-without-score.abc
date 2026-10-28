@@ -1,6 +1,7 @@
 % attendu : 1:alto(C4) 2:tenor(D3)
 % Sans %%score : une portée par voix, dans l'ordre d'apparition, sans accolade.
 X:1
+L:1/1
 K:C
 V:1 clef=alto
 C
