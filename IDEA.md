@@ -52,6 +52,9 @@ Application mobile pour apprendre et réviser le solfège. Le but n'est pas d'af
 | Temps musical | Fractions exactes (`Fraction`), pas de `double` | Deux événements de deux portées tombent dans la même colonne seulement si leurs instants sont égaux. Prépare les n-olets. |
 | Exercice de rythme (sans audio) | **Durée en temps** d'une note ou d'un silence ciblé, 8 boutons de ¼ à 4. Chiffrages x/4 seulement | Même mécanique que `identify-note`. Une note liée compte toute la liaison. En 6/8, « un temps » change de sens : écarté pour l'instant. Le rythme tapé viendra avec l'audio. |
 | Ligatures | **Choisies par l'auteur**, règle ABC : croches collées = un groupe | Pas de regroupement automatique par temps. Une leçon montre exactement ce qui est écrit. |
+| Signes et termes en ABC | Décorations `!…!` et `.` devant la note, termes en annotations `"^…"` / `"_…"` | ABC standard (abcjs et abcm2ps les lisent). Une écriture par signe : `.` pour le staccato, pas `!staccato!`. |
+| Police des termes | **Edwin Italic** (MuseScore, OFL), chasses générées en Dart | Bravura recommande Academico (introuvable en ligne) puis Edwin. Le layout reste en Dart pur : il mesure le texte avec les chasses générées, pas avec Flutter. |
+| Exercice de signes | **Sens** du signe ciblé, réponses **choisies par l'auteur** (2 à 8) | Le soufflet et « cresc. » ont la même réponse. Une première leçon propose peu de réponses, les suivantes davantage : le niveau devient un paramètre, comme pour la lecture de notes. |
 | Indexation des cibles | **Base 1** (`measure`, `event`) | Les leçons sont écrites à la main par des musiciens : « mesure 1, 2e note ». Conversion une seule fois, au chargement. |
 | Moteur sans Flutter | `package:notation/core.dart` (abc, modèle, layout) à côté de `notation.dart` (rendu) | Le validateur tourne avec `dart run`, sans `dart:ui`. Préfigure le découpage `notation_core` / `notation_flutter`. |
 | Stockage des leçons (MVP) | Embarquées dans l'appli | Du texte : ~1000 leçons pèsent environ 100 à 200 Ko compressées. |
@@ -141,7 +144,7 @@ exercise:
 
 Les index `measure` et `event` sont fragiles si l'ABC change : le validateur vérifie que chaque cible existe. Ils comptent à partir de 1.
 
-Cet exemple vise l'étape 5 (nuances). Le format réellement accepté aujourd'hui est décrit dans [doc/lessons.md](nobemol-app/doc/lessons.md) : depuis l'étape 3, `identify-note` prend son ABC dans `exercise.abc`, avec des cibles `{ staff, measure, event }`. L'étape 4 ajoute `identify-duration`.
+Cet exemple date de la conception. Depuis l'étape 5, son ABC passe le parser, mais le format réel des leçons est décrit dans [doc/lessons.md](nobemol-app/doc/lessons.md) : l'ABC de l'exercice va dans `exercise.abc`, avec des cibles `{ staff, measure, event }`. L'étape 4 ajoute `identify-duration`, l'étape 5 `identify-marking` (sens d'une nuance, d'un soufflet, d'une articulation ou d'un terme).
 
 ## Feuille de route
 
