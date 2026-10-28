@@ -11,9 +11,13 @@ nobemol-app/
 │   ├── skills.yaml       arbre de compétences
 │   └── lessons/          une leçon par fichier YAML (voir doc/lessons.md)
 ├── doc/lessons.md        format des leçons
+├── fonts/                polices de l'interface + licences OFL
 ├── lib/
 │   ├── l10n/             textes (app_fr.arb), AppLocalizations généré par pub get
-│   ├── home/             choix du point de départ, liste des leçons
+│   ├── theme/            tokens du design « Touches » et thème clair / sombre
+│   ├── ui/               composants : boutons à ombre pleine, tuiles, clavier
+│   ├── shell/            barre à 4 onglets, onglets à venir
+│   ├── home/             Parcours : point de départ, liste des leçons
 │   ├── lessons/          lecture du contenu (Dart pur) et écran de théorie
 │   └── reading/          lecture de notes : générateur, session, écran
 ├── tool/validate_content.dart  validateur du contenu, lancé en CI
