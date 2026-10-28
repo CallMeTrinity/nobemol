@@ -37,7 +37,7 @@ class Lesson {
   /// Niveau, à partir de 1.
   final int level;
   final List<TheoryPage> theory;
-  final NoteReadingParams exercise;
+  final ReadingExercise exercise;
 }
 
 final _lessonId = RegExp(r'^[a-z0-9]+(-[a-z0-9]+)*$');
@@ -87,7 +87,7 @@ Lesson parseLesson(
       for (final (index, node) in fields.list('theory').nodes.indexed)
         _theoryPage(node, 'theory[${index + 1}]', source),
     ],
-    exercise: _exercise(fields.node('exercise')!),
+    exercise: _exercise(fields.node('exercise')!, source),
   );
 }
 
@@ -98,15 +98,15 @@ TheoryPage _theoryPage(YamlNode node, String path, String source) {
     required: {'text'},
     optional: {'abc'},
   );
-  final abc = fields.node('abc');
   return TheoryPage(
     text: fields.string('text').trim(),
-    system: abc == null ? null : _abc(fields, abc, source),
+    system: fields.node('abc') == null ? null : _abc(fields, source),
   );
 }
 
-/// Lit l'ABC de [node] et situe ses erreurs dans le fichier YAML.
-System _abc(YamlFields fields, YamlNode node, String source) {
+/// Lit le champ `abc` de [fields] et situe ses erreurs dans le fichier YAML.
+System _abc(YamlFields fields, String source) {
+  final node = fields.node('abc')!;
   final abc = fields.string('abc');
   try {
     return parseAbc(abc);
@@ -128,25 +128,50 @@ System _abc(YamlFields fields, YamlNode node, String source) {
   }
 }
 
-NoteReadingParams _exercise(YamlNode node) {
-  final fields = YamlFields.read(
+/// Champs de chaque type d'exercice, `type` compris.
+const _exerciseFields = {
+  'note-reading': (
+    required: {'type', 'staff'},
+    optional: {'ledger-lines', 'accidentals'},
+  ),
+  'identify-note': (required: {'type', 'abc', 'targets'}, optional: <String>{}),
+};
+
+ReadingExercise _exercise(YamlNode node, String source) {
+  // Le type d'abord : il fixe les autres champs attendus.
+  final type = YamlFields.read(
     node,
     path: 'exercise',
     required: {'type'},
-    optional: {'staff', 'ledger-lines', 'accidentals'},
+    optional: {
+      for (final fields in _exerciseFields.values) ...fields.required,
+      for (final fields in _exerciseFields.values) ...fields.optional,
+    },
   );
-  final type = fields.string('type');
-  if (type != 'note-reading') {
-    throw fields.error(
-      fields.node('type')!,
-      'exercise.type : « $type » inconnu (note-reading)',
+  final name = type.string('type');
+  final expected = _exerciseFields[name];
+  if (expected == null) {
+    throw type.error(
+      type.node('type')!,
+      'exercise.type : « $name » inconnu '
+      '(${_exerciseFields.keys.join(', ')})',
     );
   }
 
-  final staffNode = fields.node('staff');
-  if (staffNode == null) {
-    throw fields.error(node, 'exercise : champ « staff » manquant');
-  }
+  final fields = YamlFields.read(
+    node,
+    path: 'exercise',
+    required: expected.required,
+    optional: expected.optional,
+  );
+  return switch (name) {
+    'identify-note' => _identifyNote(fields, source),
+    _ => _noteReading(fields),
+  };
+}
+
+NoteReadingParams _noteReading(YamlFields fields) {
+  final staffNode = fields.node('staff')!;
   final staffName = fields.string('staff');
   final staff = StaffSetup.values.asNameMap()[staffName];
   if (staff == null) {
@@ -162,4 +187,58 @@ NoteReadingParams _exercise(YamlNode node) {
     ledgerLines: fields.integer('ledger-lines', min: 0, max: 4, or: 0),
     accidentals: fields.boolean('accidentals', or: false),
   );
+}
+
+IdentifyNoteExercise _identifyNote(YamlFields fields, String source) {
+  final system = _abc(fields, source);
+  final targets = <EventRef>[];
+  for (final (index, node) in fields.list('targets').nodes.indexed) {
+    final target = _target(node, 'exercise.targets[${index + 1}]', system);
+    if (targets.contains(target)) {
+      throw fields.error(node, 'exercise.targets[${index + 1}] : en double');
+    }
+    targets.add(target);
+  }
+  return IdentifyNoteExercise(system: system, targets: targets);
+}
+
+/// Lit une cible `{ staff, measure, event }`, écrite en base 1 (« mesure 1,
+/// 2e note ») et convertie ici en index du code, une fois pour toutes.
+EventRef _target(YamlNode node, String path, System system) {
+  final fields = YamlFields.read(
+    node,
+    path: path,
+    required: {'measure', 'event'},
+    optional: {'staff'},
+  );
+  final staves = system.staves.toList();
+  final ids = staves.map((staff) => staff.id).nonNulls.join(', ');
+
+  final int staffIndex;
+  if (fields.node('staff') case final staffNode?) {
+    final id = fields.string('staff');
+    staffIndex = staves.indexWhere((staff) => staff.id == id);
+    if (staffIndex < 0) {
+      throw fields.error(
+        staffNode,
+        '${fields.name('staff')} : portée « $id » absente de l’ABC ($ids)',
+      );
+    }
+  } else if (staves.length > 1) {
+    throw fields.error(
+      node,
+      '$path : champ « staff » manquant, l’ABC a plusieurs portées ($ids)',
+    );
+  } else {
+    staffIndex = 0;
+  }
+
+  final measures = staves[staffIndex].measures;
+  if (measures.isEmpty) {
+    throw fields.error(node, '$path : la portée ne contient aucune note');
+  }
+  final measure = fields.integer('measure', min: 1, max: measures.length) - 1;
+  final events = measures[measure].events;
+  final event = fields.integer('event', min: 1, max: events.length) - 1;
+  return EventRef(staff: staffIndex, measure: measure, event: event);
 }

@@ -5,6 +5,7 @@
 ///
 /// Boîtes englobantes en interlignes, axe y vers le haut,
 /// origine sur la ligne de base (convention SMuFL).
+/// Ancres `null` si le glyphe n'en a pas.
 enum Glyph {
   /// Brace.
   brace(
@@ -24,6 +25,24 @@ enum Glyph {
 
   /// Whole (semibreve) notehead.
   noteheadWhole(codepoint: 0xE0A2, bBoxSW: (0.0, -0.5), bBoxNE: (1.688, 0.5)),
+
+  /// Half (minim) notehead.
+  noteheadHalf(
+    codepoint: 0xE0A3,
+    bBoxSW: (0.0, -0.5),
+    bBoxNE: (1.18, 0.5),
+    stemUpSE: (1.18, 0.168),
+    stemDownNW: (0.0, -0.168),
+  ),
+
+  /// Black notehead.
+  noteheadBlack(
+    codepoint: 0xE0A4,
+    bBoxSW: (0.0, -0.5),
+    bBoxNE: (1.18, 0.5),
+    stemUpSE: (1.18, 0.168),
+    stemDownNW: (0.0, -0.168),
+  ),
 
   /// Double flat.
   accidentalDoubleFlat(
@@ -58,9 +77,45 @@ enum Glyph {
     codepoint: 0xE263,
     bBoxSW: (0.0, -0.5),
     bBoxNE: (0.988, 0.508),
-  );
+  ),
 
-  new({required this.codepoint, required this.bBoxSW, required this.bBoxNE});
+  /// Time signature 0.
+  timeSig0(codepoint: 0xE080, bBoxSW: (0.08, -1.0), bBoxNE: (1.8, 1.004)),
+
+  /// Time signature 1.
+  timeSig1(codepoint: 0xE081, bBoxSW: (0.08, -1.0), bBoxNE: (1.256, 1.004)),
+
+  /// Time signature 2.
+  timeSig2(codepoint: 0xE082, bBoxSW: (0.08, -1.028), bBoxNE: (1.704, 1.016)),
+
+  /// Time signature 3.
+  timeSig3(codepoint: 0xE083, bBoxSW: (0.08, -1.004), bBoxNE: (1.604, 0.996)),
+
+  /// Time signature 4.
+  timeSig4(codepoint: 0xE084, bBoxSW: (0.08, -1.0), bBoxNE: (1.8, 1.004)),
+
+  /// Time signature 5.
+  timeSig5(codepoint: 0xE085, bBoxSW: (0.08, -1.004), bBoxNE: (1.532, 0.984)),
+
+  /// Time signature 6.
+  timeSig6(codepoint: 0xE086, bBoxSW: (0.08, -0.996), bBoxNE: (1.656, 1.004)),
+
+  /// Time signature 7.
+  timeSig7(codepoint: 0xE087, bBoxSW: (0.08, -1.0), bBoxNE: (1.684, 0.996)),
+
+  /// Time signature 8.
+  timeSig8(codepoint: 0xE088, bBoxSW: (0.08, -1.036), bBoxNE: (1.664, 1.036)),
+
+  /// Time signature 9.
+  timeSig9(codepoint: 0xE089, bBoxSW: (0.08, -0.996), bBoxNE: (1.656, 1.004));
+
+  new({
+    required this.codepoint,
+    required this.bBoxSW,
+    required this.bBoxNE,
+    this.stemUpSE,
+    this.stemDownNW,
+  });
 
   /// Codepoint dans la police.
   final int codepoint;
@@ -70,6 +125,12 @@ enum Glyph {
 
   /// Coin haut droit de la boîte englobante (x, y).
   final (double, double) bBoxNE;
+
+  /// Attache d'une hampe vers le haut (x, y).
+  final (double, double)? stemUpSE;
+
+  /// Attache d'une hampe vers le bas (x, y).
+  final (double, double)? stemDownNW;
 }
 
 /// Valeurs de gravure par défaut de Bravura, en interlignes.
@@ -85,4 +146,16 @@ abstract final class EngravingDefaults {
 
   /// `thinBarlineThickness`.
   static const thinBarlineThickness = 0.16;
+
+  /// `thickBarlineThickness`.
+  static const thickBarlineThickness = 0.5;
+
+  /// `barlineSeparation`.
+  static const barlineSeparation = 0.4;
+
+  /// `thinThickBarlineSeparation`.
+  static const thinThickBarlineSeparation = 0.4;
+
+  /// `stemThickness`.
+  static const stemThickness = 0.12;
 }

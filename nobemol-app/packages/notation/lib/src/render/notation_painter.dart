@@ -1,12 +1,19 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:notation/src/layout/draw_list.dart';
 import 'package:notation/src/layout/layout.dart';
+import 'package:notation/src/model/system.dart';
 import 'package:notation/src/render/draw_glyph.dart';
 
 /// Dessine un [SystemLayout]. Seule conversion des interlignes en pixels.
 class NotationPainter extends CustomPainter {
   /// Crée un painter. [staffSpace] est la taille d'un interligne en pixels.
-  new(this.layout, {required this.staffSpace, required this.color});
+  new(
+    this.layout, {
+    required this.staffSpace,
+    required this.color,
+    this.highlights = const {},
+  });
 
   /// Liste de dessin.
   final SystemLayout layout;
@@ -17,6 +24,9 @@ class NotationPainter extends CustomPainter {
   /// Couleur de la notation.
   final Color color;
 
+  /// Couleur propre à certains événements (note ciblée, correction).
+  final Map<EventRef, Color> highlights;
+
   /// Taille en pixels du dessin complet.
   Size get size =>
       Size(layout.bounds.width * staffSpace, layout.bounds.height * staffSpace);
@@ -24,15 +34,14 @@ class NotationPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final s = staffSpace;
-    final line = Paint()
-      ..color = color
-      ..strokeCap = StrokeCap.butt;
+    final line = Paint()..strokeCap = StrokeCap.butt;
 
     canvas
       ..save()
       ..translate(-layout.bounds.left * s, -layout.bounds.top * s);
 
     for (final command in layout.commands) {
+      final color = highlights[command.event] ?? this.color;
       switch (command) {
         case GlyphCommand():
           drawGlyph(
@@ -48,7 +57,9 @@ class NotationPainter extends CustomPainter {
           canvas.drawLine(
             Offset(command.x1 * s, command.y1 * s),
             Offset(command.x2 * s, command.y2 * s),
-            line..strokeWidth = command.thickness * s,
+            line
+              ..color = color
+              ..strokeWidth = command.thickness * s,
           );
       }
     }
@@ -60,5 +71,6 @@ class NotationPainter extends CustomPainter {
   bool shouldRepaint(NotationPainter oldDelegate) =>
       oldDelegate.layout != layout ||
       oldDelegate.staffSpace != staffSpace ||
-      oldDelegate.color != color;
+      oldDelegate.color != color ||
+      !mapEquals(oldDelegate.highlights, highlights);
 }

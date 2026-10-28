@@ -6,9 +6,6 @@ import 'package:notation/notation.dart';
 
 import 'package:nobemol/reading/note_reading.dart';
 
-/// Nombre de notes par session.
-const sessionLength = 20;
-
 /// Durée d'affichage de la correction avant la note suivante.
 const rightAnswerDelay = Duration(milliseconds: 400);
 const wrongAnswerDelay = Duration(milliseconds: 1200);
@@ -19,10 +16,10 @@ final randomProvider = Provider<Random>((ref) => Random());
 /// Horloge du chrono, remplaçable en test.
 final clockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
 
-/// Session de lecture en cours pour des paramètres d'exercice (point de
-/// départ ou leçon).
+/// Session de lecture en cours pour un exercice (point de départ ou
+/// leçon).
 final sessionProvider = NotifierProvider.autoDispose
-    .family<SessionNotifier, SessionState, NoteReadingParams>(
+    .family<SessionNotifier, SessionState, ReadingExercise>(
       SessionNotifier.new,
     );
 
@@ -65,19 +62,19 @@ class SessionState {
 }
 
 class SessionNotifier extends Notifier<SessionState> {
-  SessionNotifier(this.params);
+  SessionNotifier(this.exercise);
 
-  final NoteReadingParams params;
+  final ReadingExercise exercise;
 
-  late NoteGenerator _generator;
+  late QuestionSource _questions;
   Timer? _timer;
 
   @override
   SessionState build() {
-    _generator = NoteGenerator(params, ref.watch(randomProvider));
+    _questions = exercise.questions(ref.watch(randomProvider));
     ref.onDispose(() => _timer?.cancel());
     return SessionState(
-      question: _generator.next(),
+      question: _questions.next(),
       startedAt: ref.read(clockProvider)(),
     );
   }
@@ -95,7 +92,9 @@ class SessionNotifier extends Notifier<SessionState> {
       correct: current.correct + (right ? 1 : 0),
       choice: step,
       startedAt: current.startedAt,
-      finishedAt: answered == sessionLength ? ref.read(clockProvider)() : null,
+      finishedAt: answered == exercise.length
+          ? ref.read(clockProvider)()
+          : null,
     );
     _timer = Timer(right ? rightAnswerDelay : wrongAnswerDelay, _next);
   }
@@ -106,7 +105,7 @@ class SessionNotifier extends Notifier<SessionState> {
     state = SessionState(
       question: finished
           ? current.question
-          : _generator.next(previous: current.question),
+          : _questions.next(previous: current.question),
       phase: finished ? SessionPhase.finished : SessionPhase.asking,
       answered: current.answered,
       correct: current.correct,

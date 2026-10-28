@@ -1,7 +1,10 @@
 import 'package:notation/src/abc/abc_exception.dart';
 import 'package:notation/src/model/clef.dart';
+import 'package:notation/src/model/fraction.dart';
+import 'package:notation/src/model/key_signature.dart';
 import 'package:notation/src/model/pitch.dart';
 import 'package:notation/src/model/system.dart';
+import 'package:notation/src/model/time_signature.dart';
 
 /// Lit un morceau écrit dans le sous-ensemble ABC du moteur (`doc/abc.md`).
 ///
@@ -24,7 +27,16 @@ class _Voice {
   final int column;
 
   Clef? clef;
-  final notes = <Note>[];
+
+  /// Mesures fermées par une barre.
+  final measures = <Measure>[];
+
+  /// Événements de la mesure en cours.
+  final events = <Event>[];
+
+  /// Position de la dernière note, pour une mesure finale sans barre.
+  int lastLine = 0;
+  int lastColumn = 0;
 }
 
 /// Élément de `%%score` : une voix seule ou des voix sous accolade.
@@ -34,6 +46,30 @@ final _field = RegExp('^([A-Za-z]):');
 final _voiceId = RegExp(r'^[A-Za-z0-9_]+$');
 final _voiceIdPrefix = RegExp('[A-Za-z0-9_]+');
 final _token = RegExp(r'\S+');
+final _digits = RegExp('[0-9]+');
+final _meter = RegExp(r'^([0-9]+)/([0-9]+)$');
+final _unitLength = RegExp(r'^1/([0-9]+)$');
+final _keyName = RegExp(r'^([A-G])([#b]?)(m?)$');
+
+/// Dénominateurs acceptés dans M: et L:.
+const _denominators = {1, 2, 4, 8, 16};
+
+/// Dièses (positif) ou bémols (négatif) de la tonalité majeure de chaque
+/// lettre.
+const Map<String, int> _majorFifths = {
+  'F': -1,
+  'C': 0,
+  'G': 1,
+  'D': 2,
+  'A': 3,
+  'E': 4,
+  'B': 5,
+};
+
+/// Figures acceptées, par durée en rondes.
+final Map<Fraction, NoteValue> _noteValues = {
+  for (final value in NoteValue.values) value.duration: value,
+};
 
 const Map<String, Clef> _clefs = {
   'treble': Clef.treble,
@@ -62,6 +98,15 @@ class _Parser {
 
   /// Clé de `K:`, pour les voix qui n'en donnent pas.
   Clef? _keyClef;
+
+  /// Armure de `K:`.
+  KeySignature _keySignature = KeySignature.none;
+
+  /// Chiffrage de `M:`, `null` sans mesures.
+  TimeSignature? _time;
+
+  /// Unité de temps de `L:`, obligatoire dès qu'il y a une note.
+  Fraction? _unit;
 
   /// Voix dans l'ordre d'apparition.
   final _voices = <String?, _Voice>{};
@@ -147,6 +192,14 @@ class _Parser {
       case 'V':
         _voiceField(value);
         return _Phase.header;
+      case 'M':
+        if (_time != null) throw _error('M: en double', 1);
+        _time = _meterField(value);
+        return _Phase.header;
+      case 'L':
+        if (_unit != null) throw _error('L: en double', 1);
+        _unit = _unitField(value);
+        return _Phase.header;
       case 'T':
         throw _error(
           'champ T: non supporté : le titre va dans le fichier de la leçon',
@@ -173,8 +226,8 @@ class _Parser {
   }
 
   String _unsupportedField(String field) => switch (field) {
-    'M' => 'champ M: (mesure) non supporté (étape 3)',
-    'L' => 'champ L: (unité de temps) non supporté (étape 3)',
+    'M' => "changement de chiffrage non supporté : M: va dans l'en-tête",
+    'L' => "changement d'unité de temps non supporté : L: va dans l'en-tête",
     'X' => 'un seul X: par morceau',
     _ => 'champ $field: non supporté',
   };
@@ -254,12 +307,7 @@ class _Parser {
     if (key.group(0)!.startsWith('clef=')) {
       throw _error('tonalité attendue avant la clé (K:C clef=…)', keyColumn);
     }
-    if (key.group(0) != 'C') {
-      throw _error(
-        'armure « ${key.group(0)} » non supportée (étape 3)',
-        keyColumn,
-      );
-    }
+    _keySignature = _keySignatureOf(key.group(0)!, keyColumn);
     for (final token in tokens.skip(1)) {
       if (_keyClef != null) {
         throw _error('une seule clé par champ K:', token.start + 3);
@@ -274,6 +322,73 @@ class _Parser {
     for (final voice in _voices.values) {
       _checkInScore(voice.id!, line: voice.line, column: voice.column);
     }
+  }
+
+  TimeSignature _meterField(String value) {
+    final text = value.trim();
+    final column = value.indexOf(_token) + 3;
+    final match = _meter.firstMatch(text);
+    if (match == null) {
+      throw _error(switch (text) {
+        '' => 'chiffrage attendu après M: (M:4/4)',
+        'C' => 'M:C non supporté : écrire M:4/4',
+        'C|' => 'M:C| non supporté : écrire M:2/2',
+        'none' => 'M:none non supporté : sans mesures, omettre M:',
+        _ => 'chiffrage « $text » invalide (M:3/4)',
+      }, column);
+    }
+    final beats = int.parse(match.group(1)!);
+    final beatUnit = int.parse(match.group(2)!);
+    if (beats < 1 || beats > 12) {
+      throw _error('chiffre du haut de 1 à 12 attendu', column);
+    }
+    if (!_denominators.contains(beatUnit)) {
+      throw _error('chiffre du bas : 1, 2, 4, 8 ou 16', column);
+    }
+    return TimeSignature(beats, beatUnit);
+  }
+
+  Fraction _unitField(String value) {
+    final text = value.trim();
+    final denominator = int.tryParse(
+      _unitLength.firstMatch(text)?.group(1) ?? '',
+    );
+    if (denominator == null || !_denominators.contains(denominator)) {
+      throw _error(
+        'unité de temps « $text » invalide : 1/1, 1/2, 1/4, 1/8 ou 1/16',
+        value.indexOf(_token) + 3,
+      );
+    }
+    return Fraction(1, denominator);
+  }
+
+  /// Armure de la tonalité [name] : `G` (sol majeur), `Bbm` (si bémol
+  /// mineur)...
+  KeySignature _keySignatureOf(String name, int column) {
+    final match = _keyName.firstMatch(name);
+    if (match == null) {
+      throw _error(
+        'tonalité « $name » non supportée : '
+        'majeure (G, Bb, F#) ou mineure (Em, Bbm)',
+        column,
+      );
+    }
+    final fifths =
+        _majorFifths[match.group(1)]! +
+        switch (match.group(2)) {
+          '#' => 7,
+          'b' => -7,
+          _ => 0,
+        } -
+        (match.group(3) == 'm' ? 3 : 0);
+    if (fifths.abs() > 7) {
+      throw _error(
+        'tonalité « $name » : plus de 7 altérations, '
+        "écrire l'enharmonique",
+        column,
+      );
+    }
+    return KeySignature(fifths);
   }
 
   /// Lit un champ `V:` et renvoie la voix désignée.
@@ -352,7 +467,12 @@ class _Parser {
         index++;
         continue;
       }
+      if (char == '|') {
+        index = _barline(voice, content, index);
+        continue;
+      }
 
+      final noteColumn = index + 1;
       final (accidental, length) = _accidental(content, index);
       index += length;
       if (index >= content.length || !_isNote(content[index])) {
@@ -384,10 +504,135 @@ class _Parser {
         index++;
       }
 
-      voice.notes.add(
-        Note(Pitch(_steps[upper]!, octave, accidental: accidental)),
+      final (multiplier, end) = _duration(content, index);
+      index = end;
+      voice
+        ..events.add(
+          Note(
+            Pitch(_steps[upper]!, octave, accidental: accidental),
+            value: _noteValue(multiplier, noteColumn),
+          ),
+        )
+        ..lastLine = _line
+        ..lastColumn = noteColumn;
+    }
+  }
+
+  /// Lit la barre qui commence à [index], ferme la mesure en cours et
+  /// renvoie l'index qui suit la barre.
+  int _barline(_Voice voice, String content, int index) {
+    final column = index + 1;
+    final next = index + 1 < content.length ? content[index + 1] : '';
+    final (barline, length) = switch (next) {
+      '|' => (Barline.lightLight, 2),
+      ']' => (Barline.lightHeavy, 2),
+      ':' => throw _error('reprise non supportée', column),
+      _ when int.tryParse(next) != null => throw _error(
+        'fin alternative non supportée',
+        column,
+      ),
+      _ => (Barline.regular, 1),
+    };
+
+    final time = _time;
+    if (time == null) {
+      throw _error(
+        "barre de mesure sans chiffrage : ajouter M: dans l'en-tête",
+        column,
       );
     }
+    if (voice.events.isEmpty) {
+      throw _error(
+        voice.measures.isEmpty
+            ? 'barre de mesure avant la première note'
+            : 'mesure vide (silences : étape 4)',
+        column,
+      );
+    }
+    _closeMeasure(voice, time, barline, line: _line, column: column);
+    return index + length;
+  }
+
+  /// Ajoute la mesure en cours de [voice], après avoir vérifié sa durée.
+  void _closeMeasure(
+    _Voice voice,
+    TimeSignature time,
+    Barline? barline, {
+    required int line,
+    required int column,
+  }) {
+    final measure = Measure(List.unmodifiable(voice.events), barline: barline);
+    final expected = time.measureDuration;
+    if (measure.duration != expected) {
+      final problem = measure.duration < expected
+          ? 'incomplète'
+          : 'trop longue';
+      throw AbcException(
+        'mesure ${voice.measures.length + 1} $problem : '
+        '${_inBeats(measure.duration, time)} au lieu de $time',
+        line: line,
+        column: column,
+      );
+    }
+    voice.measures.add(measure);
+    voice.events.clear();
+  }
+
+  /// Multiplicateur de durée (`2`, `/2`, `3/2`, `/`, `//`) à [index], et
+  /// index qui le suit.
+  (Fraction, int) _duration(String content, int index) {
+    var end = index;
+    var numerator = 1;
+    final digits = _digits.matchAsPrefix(content, end);
+    if (digits != null) {
+      numerator = int.parse(digits.group(0)!);
+      if (numerator == 0) throw _error('durée nulle', index + 1);
+      end = digits.end;
+    }
+
+    var slashes = 0;
+    while (end < content.length && content[end] == '/') {
+      slashes++;
+      end++;
+    }
+    if (slashes == 0) return (Fraction(numerator), end);
+
+    final denominator = _digits.matchAsPrefix(content, end);
+    if (denominator == null) {
+      return (Fraction(numerator, 1 << slashes), end);
+    }
+    final value = int.parse(denominator.group(0)!);
+    if (slashes > 1 || value == 0) {
+      throw _error(
+        'durée « ${content.substring(index, denominator.end)} » invalide',
+        index + 1,
+      );
+    }
+    return (Fraction(numerator, value), denominator.end);
+  }
+
+  /// Figure d'une note de durée [multiplier] × `L:`.
+  NoteValue _noteValue(Fraction multiplier, int column) {
+    final unit = _unit;
+    if (unit == null) {
+      throw _error(
+        "unité de temps manquante : ajouter L: dans l'en-tête (L:1/4)",
+        column,
+      );
+    }
+    final duration = unit * multiplier;
+    if (_noteValues[duration] case final value?) return value;
+
+    final numerator = duration.reduced.numerator;
+    throw _error(switch (duration) {
+      _ when numerator == 3 || numerator == 7 =>
+        'note pointée non supportée (étape 4)',
+      _ when duration < NoteValue.quarter.duration =>
+        'croche et valeurs plus courtes non supportées (étape 4)',
+      _ when duration > NoteValue.whole.duration =>
+        "durée plus longue qu'une ronde non supportée",
+      _ => 'durée de $duration de ronde non supportée',
+    }, column);
   }
 
   /// Voix unique d'un morceau sans `V:`.
@@ -402,13 +647,17 @@ class _Parser {
   }
 
   System _system() {
+    _closeVoices();
+
     // Une voix de %%score sans V: ni musique donne une portée vide.
     Staff staff(String? id) {
       final voice = _voices[id];
       return Staff(
         id: id,
         clef: voice?.clef ?? _keyClef ?? Clef.treble,
-        notes: List.unmodifiable(voice?.notes ?? const <Note>[]),
+        key: _keySignature,
+        time: _time,
+        measures: List.unmodifiable(voice?.measures ?? const <Measure>[]),
       );
     }
 
@@ -424,6 +673,51 @@ class _Parser {
     return System([
       for (final id in _voices.keys) StaffGroup([staff(id)]),
     ]);
+  }
+
+  /// Ferme la dernière mesure de chaque voix, puis vérifie que les voix
+  /// s'alignent : même nombre de mesures, mêmes barres.
+  void _closeVoices() {
+    final time = _time;
+    for (final voice in _voices.values) {
+      if (voice.events.isEmpty) continue;
+      if (time == null) {
+        voice.measures.add(Measure(List.unmodifiable(voice.events)));
+        voice.events.clear();
+      } else {
+        _closeMeasure(
+          voice,
+          time,
+          null,
+          line: voice.lastLine,
+          column: voice.lastColumn,
+        );
+      }
+    }
+
+    // Une voix sans musique donne une portée vide, sans mesure.
+    final voices = _voices.values.where((voice) => voice.measures.isNotEmpty);
+    final reference = voices.firstOrNull;
+    if (reference == null) return;
+    for (final voice in voices.skip(1)) {
+      AbcException error(String message) =>
+          AbcException(message, line: voice.line, column: voice.column);
+      if (voice.measures.length != reference.measures.length) {
+        throw error(
+          'la voix « ${voice.id} » a ${voice.measures.length} mesure(s) et '
+          '« ${reference.id} » en a ${reference.measures.length} : '
+          'les voix doivent avoir le même nombre de mesures',
+        );
+      }
+      for (final (index, measure) in voice.measures.indexed) {
+        if (measure.barline != reference.measures[index].barline) {
+          throw error(
+            'mesure ${index + 1} : la voix « ${voice.id} » ne finit pas '
+            'par la même barre que « ${reference.id} »',
+          );
+        }
+      }
+    }
   }
 
   AbcException _error(String message, int column) =>
@@ -450,18 +744,26 @@ bool _isNote(String char) => _steps.containsKey(char.toUpperCase());
   };
 }
 
+/// Écrit [duration] dans l'unité du chiffrage quand c'est possible : `4/8`
+/// en 6/8, plutôt que `1/2`.
+String _inBeats(Fraction duration, TimeSignature time) {
+  final beats = duration * Fraction(time.beatUnit);
+  return beats.isInteger ? '$beats/${time.beatUnit}' : '$duration';
+}
+
 /// Message pour un caractère hors du sous-ensemble, avec l'étape qui
 /// l'ajoutera.
 String _unexpected(String content, int index) {
   final char = content[index];
   final next = index + 1 < content.length ? content[index + 1] : '';
   return switch (char) {
-    '|' || ':' => 'barre de mesure non supportée (étape 3)',
-    '[' when next == '|' => 'barre de mesure non supportée (étape 3)',
+    ':' => 'reprise non supportée',
+    '[' when next == '|' => 'barre « [| » non supportée',
     '[' when _field.hasMatch(content.substring(index + 1)) =>
       'champ dans la ligne non supporté',
     '[' => 'accord non supporté (plus tard)',
-    '/' => 'durée non supportée (étape 3)',
+    ']' => 'caractère inattendu « ] »',
+    '/' => 'durée sans note : pas d’espace entre une note et sa durée',
     'z' || 'Z' || 'x' || 'X' => 'silence non supporté (étape 4)',
     '-' => 'liaison de prolongation non supportée (étape 4)',
     '>' || '<' => 'rythme pointé non supporté (étape 4)',
@@ -470,7 +772,8 @@ String _unexpected(String content, int index) {
     '{' || '}' => "note d'ornement non supportée",
     '"' => 'annotation ou accord chiffré non supporté',
     r'\' => 'continuation de ligne non supportée',
-    _ when int.tryParse(char) != null => 'durée non supportée (étape 3)',
+    _ when int.tryParse(char) != null =>
+      'durée sans note : pas d’espace entre une note et sa durée',
     _ => 'caractère inattendu « $char »',
   };
 }

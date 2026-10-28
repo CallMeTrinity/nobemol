@@ -23,6 +23,14 @@
   title: Lire la grande portée
   requires: [note-reading.bass, note-reading.ledger-lines]
 
+- id: note-reading.phrases
+  title: Lire une courte phrase en mesures
+  requires: [note-reading.treble]
+
+- id: note-reading.key-signatures
+  title: Lire avec une armure
+  requires: [note-reading.phrases, note-reading.accidentals]
+
 - id: note-reading.alto
   title: Lire en clé d'ut 3e ligne
   requires: [note-reading.treble]

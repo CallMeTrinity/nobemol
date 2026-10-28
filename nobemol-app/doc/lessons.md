@@ -23,6 +23,7 @@ theory:                          # au moins une page
       La note posée sur cette ligne est un sol.
     abc: |                       # facultatif
       X:1
+      L:1/1                      # obligatoire dès qu'il y a une note
       K:C
       G
 exercise:
@@ -49,16 +50,42 @@ Tout champ inconnu est une erreur : une faute de frappe (`ledger_lines`) ne pass
 
 | `type` | Champs | Exercice |
 |---|---|---|
-| `note-reading` | `staff`, `ledger-lines`, `accidentals` | Lecture de notes paramétrique, la même que les points de départ de l'accueil. |
+| `note-reading` | `staff`, `ledger-lines`, `accidentals` | Lecture de notes paramétrique, la même que les points de départ de l'accueil. 20 notes tirées au hasard. |
+| `identify-note` | `abc`, `targets` | Une phrase écrite en ABC. Chaque cible est colorée à son tour, et il faut la nommer. Une question par cible, dans l'ordre. |
 
-`identify-note` (une note ciblée dans l'ABC) arrive à l'étape 3, avec les mesures.
+### `identify-note`
+
+```yaml
+exercise:
+  type: identify-note
+  abc: |
+    X:1
+    %%score {RH LH}
+    M:3/4
+    L:1/4
+    K:G
+    V:RH
+    B2 c | d2 c |]
+    V:LH clef=bass
+    G, D, B, | G,2 D, |]
+  targets:
+    - { staff: RH, measure: 1, event: 2 }   # do, 2e note de la mesure 1
+    - { staff: LH, measure: 2, event: 1 }
+```
+
+- `staff` : identifiant de la voix (`V:`). Facultatif s'il n'y a qu'une portée, obligatoire sinon.
+- `measure`, `event` : comptés **à partir de 1**. `event` compte les notes de la mesure, de gauche à droite.
+- Le chargement vérifie que chaque cible existe (portée, mesure, note) et qu'elle n'est pas en double. La CI échoue sinon.
+- La réponse est le nom de la note, sans l'altération : un fa dièse par l'armure se nomme fa.
+- Les cibles peuvent sauter des notes et suivre n'importe quel ordre : la note demandée est colorée.
 
 ## Conventions
 
 - **Pièges YAML** : `>-` replie les lignes en un seul paragraphe, `|` garde les retours à la ligne (obligatoire pour l'ABC). Un texte qui contient `: ` se met entre guillemets.
-- **ABC** : pas de ligne vide dans un bloc `abc` (en ABC, elle termine le morceau).
+- **ABC** : pas de ligne vide dans un bloc `abc` (en ABC, elle termine le morceau). `L:` est obligatoire dès qu'il y a une note : `L:1/1` pour des rondes sans rythme.
+- **Phrases** : 3 ou 4 mesures au plus. Elles s'affichent sur une seule ligne, à la largeur de l'écran : au-delà, les notes deviennent trop petites.
 - **Noms de notes** : en do-ré-mi dans les textes. L'ABC reste en lettres.
-- **Cibles** (`identify-note`, étape 3) : `measure` et `event` comptent **à partir de 1**, comme on compte les mesures en musique (« mesure 1, 2e note »). La conversion en index du code se fait au chargement.
+- **Cibles** (`identify-note`) : `measure` et `event` comptent **à partir de 1**, comme on compte les mesures en musique (« mesure 1, 2e note »). La conversion en index du code se fait au chargement.
 
 ## Ordre des leçons
 

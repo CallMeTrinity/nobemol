@@ -10,5 +10,8 @@ export 'src/layout/draw_list.dart';
 export 'src/layout/glyph.g.dart';
 export 'src/layout/layout.dart';
 export 'src/model/clef.dart';
+export 'src/model/fraction.dart';
+export 'src/model/key_signature.dart';
 export 'src/model/pitch.dart';
 export 'src/model/system.dart';
+export 'src/model/time_signature.dart';

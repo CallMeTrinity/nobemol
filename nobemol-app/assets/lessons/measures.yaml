@@ -1,0 +1,59 @@
+id: measures
+title: Mesures et figures de notes
+skills: [note-reading.phrases]
+level: 2
+theory:
+  - text: >-
+      La musique se découpe en mesures, séparées par des barres verticales.
+      La double barre, fine puis épaisse, marque la fin du morceau.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      C D E F | G A B c |]
+  - text: >-
+      La forme d'une note donne sa durée. La ronde, sans hampe, dure
+      quatre temps. La blanche, creuse avec une hampe, en dure deux.
+      La noire, pleine, en dure un.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      G4 | G2 G2 | G G G G |]
+  - text: >-
+      Le chiffrage suit la clé. Le chiffre du haut donne le nombre de
+      temps par mesure. Ici, 3/4 : trois noires par mesure.
+    abc: |
+      X:1
+      M:3/4
+      L:1/4
+      K:C
+      E F G | c2 B | A2 G |]
+  - text: >-
+      La hampe monte à droite de la tête quand la note est en bas de la
+      portée, et descend à gauche quand elle est en haut. Elle ne change
+      pas le nom de la note.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      E F e f |]
+exercise:
+  type: identify-note
+  abc: |
+    X:1
+    M:4/4
+    L:1/4
+    K:C
+    E G c2 | B A G2 | F D C2 |]
+  targets:
+    - { measure: 1, event: 1 }
+    - { measure: 1, event: 3 }
+    - { measure: 2, event: 1 }
+    - { measure: 2, event: 3 }
+    - { measure: 3, event: 1 }
+    - { measure: 3, event: 2 }
+    - { measure: 3, event: 3 }

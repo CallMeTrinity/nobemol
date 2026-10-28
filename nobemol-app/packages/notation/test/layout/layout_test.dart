@@ -1,9 +1,22 @@
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notation/notation.dart';
 
 void main() {
   SystemLayout layoutNote(Pitch pitch, {Clef clef = Clef.treble}) =>
-      layoutSystem(System.single(Staff(clef: clef, notes: [Note(pitch)])));
+      layoutSystem(
+        System.single(
+          Staff(
+            clef: clef,
+            measures: [
+              Measure([Note(pitch)]),
+            ],
+          ),
+        ),
+      );
+
+  System parse(String abc) => parseAbc('X:1\n$abc');
 
   Iterable<GlyphCommand> glyphs(SystemLayout layout, Glyph glyph) =>
       layout.commands.whereType<GlyphCommand>().where((c) => c.glyph == glyph);
@@ -98,7 +111,11 @@ void main() {
   group('grande portée', () {
     final layout = layoutSystem(
       System([
-        StaffGroup.grand(lower: const [Note(Pitch(DiatonicStep.c, 3))]),
+        StaffGroup.grand(
+          lower: const [
+            Measure([Note(Pitch(DiatonicStep.c, 3))]),
+          ],
+        ),
       ]),
     );
 
@@ -137,18 +154,190 @@ void main() {
 
   test('reserveAbove et reserveBelow fixent la hauteur minimale', () {
     final low = layoutSystem(
-      System.single(
-        const Staff(clef: Clef.treble, notes: [Note(Pitch(DiatonicStep.c, 4))]),
-      ),
+      parse('L:1/1\nK:C\nC\n'),
       options: const LayoutOptions(reserveAbove: 3, reserveBelow: 3),
     );
     final high = layoutSystem(
-      System.single(
-        const Staff(clef: Clef.treble, notes: [Note(Pitch(DiatonicStep.a, 5))]),
-      ),
+      parse('L:1/1\nK:C\na\n'),
       options: const LayoutOptions(reserveAbove: 3, reserveBelow: 3),
     );
     expect(low.bounds.top, high.bounds.top);
     expect(low.bounds.bottom, high.bounds.bottom);
+  });
+
+  group('hampes', () {
+    LineCommand stem(SystemLayout layout) => layout.commands
+        .whereType<LineCommand>()
+        .singleWhere((c) => c.thickness == EngravingDefaults.stemThickness);
+
+    test('sous la ligne du milieu : vers le haut, à droite de la tête', () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\nG\n'));
+      final head = glyphs(layout, Glyph.noteheadBlack).single;
+      final line = stem(layout);
+      expect(line.x1, closeTo(head.bounds.right, 0.1));
+      expect(line.y2, lessThan(line.y1));
+      expect(line.y1 - line.y2, closeTo(3.5 - 0.168, 1e-9));
+    });
+
+    test('sur la ligne du milieu : vers le bas, à gauche de la tête', () {
+      final layout = layoutSystem(parse('L:1/2\nK:C\nB\n'));
+      final head = glyphs(layout, Glyph.noteheadHalf).single;
+      final line = stem(layout);
+      expect(line.x1, closeTo(head.bounds.left, 0.1));
+      expect(line.y2, greaterThan(line.y1));
+    });
+
+    test('loin de la portée : la hampe rejoint la ligne du milieu', () {
+      final line = stem(layoutSystem(parse("L:1/4\nK:C\nc'\n")));
+      // Do6 : deux lignes supplémentaires au-dessus, hampe vers le bas
+      // jusqu'à la 3e ligne (y = 2).
+      expect(line.y2, 2);
+    });
+
+    test('pas de hampe sur une ronde', () {
+      final layout = layoutSystem(parse('L:1/1\nK:C\nG\n'));
+      expect(
+        layout.commands.whereType<LineCommand>().where(
+          (c) => c.thickness == EngravingDefaults.stemThickness,
+        ),
+        isEmpty,
+      );
+    });
+  });
+
+  group('armure', () {
+    List<double> sharps(SystemLayout layout) =>
+        glyphs(layout, Glyph.accidentalSharp).map((g) => g.y).toList();
+    List<double> flats(SystemLayout layout) =>
+        glyphs(layout, Glyph.accidentalFlat).map((g) => g.y).toList();
+
+    // y = 4 - position / 2 : la ligne du haut est à y = 0.
+    test('clé de sol : fa#5, do#5, sol#5', () {
+      expect(sharps(layoutSystem(parse('K:A\n'))), [0, 1.5, -0.5]);
+    });
+
+    test('clé de sol : sib4, mib5, lab4', () {
+      expect(flats(layoutSystem(parse('K:Eb\n'))), [2, 0.5, 2.5]);
+    });
+
+    test('clé de fa : mêmes notes, deux octaves plus bas', () {
+      expect(sharps(layoutSystem(parse('K:A clef=bass\n'))), [1, 2.5, 0.5]);
+      expect(flats(layoutSystem(parse('K:Eb clef=bass\n'))), [3, 1.5, 3.5]);
+    });
+
+    test("clé d'ut 4e ligne : les dièses commencent en bas", () {
+      // fa3 sur la 2e ligne (position 2), puis do4 (6), sol3 (3).
+      expect(sharps(layoutSystem(parse('K:A clef=tenor\n'))), [3, 1, 2.5]);
+    });
+
+    test('les altérations se suivent de gauche à droite, après la clé', () {
+      final layout = layoutSystem(parse('K:C#\n'));
+      final xs = glyphs(layout, Glyph.accidentalSharp).map((g) => g.x).toList();
+      expect(xs, hasLength(7));
+      expect(xs, orderedEquals([...xs]..sort()));
+      expect(
+        glyphs(layout, Glyph.accidentalSharp).first.bounds.left,
+        greaterThan(glyphs(layout, Glyph.gClef).single.bounds.right),
+      );
+    });
+  });
+
+  test('chiffrage : haut sur la 4e ligne, bas sur la 2e', () {
+    final layout = layoutSystem(parse('M:3/4\nK:C\n'));
+    expect(glyphs(layout, Glyph.timeSig3).single.y, 1);
+    expect(glyphs(layout, Glyph.timeSig4).single.y, 3);
+  });
+
+  test('chiffrage à deux chiffres : centré au-dessus du chiffre du bas', () {
+    final layout = layoutSystem(parse('M:12/8\nK:C\n'));
+    final top = [
+      ...glyphs(layout, Glyph.timeSig1),
+      ...glyphs(layout, Glyph.timeSig2),
+    ].map((g) => g.bounds).reduce((a, b) => a.union(b));
+    final bottom = glyphs(layout, Glyph.timeSig8).single.bounds;
+    expect(
+      (top.left + top.right) / 2,
+      closeTo((bottom.left + bottom.right) / 2, 1e-9),
+    );
+  });
+
+  group('colonnes temporelles', () {
+    final layout = layoutSystem(
+      parse(
+        '%%score {RH LH}\nM:2/4\nL:1/4\nK:C\n'
+        'V:RH\nc2 | ^c d |]\n'
+        'V:LH clef=bass\nC, D, | E,2 |]\n',
+      ),
+    );
+    List<double> heads(Glyph glyph) =>
+        glyphs(layout, glyph).map((g) => g.x).toList();
+
+    test('les notes qui commencent ensemble sont alignées', () {
+      final black = heads(Glyph.noteheadBlack);
+      final half = heads(Glyph.noteheadHalf);
+      // RH : c2 (blanche), puis ^c d. LH : C, D, puis E,2 (blanche).
+      expect(half[0], black[2]); // temps 1 : c2 et C,
+      expect(black[0], half[1]); // mesure 2 : ^c et E,2
+    });
+
+    test("l'altération pousse la colonne entière, sur les deux portées", () {
+      final sharp = glyphs(layout, Glyph.accidentalSharp).single.bounds;
+      final barline = layout.commands.whereType<LineCommand>().firstWhere(
+        (c) => c.y2 == 14 && c.x1 > 1,
+      );
+      // Une barre, un interligne, l'altération, puis les têtes alignées.
+      expect(sharp.left, closeTo(barline.x1 + barline.thickness / 2 + 1, 1e-9));
+      expect(heads(Glyph.noteheadHalf)[1], heads(Glyph.noteheadBlack)[0]);
+    });
+
+    test('les barres traversent la grande portée', () {
+      final barlines = layout.commands.whereType<LineCommand>().where(
+        (c) => c.x1 == c.x2 && c.y1 == 0 && c.y2 == 14,
+      );
+      // Barre initiale, barre simple, barre finale (fine + épaisse).
+      expect(barlines, hasLength(4));
+    });
+
+    test('la portée finit sur la barre finale', () {
+      final thick = layout.commands.whereType<LineCommand>().singleWhere(
+        (c) => c.thickness == EngravingDefaults.thickBarlineThickness,
+      );
+      final staffLine = layout.commands.whereType<LineCommand>().firstWhere(
+        (c) => c.thickness == EngravingDefaults.staffLineThickness,
+      );
+      expect(thick.x1 + thick.thickness / 2, staffLine.x2);
+    });
+  });
+
+  test('la place suit la durée : √2 de plus à chaque doublement', () {
+    final layout = layoutSystem(parse('L:1/4\nK:C\nC4 D2 E F\n'));
+    final heads = layout.commands
+        .whereType<GlyphCommand>()
+        .where((c) => c.glyph.name.startsWith('notehead'))
+        .map((c) => c.x)
+        .toList();
+    final whole = heads[1] - heads[0];
+    final half = heads[2] - heads[1];
+    final quarter = heads[3] - heads[2];
+    expect(quarter, 2.75);
+    expect(half / quarter, closeTo(math.sqrt2, 1e-9));
+    expect(whole / half, closeTo(math.sqrt2, 1e-9));
+  });
+
+  test('chaque note désigne son événement', () {
+    final layout = layoutSystem(parse('M:2/4\nL:1/4\nK:C\n^C D | E2 |\n'));
+    final tagged = layout.commands.where((c) => c.event != null);
+    expect(tagged.map((c) => c.event).toSet(), {
+      const EventRef(staff: 0, measure: 0, event: 0),
+      const EventRef(staff: 0, measure: 0, event: 1),
+      const EventRef(staff: 0, measure: 1, event: 0),
+    });
+    // Do4 : tête, dièse et hampe, pas la ligne supplémentaire.
+    expect(
+      tagged.where(
+        (c) => c.event == const EventRef(staff: 0, measure: 0, event: 0),
+      ),
+      hasLength(3),
+    );
   });
 }

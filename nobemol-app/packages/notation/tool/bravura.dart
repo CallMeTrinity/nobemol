@@ -23,18 +23,24 @@ const _glyphNamesUrl =
 const _output = 'lib/src/layout/glyph.g.dart';
 
 /// Glyphes utilisés par le moteur, par nom SMuFL.
-const _glyphs = [
+final List<String> _glyphs = [
   'brace',
   'gClef',
   'cClef',
   'fClef',
   'noteheadWhole',
+  'noteheadHalf',
+  'noteheadBlack',
   'accidentalDoubleFlat',
   'accidentalFlat',
   'accidentalNatural',
   'accidentalSharp',
   'accidentalDoubleSharp',
+  for (var digit = 0; digit <= 9; digit++) 'timeSig$digit',
 ];
+
+/// Points d'ancrage utilisés par le moteur, s'ils existent pour le glyphe.
+const _anchors = ['stemUpSE', 'stemDownNW'];
 
 /// Valeurs de gravure par défaut utilisées par le moteur.
 const _engravingDefaults = [
@@ -42,6 +48,10 @@ const _engravingDefaults = [
   'legerLineThickness',
   'legerLineExtension',
   'thinBarlineThickness',
+  'thickBarlineThickness',
+  'barlineSeparation',
+  'thinThickBarlineSeparation',
+  'stemThickness',
 ];
 
 Future<void> main() async {
@@ -78,6 +88,7 @@ Map<String, dynamic> _json(List<int> bytes) =>
 
 String _generate(Map<String, dynamic> metadata, Map<String, dynamic> names) {
   final bBoxes = metadata['glyphBBoxes'] as Map<String, dynamic>;
+  final anchors = metadata['glyphsWithAnchors'] as Map<String, dynamic>;
   final defaults = metadata['engravingDefaults'] as Map<String, dynamic>;
 
   final out = StringBuffer()
@@ -88,6 +99,7 @@ String _generate(Map<String, dynamic> metadata, Map<String, dynamic> names) {
     ..writeln('///')
     ..writeln('/// Boîtes englobantes en interlignes, axe y vers le haut,')
     ..writeln('/// origine sur la ligne de base (convention SMuFL).')
+    ..writeln("/// Ancres `null` si le glyphe n'en a pas.")
     ..writeln('enum Glyph {');
 
   for (final name in _glyphs) {
@@ -101,8 +113,17 @@ String _generate(Map<String, dynamic> metadata, Map<String, dynamic> names) {
       ..writeln('  $name(')
       ..writeln('    codepoint: 0x$codepoint,')
       ..writeln('    bBoxSW: (${_double(sw[0])}, ${_double(sw[1])}),')
-      ..writeln('    bBoxNE: (${_double(ne[0])}, ${_double(ne[1])}),')
-      ..writeln('  ),');
+      ..writeln('    bBoxNE: (${_double(ne[0])}, ${_double(ne[1])}),');
+    final glyphAnchors = anchors[name] as Map<String, dynamic>?;
+    for (final anchor in _anchors) {
+      final point = (glyphAnchors?[anchor] as List?)?.cast<num>();
+      if (point != null) {
+        out.writeln(
+          '    $anchor: (${_double(point[0])}, ${_double(point[1])}),',
+        );
+      }
+    }
+    out.writeln('  ),');
   }
 
   out
@@ -112,6 +133,8 @@ String _generate(Map<String, dynamic> metadata, Map<String, dynamic> names) {
     ..writeln('    required this.codepoint,')
     ..writeln('    required this.bBoxSW,')
     ..writeln('    required this.bBoxNE,')
+    ..writeln('    this.stemUpSE,')
+    ..writeln('    this.stemDownNW,')
     ..writeln('  });')
     ..writeln()
     ..writeln('  /// Codepoint dans la police.')
@@ -122,6 +145,12 @@ String _generate(Map<String, dynamic> metadata, Map<String, dynamic> names) {
     ..writeln()
     ..writeln('  /// Coin haut droit de la boîte englobante (x, y).')
     ..writeln('  final (double, double) bBoxNE;')
+    ..writeln()
+    ..writeln("  /// Attache d'une hampe vers le haut (x, y).")
+    ..writeln('  final (double, double)? stemUpSE;')
+    ..writeln()
+    ..writeln("  /// Attache d'une hampe vers le bas (x, y).")
+    ..writeln('  final (double, double)? stemDownNW;')
     ..writeln('}')
     ..writeln()
     ..writeln('/// Valeurs de gravure par défaut de Bravura, en interlignes.')

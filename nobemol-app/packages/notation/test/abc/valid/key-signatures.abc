@@ -1,0 +1,7 @@
+% attendu : A:treble 2#() B:bass 2#() C:alto 2#()
+% L'armure vaut pour toutes les voix. Si mineur et ré majeur : 2 dièses.
+X:1
+V:A
+V:B clef=bass
+V:C clef=alto
+K:Bm

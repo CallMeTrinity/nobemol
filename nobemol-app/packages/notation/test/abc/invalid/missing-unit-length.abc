@@ -1,0 +1,6 @@
+% erreur : 6:3 unité de temps manquante
+% Sans L:, l'ABC prend la croche (ou la double croche) par défaut : le
+% sous-ensemble exige de l'écrire.
+X:1
+K:C
+  C D

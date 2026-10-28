@@ -48,6 +48,8 @@ Application mobile pour apprendre et réviser le solfège. Le but n'est pas d'af
 | Format des leçons | **Un fichier YAML par leçon**, ABC compris (`abc: \|`) | La musique (ABC) et la pédagogie (exercice) restent séparées, mais en champs et pas en fichiers. Pas d'ABC multi-ligne échappé dans du JSON. |
 | Validation du contenu | Validateur Dart qui utilise **notre** parser, lancé en CI | Vérifie l'ABC, le schéma, l'existence des cibles et des compétences. |
 | Sous-ensemble ABC | **Strict** : tout ce qui sort du sous-ensemble est une erreur, jamais ignoré. Une hauteur s'écrit d'une seule façon (`c`, pas `C'`) | Une leçon qui passe le validateur s'affiche comme prévu. Spécification : [doc/abc.md](nobemol-app/packages/notation/doc/abc.md). |
+| Durée par défaut (`L:`) | **Obligatoire** dès qu'il y a une note, `L:1/1` pour des notes sans rythme | L'ABC standard prend la croche ou la double croche selon `M:`. Un auteur qui oublie `L:` aurait des croches sans le savoir. Le sous-ensemble ne devine pas. |
+| Temps musical | Fractions exactes (`Fraction`), pas de `double` | Deux événements de deux portées tombent dans la même colonne seulement si leurs instants sont égaux. Prépare les n-olets. |
 | Indexation des cibles | **Base 1** (`measure`, `event`) | Les leçons sont écrites à la main par des musiciens : « mesure 1, 2e note ». Conversion une seule fois, au chargement. |
 | Moteur sans Flutter | `package:notation/core.dart` (abc, modèle, layout) à côté de `notation.dart` (rendu) | Le validateur tourne avec `dart run`, sans `dart:ui`. Préfigure le découpage `notation_core` / `notation_flutter`. |
 | Stockage des leçons (MVP) | Embarquées dans l'appli | Du texte : ~1000 leçons pèsent environ 100 à 200 Ko compressées. |
@@ -137,7 +139,7 @@ exercise:
 
 Les index `measure` et `event` sont fragiles si l'ABC change : le validateur vérifie que chaque cible existe. Ils comptent à partir de 1.
 
-Cet exemple vise l'étape 3 et plus (mesures, armure, nuances). Le format réellement accepté aujourd'hui est décrit dans [doc/lessons.md](nobemol-app/doc/lessons.md) : à l'étape 2, l'ABC vit dans les pages de théorie et l'exercice est la lecture paramétrique.
+Cet exemple vise l'étape 5 (nuances, croches). Le format réellement accepté aujourd'hui est décrit dans [doc/lessons.md](nobemol-app/doc/lessons.md) : depuis l'étape 3, `identify-note` prend son ABC dans `exercise.abc`, avec des cibles `{ staff, measure, event }`.
 
 ## Feuille de route
 

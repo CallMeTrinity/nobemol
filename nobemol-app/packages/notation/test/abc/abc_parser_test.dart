@@ -14,11 +14,11 @@ void main() {
   );
 
   test('fins de ligne Windows', () {
-    expect(parse('X:1\r\nK:C\r\nC D\r\n'), 'treble(C4 D4)');
+    expect(parse('X:1\r\nL:1/1\r\nK:C\r\nC D\r\n'), 'treble(C4 D4)');
   });
 
   test('do central : C, en clé de sol sur la 1re ligne supplémentaire', () {
-    final staff = parseAbc('X:1\nK:C\nC\n').staves.single;
+    final staff = parseAbc('X:1\nL:1/1\nK:C\nC\n').staves.single;
     expect(staff.clef.staffPosition(staff.notes.single.pitch), -2);
   });
 
@@ -31,6 +31,103 @@ void main() {
       parse('X:1\n%%score S {RH LH}\nK:C\n'),
       'S:treble() {RH:treble() LH:treble()}',
     );
+  });
+
+  group('armures', () {
+    KeySignature key(String name) =>
+        parseAbc('X:1\nK:$name\n').staves.single.key;
+
+    test('majeures et mineures', () {
+      expect(key('C'), KeySignature.none);
+      expect(key('Am'), KeySignature.none);
+      expect(key('G'), const KeySignature(1));
+      expect(key('Em'), const KeySignature(1));
+      expect(key('F'), const KeySignature(-1));
+      expect(key('Dm'), const KeySignature(-1));
+      expect(key('F#'), const KeySignature(6));
+      expect(key('C#'), const KeySignature(7));
+      expect(key('Cb'), const KeySignature(-7));
+      expect(key('Bbm'), const KeySignature(-5));
+      expect(key('A#m'), const KeySignature(7));
+    });
+
+    test('la clé suit la tonalité', () {
+      final staff = parseAbc('X:1\nK:D clef=bass\n').staves.single;
+      expect(staff.key, const KeySignature(2));
+      expect(staff.clef, Clef.bass);
+    });
+
+    test('formes refusées', () {
+      expect(() => parseAbc('X:1\nK:Gmin\n'), error(2, 3, 'Gmin'));
+      expect(() => parseAbc('X:1\nK:none\n'), error(2, 3, 'none'));
+      expect(() => parseAbc('X:1\nK:Fb\n'), error(2, 3, '7 altérations'));
+      expect(() => parseAbc('X:1\nK:D#m\n'), isNot(throwsA(anything)));
+    });
+  });
+
+  group('durées', () {
+    test('relatives à L:', () {
+      expect(parse('X:1\nL:1/4\nK:C\nC4 D2 E\n'), 'treble(C4 D4:2 E4:4)');
+      expect(parse('X:1\nL:1/8\nK:C\nC8 D4 E2\n'), 'treble(C4 D4:2 E4:4)');
+      expect(
+        parse('X:1\nL:1/1\nK:C\nC D/ E// F/4\n'),
+        'treble(C4 D4:2 E4:4 F4:4)',
+      );
+      expect(parse('X:1\nL:1/2\nK:C\nC2/4\n'), 'treble(C4:4)');
+    });
+
+    test('sans L:, même sans chiffre de durée', () {
+      expect(() => parseAbc('X:1\nK:C\nC\n'), error(3, 1, 'L:'));
+      expect(() => parseAbc('X:1\nM:4/4\nK:C\n^C\n'), error(4, 1, 'L:'));
+    });
+
+    test('valeurs refusées', () {
+      expect(() => parseAbc('X:1\nL:1/4\nK:C\nC6\n'), error(4, 1, 'pointée'));
+      expect(() => parseAbc('X:1\nL:1/4\nK:C\nC7\n'), error(4, 1, 'pointée'));
+      expect(() => parseAbc('X:1\nL:1/4\nK:C\nC5\n'), error(4, 1, 'ronde'));
+      expect(() => parseAbc('X:1\nL:1/4\nK:C\nC0\n'), error(4, 2, 'nulle'));
+      expect(() => parseAbc('X:1\nL:1/16\nK:C\nC D4\n'), error(4, 1, 'croche'));
+    });
+  });
+
+  group('mesures', () {
+    test('sans chiffrage : une seule mesure, sans barre', () {
+      final staff = parseAbc('X:1\nL:1/4\nK:C\nC D E\n').staves.single;
+      expect(staff.time, isNull);
+      expect(staff.measures, hasLength(1));
+      expect(staff.measures.single.barline, isNull);
+    });
+
+    test('mesures en 6/8 sans croche', () {
+      expect(
+        parse('X:1\nM:6/8\nL:1/4\nK:C\nC D E |]\n'),
+        'treble 6/8(C4:4 D4:4 E4:4 |])',
+      );
+    });
+
+    test('voix vide à côté de mesures : portée vide', () {
+      expect(
+        parse('X:1\n%%score {A B}\nM:2/4\nL:1/2\nK:C\nV:A\nc | c |]\n'),
+        '{A:treble 2/4(C5:2 | C5:2 |]) B:treble 2/4()}',
+      );
+    });
+
+    test('fin alternative refusée', () {
+      expect(
+        () => parseAbc('X:1\nM:2/4\nL:1/2\nK:C\nC |1 D |\n'),
+        error(5, 3, 'fin alternative'),
+      );
+    });
+
+    test('chiffrage invalide', () {
+      expect(() => parseAbc('X:1\nM:13/4\nK:C\n'), error(2, 3, '1 à 12'));
+      expect(
+        () => parseAbc('X:1\nM:3/3\nK:C\n'),
+        error(2, 3, 'chiffre du bas'),
+      );
+      expect(() => parseAbc('X:1\nM:C|\nK:C\n'), error(2, 3, 'M:2/2'));
+      expect(() => parseAbc('X:1\nM:3/4\nM:3/4\nK:C\n'), error(3, 1, 'double'));
+    });
   });
 
   group('erreurs', () {
@@ -49,11 +146,17 @@ void main() {
     });
 
     test('changement de tonalité dans le corps', () {
-      expect(() => parseAbc('X:1\nK:C\nC\nK:C\n'), error(4, 1, 'changement'));
+      expect(
+        () => parseAbc('X:1\nL:1/1\nK:C\nC\nK:C\n'),
+        error(5, 1, 'changement'),
+      );
     });
 
     test('altération sans note', () {
-      expect(() => parseAbc('X:1\nK:C\nC ^ D\n'), error(3, 4, 'note attendue'));
+      expect(
+        () => parseAbc('X:1\nL:1/1\nK:C\nC ^ D\n'),
+        error(4, 4, 'note attendue'),
+      );
     });
 
     test('mauvaise marque d’octave sur une minuscule', () {
@@ -98,8 +201,8 @@ void main() {
 
     test('V: après de la musique hors voix', () {
       expect(
-        () => parseAbc('X:1\nK:C\nC\nV:A\nD\n'),
-        error(4, 1, 'musique avant le premier V:'),
+        () => parseAbc('X:1\nL:1/1\nK:C\nC\nV:A\nD\n'),
+        error(5, 1, 'musique avant le premier V:'),
       );
     });
 

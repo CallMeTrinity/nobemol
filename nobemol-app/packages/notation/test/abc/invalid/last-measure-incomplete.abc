@@ -1,0 +1,8 @@
+% erreur : 8:1 mesure 2 incomplète : 1/4 au lieu de 3/4
+% La dernière mesure, même sans barre, doit être complète (pas de levée).
+X:1
+M:3/4
+L:1/4
+K:C
+C D E |
+F

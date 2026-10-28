@@ -21,7 +21,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'lecture/:level',
             redirect: (context, state) => _level(state) == null ? '/' : null,
             builder: (context, state) =>
-                ReadingScreen(params: _level(state)!.params),
+                ReadingScreen(exercise: _level(state)!.params),
           ),
           GoRoute(
             path: 'lecon/:id',
@@ -33,7 +33,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'exercice',
                 builder: (context, state) =>
-                    ReadingScreen(params: _lesson(content, state)!.exercise),
+                    ReadingScreen(exercise: _lesson(content, state)!.exercise),
               ),
             ],
           ),
