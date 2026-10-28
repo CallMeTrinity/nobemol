@@ -1,6 +1,15 @@
 {
   "@@locale": "fr",
   "appTitle": "Nobémol",
+  "tabCourse": "Parcours",
+  "tabReview": "Réviser",
+  "tabArcade": "Arcade",
+  "tabProfile": "Profil",
+  "comingSoon": "Bientôt",
+  "reviewSoon": "Les notes ratées reviendront ici, de plus en plus espacées à mesure que tu les retiens.",
+  "arcadeSoon": "Des parties contre la montre, avec les notes déjà apprises.",
+  "profileSoon": "Ton niveau, tes statistiques et tes succès.",
+  "close": "Fermer",
   "homeQuestion": "Par où commencer ?",
   "levelBeginnerTitle": "Je débute",
   "levelBeginnerDescription": "Clé de sol, notes sur la portée",
@@ -20,24 +29,20 @@
   "lessonPrevious": "Précédent",
   "lessonNext": "Suivant",
   "lessonPractice": "S'entraîner",
-  "readingTitle": "Lecture de notes",
-  "rhythmTitle": "Lecture rythmique",
+  "noteQuestion": "Quelle note ?",
   "rhythmQuestion": "Combien de temps dure-t-elle ?",
-  "symbolsTitle": "Signes et termes",
-  "markingQuestion": "Que veut dire ce signe ?",
-  "readingProgress": "{current} / {total}",
+  "markingQuestion": "Ce signe veut dire…",
+  "readingProgress": "{current} sur {total} · {correct, plural, =0{aucune juste} =1{1 juste} other{{correct} justes}}",
   "@readingProgress": {
     "placeholders": {
       "current": { "type": "int" },
-      "total": { "type": "int" }
+      "total": { "type": "int" },
+      "correct": { "type": "int" }
     }
   },
-  "readingScore": "{count, plural, =0{Aucune bonne réponse} =1{1 bonne réponse} other{{count} bonnes réponses}}",
-  "@readingScore": {
-    "placeholders": {
-      "count": { "type": "int" }
-    }
-  },
+  "keyboardNaturals": "Pas d'altérations · noires inactives",
+  "keyboardAccidentals": "Altération ignorée · touche blanche",
+  "durationsHint": "En temps · la noire vaut 1",
   "resultTitle": "Session terminée",
   "resultScore": "{correct} / {total}",
   "@resultScore": {

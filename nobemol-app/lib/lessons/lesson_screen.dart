@@ -3,7 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:notation/notation.dart';
 
 import 'package:nobemol/l10n/app_localizations.dart';
+import 'package:nobemol/l10n/labels.dart';
 import 'package:nobemol/lessons/lesson.dart';
+import 'package:nobemol/theme/tokens.dart';
+import 'package:nobemol/ui/depth.dart';
 
 /// Pages de théorie d'une leçon, puis accès à l'exercice.
 class LessonScreen extends StatefulWidget {
@@ -21,37 +24,151 @@ class _LessonScreenState extends State<LessonScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final c = context.colors;
     final lesson = widget.lesson;
     final pages = lesson.theory;
+    final page = pages[_page];
     final last = _page == pages.length - 1;
+    final (:title, :body) = page.parts;
 
     return Scaffold(
-      appBar: AppBar(title: Text(lesson.title)),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              LinearProgressIndicator(value: (_page + 1) / pages.length),
-              const SizedBox(height: 24),
-              Expanded(child: _TheoryPageView(page: pages[_page])),
-              const SizedBox(height: 16),
-              Row(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Header(title: lesson.title, page: page),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(
+                Space.xl,
+                Space.xxl,
+                Space.xl,
+                Space.ml,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _PageDots(count: pages.length, current: _page),
+                  const SizedBox(height: Space.ml),
+                  Text(
+                    title,
+                    style: AppText.titleTheory.copyWith(color: c.ink),
+                  ),
+                  if (body.isNotEmpty) ...[
+                    const SizedBox(height: Space.m),
+                    Text(
+                      body,
+                      style: AppText.bodyLarge.copyWith(color: c.inkMuted),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(Space.l, 0, Space.l, Space.xl),
+              child: Row(
                 children: [
                   if (_page > 0)
-                    OutlinedButton(
+                    DepthButton(
+                      label: l10n.lessonPrevious,
+                      variant: ButtonVariant.text,
+                      large: true,
                       onPressed: () => setState(() => _page--),
-                      child: Text(l10n.lessonPrevious),
                     ),
                   const Spacer(),
-                  FilledButton(
+                  DepthButton(
+                    label: last ? l10n.lessonPractice : l10n.lessonNext,
+                    variant: last ? ButtonVariant.primary : ButtonVariant.ink,
+                    large: true,
                     onPressed: last
                         ? () => context.go('/lecon/${lesson.id}/exercice')
                         : () => setState(() => _page++),
-                    child: Text(last ? l10n.lessonPractice : l10n.lessonNext),
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bandeau du haut : fermer, titre de la leçon, et la musique de la page.
+class _Header extends StatelessWidget {
+  const _Header({required this.title, required this.page});
+
+  final String title;
+  final TheoryPage page;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final l10n = AppLocalizations.of(context);
+    final system = page.system;
+
+    return ColoredBox(
+      color: c.accentSoft,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            Space.s,
+            Space.m,
+            Space.s,
+            Space.l,
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  SizedBox.square(
+                    dimension: Sizes.minTarget,
+                    child: IconButton(
+                      key: const ValueKey('close'),
+                      tooltip: l10n.close,
+                      onPressed: () => context.go('/'),
+                      icon: Icon(Icons.close_rounded, color: c.ink),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: AppText.titleCard.copyWith(
+                        color: c.ink,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: Sizes.minTarget),
+                ],
+              ),
+              if (system != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    Space.ml,
+                    Space.xl,
+                    Space.ml,
+                    0,
+                  ),
+                  // scaleDown : la portée garde sa taille, sauf si elle
+                  // déborde.
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: NotationView(
+                      system: system,
+                      staffSpace: StaffSpaces.theory,
+                      color: c.ink,
+                      labels: page.names ? _names(system, l10n) : const {},
+                      labelStyle: AppText.staffLabel.copyWith(
+                        color: c.inkMuted,
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -60,32 +177,40 @@ class _LessonScreenState extends State<LessonScreen> {
   }
 }
 
-class _TheoryPageView extends StatelessWidget {
-  const _TheoryPageView({required this.page});
+/// Nom de chaque note de [system], sans l'altération.
+Map<EventRef, String> _names(System system, AppLocalizations l10n) => {
+  for (final (index, staff) in system.staves.indexed)
+    for (final (:measure, :event, :value) in staff.events)
+      if (value case Note(:final pitch))
+        EventRef(staff: index, measure: measure, event: event): l10n.noteName(
+          pitch.step,
+        ),
+};
 
-  final TheoryPage page;
+/// Page courante : un trait d'accent. Pages lues en encre, à venir en gris.
+class _PageDots extends StatelessWidget {
+  const _PageDots({required this.count, required this.current});
+
+  final int count;
+  final int current;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final system = page.system;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final c = context.colors;
+    return Row(
       children: [
-        Text(page.text, style: theme.textTheme.titleMedium),
-        if (system != null)
-          Expanded(
-            child: Center(
-              // scaleDown : la portée garde sa taille, sauf si elle déborde.
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: NotationView(
-                  system: system,
-                  staffSpace: 16,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
+        for (var i = 0; i < count; i++)
+          Container(
+            margin: const EdgeInsets.only(right: Space.xs),
+            width: i == current ? 24 : 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: i == current
+                  ? c.accent
+                  : i < current
+                  ? c.ink
+                  : c.keyBorder,
+              borderRadius: BorderRadius.circular(4),
             ),
           ),
       ],

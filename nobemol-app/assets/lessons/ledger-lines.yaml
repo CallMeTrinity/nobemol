@@ -6,6 +6,7 @@ theory:
   - text: >-
       Quand une note sort de la portée, on ajoute de petites lignes :
       les lignes supplémentaires. On continue à lire de proche en proche.
+    names: true
     abc: |
       X:1
       L:1/1
@@ -22,6 +23,7 @@ theory:
   - text: >-
       Au-dessus de la portée : sol juste au-dessus de la 5e ligne,
       puis la sur la 1re ligne supplémentaire.
+    names: true
     abc: |
       X:1
       L:1/1

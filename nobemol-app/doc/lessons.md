@@ -26,6 +26,15 @@ theory:                          # au moins une page
       L:1/1                      # obligatoire dès qu'il y a une note
       K:C
       G
+  - text: >-
+      À partir du sol, on lit de proche en proche.
+      Juste en dessous, dans l'interligne : fa. Juste au-dessus : la.
+    names: true                  # facultatif : « fa, sol, la » sous la portée
+    abc: |
+      X:1
+      L:1/1
+      K:C
+      F G A
 exercise:
   type: note-reading
   staff: treble                  # treble, bass, alto, tenor ou grand
@@ -41,8 +50,13 @@ exercise:
 | `title` | Titre affiché dans l'appli. |
 | `skills` | Compétences travaillées, sans doublon. Chacune doit exister dans `assets/skills.yaml`. |
 | `level` | Niveau de 1 à 10. |
-| `theory` | Pages de théorie, dans l'ordre. `text` obligatoire, `abc` facultatif. |
+| `theory` | Pages de théorie, dans l'ordre. `text` obligatoire, `abc` et `names` facultatifs. |
 | `exercise` | Exercice qui suit la théorie. |
+
+### Pages de théorie
+
+- La **première phrase** de `text` s'affiche en titre, la suite en dessous. Une phrase finit sur `.`, `!`, `?` ou `…` suivi d'une majuscule : « la 2e ligne. La note » coupe bien, « 2e ligne » seul ne coupe pas.
+- `names: true` écrit le nom de chaque note sous la portée, sans l'altération, dans la notation choisie par l'élève (do-ré-mi aujourd'hui). Demande un `abc`. À réserver aux pages qui montrent plusieurs notes : sur une note seule, le texte la nomme déjà.
 
 Tout champ inconnu est une erreur : une faute de frappe (`ledger_lines`) ne passe pas en silence.
 

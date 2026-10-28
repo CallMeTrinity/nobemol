@@ -8,12 +8,26 @@ import 'package:nobemol/reading/note_reading.dart';
 
 /// Page de théorie : un texte, et de la musique si besoin.
 class TheoryPage {
-  const TheoryPage({required this.text, this.system});
+  const TheoryPage({required this.text, this.system, this.names = false});
 
   final String text;
 
   /// Musique lue depuis l'ABC, `null` sans musique.
   final System? system;
+
+  /// Écrit le nom de chaque note sous la portée.
+  final bool names;
+
+  /// La première phrase, l'idée de la page, et la suite. La suite est vide
+  /// si le texte n'a qu'une phrase.
+  ({String title, String body}) get parts {
+    final end = RegExp(r'[.!?…]\s+(?=\p{Lu})', unicode: true).firstMatch(text);
+    if (end == null) return (title: text, body: '');
+    return (
+      title: text.substring(0, end.start + 1),
+      body: text.substring(end.end),
+    );
+  }
 }
 
 /// Leçon : des pages de théorie, puis un exercice de lecture.
@@ -98,11 +112,21 @@ TheoryPage _theoryPage(YamlNode node, String path, String source) {
     node,
     path: path,
     required: {'text'},
-    optional: {'abc'},
+    optional: {'abc', 'names'},
   );
+  final system = fields.node('abc') == null ? null : _abc(fields, source);
+  final names = fields.boolean('names', or: false);
+  if (names && system == null) {
+    throw fields.error(
+      fields.node('names')!,
+      '${fields.name('names')} : pas de musique (abc) sous laquelle écrire '
+      'les noms',
+    );
+  }
   return TheoryPage(
     text: fields.string('text').trim(),
-    system: fields.node('abc') == null ? null : _abc(fields, source),
+    system: system,
+    names: names,
   );
 }
 

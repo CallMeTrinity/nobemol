@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notation/notation.dart';
 
+import 'package:nobemol/home/home_screen.dart';
 import 'package:nobemol/lessons/content.dart';
 import 'package:nobemol/lessons/content_provider.dart';
 import 'package:nobemol/lessons/lesson_screen.dart';
@@ -16,6 +17,8 @@ import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/reading/reading_screen.dart';
 import 'package:nobemol/reading/session.dart';
 import 'package:nobemol/reading/start_level.dart';
+import 'package:nobemol/theme/tokens.dart';
+import 'package:nobemol/ui/glyph_view.dart';
 
 void main() {
   late DateTime now;
@@ -99,7 +102,7 @@ void main() {
     }
     await tester.pumpAndSettle();
 
-    expect(find.text('Session terminée'), findsOneWidget);
+    expect(find.text('SESSION TERMINÉE'), findsOneWidget);
     expect(find.text('10 / 20'), findsOneWidget);
     expect(find.text('Temps : 1:00'), findsOneWidget);
 
@@ -108,7 +111,7 @@ void main() {
     expect(container.read(sessionProvider(level.params)).answered, 0);
     expect(find.byType(NotationView), findsOneWidget);
 
-    await tester.tap(find.byType(BackButton));
+    await tester.tap(find.byKey(const ValueKey('close')));
     await tester.pumpAndSettle();
     expect(find.text('Par où commencer ?'), findsOneWidget);
   });
@@ -193,6 +196,7 @@ void main() {
     );
     final view = tester.widget<NotationView>(find.byType(NotationView));
     expect(view.highlights.keys, [exercise.targets.first]);
+    expect(view.halos.keys, [exercise.targets.first]);
     // La cible doit se voir parmi les autres notes, dans le thème de
     // l'appli : un écart net sur au moins une composante, pas juste deux
     // couleurs différentes.
@@ -216,7 +220,7 @@ void main() {
     }
     await tester.pumpAndSettle();
 
-    expect(find.text('Session terminée'), findsOneWidget);
+    expect(find.text('SESSION TERMINÉE'), findsOneWidget);
     expect(
       find.text('${exercise.length} / ${exercise.length}'),
       findsOneWidget,
@@ -238,7 +242,6 @@ void main() {
     await tester.tap(find.text("S'entraîner"));
     await tester.pumpAndSettle();
 
-    expect(find.text('Lecture rythmique'), findsOneWidget);
     expect(find.text('Combien de temps dure-t-elle ?'), findsOneWidget);
     expect(find.text('1½'), findsOneWidget);
 
@@ -282,8 +285,7 @@ void main() {
     await tester.tap(find.text("S'entraîner"));
     await tester.pumpAndSettle();
 
-    expect(find.text('Signes et termes'), findsOneWidget);
-    expect(find.text('Que veut dire ce signe ?'), findsOneWidget);
+    expect(find.text('Ce signe veut dire…'), findsOneWidget);
     expect(find.text('piqué'), findsOneWidget);
     expect(find.text('prolongé à volonté'), findsOneWidget);
 
@@ -294,26 +296,35 @@ void main() {
     );
     final view = tester.widget<NotationView>(find.byType(NotationView));
     expect(view.highlights, isEmpty);
+    expect(view.halos, isEmpty);
     expect(view.decorationHighlights.keys, [exercise.targets.first]);
+    expect(view.decorationHalos.keys, [exercise.targets.first]);
     expect(
       container.read(sessionProvider(exercise)).question.answer,
       Marking.staccato,
     );
 
-    // Des mots : deux boutons par ligne.
-    final staccato = tester.getTopLeft(
-      find.byKey(const ValueKey('answer-staccato')),
-    );
-    final tenuto = tester.getTopLeft(
-      find.byKey(const ValueKey('answer-tenuto')),
-    );
-    final accent = tester.getTopLeft(
-      find.byKey(const ValueKey('answer-accent')),
-    );
-    expect(tenuto.dy, staccato.dy);
-    expect(accent.dy, greaterThan(staccato.dy));
+    // Des cartes, trois par ligne.
+    Offset card(String name) =>
+        tester.getTopLeft(find.byKey(ValueKey('answer-$name')));
+    expect(card('tenuto').dy, card('staccato').dy);
+    expect(card('accent').dy, card('staccato').dy);
+    expect(card('fermata').dy, greaterThan(card('staccato').dy));
 
-    for (var i = 0; i < exercise.length; i++) {
+    // Le signe n'apparaît sur les cartes qu'à la correction.
+    Finder sign(String name) => find.descendant(
+      of: find.byKey(ValueKey('answer-$name')),
+      matching: find.byType(GlyphView),
+    );
+    expect(find.byType(GlyphView), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('answer-tenuto')));
+    await tester.pump();
+    expect(sign('staccato'), findsOneWidget);
+    expect(sign('tenuto'), findsOneWidget);
+    await tester.pump(wrongAnswerDelay);
+    expect(find.byType(GlyphView), findsNothing);
+
+    for (var i = 1; i < exercise.length; i++) {
       final question = container.read(sessionProvider(exercise)).question;
       await tester.tap(find.byKey(ValueKey('answer-${question.answer.name}')));
       await tester.pump();
@@ -321,8 +332,73 @@ void main() {
     }
     await tester.pumpAndSettle();
     expect(
-      find.text('${exercise.length} / ${exercise.length}'),
+      find.text('${exercise.length - 1} / ${exercise.length}'),
       findsOneWidget,
     );
+  });
+
+  testWidgets(
+    'théorie : la première phrase en titre, les noms sous la portée',
+    (tester) async {
+      await startSession(tester, 'La clé de sol', expectReading: false);
+      for (var i = 0; i < 2; i++) {
+        await tester.tap(find.text('Suivant'));
+        await tester.pumpAndSettle();
+      }
+
+      expect(
+        find.text('À partir du sol, on lit de proche en proche.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Juste en dessous'), findsOneWidget);
+      final view = tester.widget<NotationView>(find.byType(NotationView));
+      expect(view.labels.values, ['fa', 'sol', 'la']);
+
+      await tester.tap(find.text('Précédent'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<NotationView>(find.byType(NotationView)).labels,
+        isEmpty,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('close')));
+      await tester.pumpAndSettle();
+      // Le Parcours garde sa position : on y était descendu.
+      expect(find.byType(HomeScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets('quatre onglets, chacun garde sa place', (tester) async {
+    await startSession(tester, 'La clé de sol', expectReading: false);
+    // La leçon passe au-dessus de la barre d'onglets.
+    expect(find.byKey(const ValueKey('tab-1')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('close')));
+    await tester.pumpAndSettle();
+
+    for (final (index, title) in ['Réviser', 'Arcade', 'Profil'].indexed) {
+      await tester.tap(find.byKey(ValueKey('tab-${index + 1}')));
+      await tester.pumpAndSettle();
+      expect(find.text(title), findsWidgets);
+      expect(find.text('BIENTÔT'), findsOneWidget);
+    }
+    await tester.tap(find.byKey(const ValueKey('tab-0')));
+    await tester.pumpAndSettle();
+    // Le Parcours garde sa position : on y était descendu.
+    expect(find.byType(HomeScreen), findsOneWidget);
+  });
+
+  testWidgets('thème sombre quand le téléphone est en sombre', (tester) async {
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+
+    final container = (await startSession(tester, 'Je débute'))!;
+    expect(container, isNotNull);
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).last);
+    expect(
+      Theme.of(tester.element(find.byWidget(scaffold))).scaffoldBackgroundColor,
+      NobemolColors.dark.bg,
+    );
+    final view = tester.widget<NotationView>(find.byType(NotationView));
+    expect(view.color, NobemolColors.dark.ink);
   });
 }

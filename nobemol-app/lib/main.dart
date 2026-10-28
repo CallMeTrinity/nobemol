@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nobemol/l10n/app_localizations.dart';
 import 'package:nobemol/lessons/content_provider.dart';
 import 'package:nobemol/router.dart';
+import 'package:nobemol/theme/theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,26 +20,17 @@ Future<void> main() async {
   );
 }
 
-/// Couleurs de l'identité visuelle (nobemol-icone.svg).
-const _ink = Color(0xFF1C2033);
-const _paper = Color(0xFFF4EEE2);
-const _accent = Color(0xFFEF5B36);
-
 class NobemolApp extends ConsumerWidget {
   const NobemolApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: _ink,
-          primary: _ink,
-          secondary: _accent,
-          surface: _paper,
-        ),
-      ),
+      // Clair ou sombre selon le téléphone, en attendant les réglages.
+      theme: buildTheme(Brightness.light),
+      darkTheme: buildTheme(Brightness.dark),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: ref.watch(routerProvider),

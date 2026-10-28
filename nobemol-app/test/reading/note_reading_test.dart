@@ -60,6 +60,21 @@ void main() {
     expect(clefs, {Clef.treble, Clef.bass});
   });
 
+  test('la note tirée est la cible, sur sa portée', () {
+    for (final params in const [
+      NoteReadingParams(staff: StaffSetup.treble),
+      NoteReadingParams(staff: StaffSetup.grand),
+    ]) {
+      for (final question in draw(params, count: 50)) {
+        final target = question.targets.single;
+        expect(
+          question.system.event(target),
+          isA<Note>().having((n) => n.pitch, 'pitch', question.pitch),
+        );
+      }
+    }
+  });
+
   test('altérations seulement si demandées', () {
     final without = draw(const NoteReadingParams(staff: StaffSetup.treble));
     expect(without.where((q) => q.pitch.accidental != null), isEmpty);
@@ -81,6 +96,7 @@ void main() {
     const question = NoteQuestion(
       system: System([]),
       pitch: Pitch(DiatonicStep.f, 4, accidental: Accidental.sharp),
+      target: EventRef(staff: 0, measure: 0, event: 0),
     );
     expect(question.answer, DiatonicStep.f);
   });

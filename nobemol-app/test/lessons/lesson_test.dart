@@ -165,6 +165,61 @@ exercise:
     );
   });
 
+  group('pages de théorie', () {
+    test('noms sous les notes : facultatifs, avec de la musique', () {
+      final lesson = parse(
+        valid.replaceFirst(
+          '  - text: Avec musique.\n',
+          '  - text: Avec musique.\n    names: true\n',
+        ),
+      );
+      expect(lesson.theory.first.names, isFalse);
+      expect(lesson.theory.last.names, isTrue);
+    });
+
+    test('noms sans musique refusés', () {
+      expect(
+        () => parse(
+          valid.replaceFirst(
+            '  - text: Sans musique.\n',
+            '  - text: Sans musique.\n    names: true\n',
+          ),
+        ),
+        error(7, 12, 'theory[1].names : pas de musique'),
+      );
+    });
+
+    test('première phrase en titre, la suite en dessous', () {
+      ({String title, String body}) parts(String text) =>
+          TheoryPage(text: text).parts;
+
+      expect(
+        parts(
+          "À partir du sol, on lit de proche en proche. "
+          "Juste en dessous, dans l'interligne : fa. Juste au-dessus : la.",
+        ),
+        (
+          title: 'À partir du sol, on lit de proche en proche.',
+          body:
+              "Juste en dessous, dans l'interligne : fa. Juste au-dessus : la.",
+        ),
+      );
+      // « 2e ligne. La » coupe, « 2e » seul ne coupe pas.
+      expect(parts('Autour de la 2e ligne. La note est un sol.'), (
+        title: 'Autour de la 2e ligne.',
+        body: 'La note est un sol.',
+      ));
+      expect(parts('Sur les lignes : mi, sol, si, ré, fa.'), (
+        title: 'Sur les lignes : mi, sol, si, ré, fa.',
+        body: '',
+      ));
+      expect(parts('Une portée ! Écrite à la main.'), (
+        title: 'Une portée !',
+        body: 'Écrite à la main.',
+      ));
+    });
+  });
+
   group('identify-note', () {
     const identify = '''
 id: test-lesson
