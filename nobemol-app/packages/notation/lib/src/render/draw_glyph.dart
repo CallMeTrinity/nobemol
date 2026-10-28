@@ -7,7 +7,7 @@ const _fontFamily = 'Bravura';
 /// Dessine [glyph] avec son origine SMuFL en [origin], en pixels.
 ///
 /// En SMuFL, un em vaut 4 interlignes : [staffSpace] fixe donc la taille de
-/// police. Seul point du moteur qui passe par le texte.
+/// police. Avec `drawText`, seul point du moteur qui passe par le texte.
 void drawGlyph(
   Canvas canvas,
   Glyph glyph,

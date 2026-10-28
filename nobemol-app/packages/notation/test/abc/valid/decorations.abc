@@ -1,0 +1,10 @@
+% attendu : treble 4/4(!p!C4:4 .D4:4 !tenuto!E4:4 !accent!F4:4 | "^rit."G4:2 "_dolce"!mf!.A4:4 !fermata!z:4 | [!f!C5:8 .B4:8] [A4:8 G4:8] !fermata!C4:2 |])
+% Nuances, articulations, annotations au-dessus et au-dessous, point
+% d'orgue sur un silence. Espaces libres entre une décoration et sa note,
+% une décoration collée ne coupe pas la ligature.
+X:1
+M:4/4
+L:1/8
+K:C
+!p! C2 .D2 !tenuto!E2 !accent! F2 |
+"^rit." G4 "_dolce" !mf! .A2 !fermata!z2 | !f!c.B AG !fermata!C4 |]

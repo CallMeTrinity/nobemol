@@ -2,7 +2,9 @@ import 'dart:math' as math;
 
 import 'package:notation/src/layout/draw_list.dart';
 import 'package:notation/src/layout/glyph.g.dart';
+import 'package:notation/src/layout/text_font.g.dart';
 import 'package:notation/src/model/clef.dart';
+import 'package:notation/src/model/decoration.dart';
 import 'package:notation/src/model/fraction.dart';
 import 'package:notation/src/model/key_signature.dart';
 import 'package:notation/src/model/pitch.dart';
@@ -109,6 +111,37 @@ const _beamStub = 1.0;
 
 /// Distance entre le centre d'une tête et les bouts de sa liaison.
 const _tieOffset = 0.5;
+
+/// Distance entre un accent et la tête ou la portée.
+const _accentGap = 0.5;
+
+/// Distance entre un point d'orgue et la portée ou ce qui dépasse au-dessus
+/// de sa note.
+const _fermataGap = 0.75;
+
+/// Distance entre une ligne de signes (textes au-dessus, nuances
+/// au-dessous) et ce qui dépasse de la portée.
+const _lineGap = 0.75;
+
+/// Taille du em des textes : leur hauteur d'x est proche de celle des
+/// nuances.
+const _textSize = 2.0;
+
+/// Distance entre une nuance et le texte qui la suit.
+const _textGap = 0.5;
+
+/// Ouverture d'un soufflet.
+const _hairpinOpening = 1.0;
+
+/// Hauteur du milieu d'un soufflet au-dessus de la ligne de base des
+/// nuances : à mi-hauteur des lettres sans hampe.
+const _hairpinRise = 0.55;
+
+/// Distance entre un soufflet et les signes de ses deux notes.
+const _hairpinGap = 0.5;
+
+/// Longueur minimale d'un soufflet.
+const _hairpinMinLength = 1.0;
 
 /// Calcule la liste de dessin de [system].
 ///
@@ -375,6 +408,7 @@ void _layoutStaff(
   required _Timeline timeline,
   required double top,
 }) {
+  final from = commands.length;
   for (var line = 0; line < 5; line++) {
     commands.add(
       LineCommand(
@@ -400,6 +434,7 @@ void _layoutStaff(
   // note seule forme un groupe d'un élément).
   final heads = <_Head>[];
   final groups = <List<_Head>>[];
+  final placed = <_Placed>[];
   var time = Fraction.zero;
   for (final (measureIndex, measure) in staff.measures.indexed) {
     final measureStart = time;
@@ -415,6 +450,7 @@ void _layoutStaff(
         case Note(:final value):
           final head = _layoutHead(commands, event, clef, ref, top: top, x: x);
           heads.add(head);
+          placed.add(_Placed(event, ref, head.glyph, x: x, head: head));
           if (beamOpen && value.flags > 0) {
             groups.last.add(head);
           } else {
@@ -424,19 +460,16 @@ void _layoutStaff(
         case Rest(:final value, :final dotted):
           // Silence d'une mesure entière : centré dans la mesure.
           final alone = staff.time != null && measure.events.length == 1;
-          _layoutRest(
-            commands,
-            event,
-            ref,
-            top: top,
-            x: alone
-                ? timeline.centered(
-                    measureStart,
-                    measureStart + measure.duration,
-                    _dotRight(_width(_restGlyph(value)), dotted: dotted),
-                  )
-                : x,
-          );
+          final glyph = _restGlyph(value);
+          final restX = alone
+              ? timeline.centered(
+                  measureStart,
+                  measureStart + measure.duration,
+                  _dotRight(_width(glyph), dotted: dotted),
+                )
+              : x;
+          _layoutRest(commands, event, ref, top: top, x: restX);
+          placed.add(_Placed(event, ref, glyph, x: restX));
           beamOpen = false;
       }
       time += event.duration;
@@ -459,6 +492,30 @@ void _layoutStaff(
       _layoutTie(commands, head, heads[index + 1]);
     }
   }
+
+  _layoutDecorations(commands, placed, from: from, start: header.end, top: top);
+}
+
+/// Note ou silence placé, pour ses décorations.
+class _Placed {
+  new(this.event, this.ref, this.glyph, {required this.x, this.head});
+
+  final Event event;
+  final EventRef ref;
+
+  /// Tête de note ou silence.
+  final Glyph glyph;
+
+  /// Origine du glyphe.
+  final double x;
+
+  /// Tête de note, `null` pour un silence.
+  final _Head? head;
+
+  /// Bords et milieu du glyphe.
+  double get left => x + glyph.bBoxSW.$1;
+  double get right => x + glyph.bBoxNE.$1;
+  double get center => (left + right) / 2;
 }
 
 /// Tête de note placée, avec le sens de sa hampe.
@@ -822,6 +879,234 @@ void _layoutTie(List<DrawCommand> commands, _Head from, _Head to) {
   );
 }
 
+/// Décorations d'une portée, une fois ses notes placées : articulations
+/// contre les têtes, points d'orgue, puis une ligne de textes au-dessus et
+/// une ligne de nuances, de soufflets et de textes au-dessous.
+///
+/// Chaque ligne passe au-delà de tout ce qui dépasse de la portée : les
+/// commandes de la portée à partir de [from], hors de l'en-tête (qui finit
+/// en [start]) pour ne pas tenir compte de la clé.
+void _layoutDecorations(
+  List<DrawCommand> commands,
+  List<_Placed> placed, {
+  required int from,
+  required double start,
+  required double top,
+}) {
+  Iterable<Box> boxes() => commands
+      .skip(from)
+      .map((command) => command.bounds)
+      .where((box) => box.left >= start);
+
+  // Le point d'orgue passe au-dessus des autres articulations.
+  for (final fermata in [false, true]) {
+    for (final item in placed) {
+      for (final decoration in item.event.decorations) {
+        if (decoration case final Articulation articulation
+            when (articulation == Articulation.fermata) == fermata) {
+          _layoutArticulation(
+            commands,
+            item,
+            articulation,
+            from: from,
+            top: top,
+          );
+        }
+      }
+    }
+  }
+
+  List<(_Placed, Annotation)> annotations(Placement placement) => [
+    for (final item in placed)
+      for (final decoration in item.event.decorations)
+        if (decoration case final Annotation annotation
+            when annotation.placement == placement)
+          (item, annotation),
+  ];
+
+  final above = annotations(Placement.above);
+  if (above.isNotEmpty) {
+    final highest = boxes().map((box) => box.top).fold(top, math.min);
+    final baseline = highest - _lineGap - TextFont.descender * _textSize;
+    for (final (item, annotation) in above) {
+      commands.add(
+        TextCommand(
+          annotation.text,
+          item.left,
+          baseline,
+          size: _textSize,
+          decoration: item.ref,
+        ),
+      );
+    }
+  }
+
+  // Ligne du dessous : sa ligne de base laisse la place du plus haut des
+  // signes qu'elle porte.
+  final below = annotations(Placement.below);
+  var ascent = below.isEmpty ? 0.0 : TextFont.ascender * _textSize;
+  for (final item in placed) {
+    for (final decoration in item.event.decorations) {
+      ascent = math.max(ascent, switch (decoration) {
+        Dynamic() => _dynamicGlyph(decoration).bBoxNE.$2,
+        HairpinStart() => _hairpinRise + _hairpinOpening / 2,
+        _ => 0,
+      });
+    }
+  }
+  if (ascent == 0) return;
+  final lowest = boxes()
+      .map((box) => box.bottom)
+      .fold(top + _staffHeight, math.max);
+  final baseline = lowest + _lineGap + ascent;
+
+  // Bords des signes de chaque note sur la ligne : un soufflet s'arrête
+  // avant eux.
+  final signs = <EventRef, Box>{};
+  void sign(DrawCommand command, EventRef ref) {
+    commands.add(command);
+    signs[ref] = signs[ref]?.union(command.bounds) ?? command.bounds;
+  }
+
+  for (final item in placed) {
+    for (final decoration in item.event.decorations) {
+      if (decoration is Dynamic) {
+        final glyph = _dynamicGlyph(decoration);
+        sign(
+          GlyphCommand(
+            glyph,
+            item.center - glyph.opticalCenter!.$1,
+            baseline,
+            decoration: item.ref,
+          ),
+          item.ref,
+        );
+      }
+    }
+  }
+  // Un texte suit la nuance de sa note : « p dolce ».
+  for (final (item, annotation) in below) {
+    sign(
+      TextCommand(
+        annotation.text,
+        switch (signs[item.ref]) {
+          final dynamic? => math.max(item.left, dynamic.right + _textGap),
+          null => item.left,
+        },
+        baseline,
+        size: _textSize,
+        decoration: item.ref,
+      ),
+      item.ref,
+    );
+  }
+
+  _Placed? open;
+  for (final item in placed) {
+    for (final decoration in item.event.decorations) {
+      if (decoration case HairpinEnd(:final hairpin) when open != null) {
+        final x1 = switch (signs[open.ref]) {
+          final box? => box.right + _hairpinGap,
+          null => open.left,
+        };
+        final x2 = switch (signs[item.ref]) {
+          final box? => box.left - _hairpinGap,
+          null => item.right,
+        };
+        _layoutHairpin(
+          commands,
+          hairpin,
+          x1,
+          math.max(x2, x1 + _hairpinMinLength),
+          baseline - _hairpinRise,
+          open.ref,
+        );
+        open = null;
+      }
+    }
+    if (item.event.decorations.any((d) => d is HairpinStart)) open = item;
+  }
+}
+
+/// Articulation de [item] : le point d'orgue au-dessus de la portée, les
+/// autres côté tête, à l'opposé de la hampe. Centrée sur la tête.
+void _layoutArticulation(
+  List<DrawCommand> commands,
+  _Placed item,
+  Articulation articulation, {
+  required int from,
+  required double top,
+}) {
+  final head = item.head;
+  final below = head != null && head.up && articulation != Articulation.fermata;
+  final glyph = _articulationGlyph(articulation, below: below);
+  final (sw, ne) = (glyph.bBoxSW, glyph.bBoxNE);
+
+  // Ordonnée de l'origine SMuFL : bord ou centre du glyphe à sa place.
+  final double y;
+  switch (articulation) {
+    case Articulation.fermata:
+      final highest = commands
+          .skip(from)
+          .where(
+            (command) =>
+                command.event == item.ref || command.decoration == item.ref,
+          )
+          .map((command) => command.bounds.top)
+          .fold(top, math.min);
+      y = highest - _fermataGap + sw.$2;
+    case _ when head == null:
+      return;
+    case Articulation.staccato || Articulation.tenuto:
+      // Dans l'interligne voisin de la tête, jamais sur une ligne.
+      final step = below ? -1 : 1;
+      var position = head.position + 2 * step;
+      if (position >= 0 && position <= 8 && position.isEven) position += step;
+      y = _y(top, position) + (sw.$2 + ne.$2) / 2;
+    case Articulation.accent:
+      // Hors de la portée.
+      y = below
+          ? math.max(head.y + 0.5, top + _staffHeight) + _accentGap + ne.$2
+          : math.min(head.y - 0.5, top) - _accentGap + sw.$2;
+  }
+  commands.add(
+    GlyphCommand(
+      glyph,
+      item.center - (sw.$1 + ne.$1) / 2,
+      y,
+      decoration: item.ref,
+    ),
+  );
+}
+
+/// Soufflet de [x1] à [x2], centré sur [y] : deux traits qui partent d'un
+/// même point, à gauche pour un crescendo, à droite pour un diminuendo.
+void _layoutHairpin(
+  List<DrawCommand> commands,
+  Hairpin hairpin,
+  double x1,
+  double x2,
+  double y,
+  EventRef ref,
+) {
+  final (closed, opened) = switch (hairpin) {
+    Hairpin.crescendo => (x1, x2),
+    Hairpin.diminuendo => (x2, x1),
+  };
+  for (final side in [-1, 1]) {
+    commands.add(
+      LineCommand(
+        closed,
+        y,
+        opened,
+        y + side * _hairpinOpening / 2,
+        EngravingDefaults.hairpinThickness,
+        decoration: ref,
+      ),
+    );
+  }
+}
+
 /// Barre initiale et signe de regroupement.
 void _layoutGroupStart(
   List<DrawCommand> commands,
@@ -934,6 +1219,28 @@ Glyph _flagGlyph(NoteValue value, {required bool up}) => switch (value.flags) {
   1 => up ? Glyph.flag8thUp : Glyph.flag8thDown,
   _ => up ? Glyph.flag16thUp : Glyph.flag16thDown,
 };
+
+Glyph _dynamicGlyph(Dynamic dynamic) => switch (dynamic) {
+  Dynamic.ppp => Glyph.dynamicPPP,
+  Dynamic.pp => Glyph.dynamicPP,
+  Dynamic.p => Glyph.dynamicPiano,
+  Dynamic.mp => Glyph.dynamicMP,
+  Dynamic.mf => Glyph.dynamicMF,
+  Dynamic.f => Glyph.dynamicForte,
+  Dynamic.ff => Glyph.dynamicFF,
+  Dynamic.fff => Glyph.dynamicFFF,
+};
+
+Glyph _articulationGlyph(Articulation articulation, {required bool below}) =>
+    switch (articulation) {
+      Articulation.staccato =>
+        below ? Glyph.articStaccatoBelow : Glyph.articStaccatoAbove,
+      Articulation.tenuto =>
+        below ? Glyph.articTenutoBelow : Glyph.articTenutoAbove,
+      Articulation.accent =>
+        below ? Glyph.articAccentBelow : Glyph.articAccentAbove,
+      Articulation.fermata => Glyph.fermataAbove,
+    };
 
 Glyph _accidentalGlyph(Accidental accidental) => switch (accidental) {
   Accidental.doubleFlat => Glyph.accidentalDoubleFlat,

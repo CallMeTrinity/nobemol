@@ -19,11 +19,12 @@ nobemol-app/
 ├── tool/validate_content.dart  validateur du contenu, lancé en CI
 └── packages/notation/    moteur de rendu de notation (publiable)
     ├── doc/abc.md        sous-ensemble ABC accepté par le parser
-    ├── fonts/            Bravura + licence OFL
+    ├── fonts/            Bravura, Edwin Italic (termes) + licences OFL
     ├── lib/core.dart     Dart pur : abc -> model -> layout (glyph.g.dart généré)
     ├── lib/notation.dart core + render (Flutter)
     ├── test/abc/         exemples ABC valides et invalides, joués comme tests
-    └── tool/bravura.dart télécharge Bravura et génère glyph.g.dart
+    └── tool/             bravura.dart et edwin.dart : polices + métadonnées
+                          générées (glyph.g.dart, text_font.g.dart)
 ```
 
 ## Prérequis
@@ -52,6 +53,7 @@ Depuis `packages/notation/` :
 ```sh
 flutter test              # tests du moteur
 dart run tool/bravura.dart # après ajout d'un glyphe dans tool/bravura.dart
+dart run tool/edwin.dart   # police des textes et ses chasses
 ```
 
 ## Golden tests

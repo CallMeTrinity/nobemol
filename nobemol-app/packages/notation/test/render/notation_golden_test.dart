@@ -7,14 +7,14 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notation/notation.dart';
 
-import '../helpers/bravura.dart';
+import '../helpers/fonts.dart';
 
 /// Le rendu des polices varie selon l'OS : les goldens ne sont générés et
 /// comparés que sous Linux (CI, workflow `goldens.yml`).
 final bool _skip = !Platform.isLinux;
 
 void main() {
-  setUpAll(loadBravura);
+  setUpAll(loadFonts);
 
   Future<void> expectGolden(
     WidgetTester tester,
@@ -190,6 +190,37 @@ void main() {
         'V:LH clef=bass\nG,,4 D,2- | D,2 B,,G,, z2 |]\n',
       ),
       'rhythm_grand_staff',
+    );
+  });
+
+  testWidgets(
+    'signes : nuances, soufflets, articulations, termes',
+    skip: _skip,
+    (tester) async {
+      await expectGolden(
+        tester,
+        parseAbc(
+          'X:1\nM:4/4\nL:1/4\nK:F\n'
+          '"_dolce" !p! C D !crescendo(! E F | G A B !crescendo)! !f! c |\n'
+          '.c .G !tenuto!E "_dim." C | "^rit." !accent!A,2 !fermata!F2 |]\n',
+        ),
+        'markings_treble',
+      );
+    },
+  );
+
+  testWidgets('grande portée : nuances entre les portées', skip: _skip, (
+    tester,
+  ) async {
+    await expectGolden(
+      tester,
+      parseAbc(
+        'X:1\n%%score {RH LH}\nM:3/4\nL:1/8\nK:G\n'
+        'V:RH\n!mp! !diminuendo(! .d.c .B.A G2 |\n'
+        '!diminuendo)! !pp! G4 !fermata!z2 |]\n'
+        'V:LH clef=bass\n!accent!G,,2 !tenuto!B,,2 D,2 | G,,4 !fermata!z2 |]\n',
+      ),
+      'markings_grand_staff',
     );
   });
 }

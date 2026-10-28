@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,6 +29,7 @@ class ReadingScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(switch (exercise) {
           IdentifyDurationExercise() => l10n.rhythmTitle,
+          IdentifyMarkingExercise() => l10n.symbolsTitle,
           _ => l10n.readingTitle,
         }),
       ),
@@ -79,6 +81,10 @@ class _Exercise extends ConsumerWidget {
                     for (final target in session.question.targets)
                       target: _targetColor(session, theme.colorScheme),
                   },
+                  decorationHighlights: {
+                    for (final target in session.question.decorationTargets)
+                      target: _targetColor(session, theme.colorScheme),
+                  },
                 ),
               ),
             ),
@@ -90,12 +96,20 @@ class _Exercise extends ConsumerWidget {
             ),
             style: theme.textTheme.labelLarge,
           ),
-          if (exercise is IdentifyDurationExercise) ...[
+          if (switch (exercise) {
+                IdentifyDurationExercise() => l10n.rhythmQuestion,
+                IdentifyMarkingExercise() => l10n.markingQuestion,
+                _ => null,
+              }
+              case final question?) ...[
             const SizedBox(height: 8),
-            Text(l10n.rhythmQuestion, style: theme.textTheme.titleMedium),
+            Text(question, style: theme.textTheme.titleMedium),
           ],
           const SizedBox(height: 16),
-          for (final row in _rows(exercise.choices))
+          for (final row in _rows(
+            exercise.choices,
+            perRow: exercise is IdentifyMarkingExercise ? 2 : 7,
+          ))
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Row(
@@ -130,11 +144,15 @@ Color _targetColor(SessionState session, ColorScheme scheme) =>
       _ => scheme.error,
     };
 
-/// Les 7 notes tiennent sur une ligne. Au-delà, deux lignes égales.
-List<List<Enum>> _rows(List<Enum> choices) {
-  if (choices.length <= 7) return [choices];
-  final half = (choices.length + 1) ~/ 2;
-  return [choices.sublist(0, half), choices.sublist(half)];
+/// Boutons répartis en lignes égales d'au plus [perRow] : les 7 notes sur
+/// une ligne, les 8 durées sur deux, le sens des signes (des mots) par deux.
+List<List<Enum>> _rows(List<Enum> choices, {required int perRow}) {
+  final count = (choices.length + perRow - 1) ~/ perRow;
+  final size = (choices.length + count - 1) ~/ count;
+  return [
+    for (var start = 0; start < choices.length; start += size)
+      choices.sublist(start, min(start + size, choices.length)),
+  ];
 }
 
 class _AnswerButton extends StatelessWidget {
@@ -169,7 +187,10 @@ class _AnswerButton extends StatelessWidget {
         backgroundColor: color,
         foregroundColor: color == null ? null : Colors.white,
       ),
-      child: Text(AppLocalizations.of(context).answerLabel(choice)),
+      child: Text(
+        AppLocalizations.of(context).answerLabel(choice),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 }

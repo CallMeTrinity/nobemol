@@ -8,8 +8,9 @@ import 'package:notation/notation.dart';
 /// Une note est suivie de sa figure (`:2` blanche, `:4` noire, `:8`
 /// croche), sauf la ronde, puis de `.` si elle est pointée et de `-` si elle
 /// est liée à la suivante. Un silence s'écrit `z`, avec sa figure. Les notes
-/// ligaturées sont entre crochets. Chaque mesure est suivie de sa barre,
-/// s'il y en a une.
+/// ligaturées sont entre crochets. Les décorations précèdent leur note,
+/// écrites comme en ABC (`!p!`, `.`, `"_dolce"`). Chaque mesure est suivie
+/// de sa barre, s'il y en a une.
 String describeSystem(System system) => system.groups
     .map((group) {
       final staves = group.staves.map(_describeStaff).join(' ');
@@ -33,10 +34,11 @@ String _describeMeasure(Measure measure) {
         ? ''
         : ':${1 ~/ event.value.duration.toDouble()}';
     final dot = event.dotted ? '.' : '';
+    final decorations = event.decorations.map(_describeDecoration).join();
     var text = switch (event) {
       Note(:final pitch, :final tiedToNext) =>
-        '$pitch$value$dot${tiedToNext ? '-' : ''}',
-      Rest() => 'z$value$dot',
+        '$decorations$pitch$value$dot${tiedToNext ? '-' : ''}',
+      Rest() => '${decorations}z$value$dot',
     };
     final beamed = event is Note && event.beamedToNext;
     if (beamed && !beamOpen) text = '[$text';
@@ -52,6 +54,16 @@ String _describeMeasure(Measure measure) {
   };
   return '${events.join(' ')}$barline';
 }
+
+String _describeDecoration(Decoration decoration) => switch (decoration) {
+  Dynamic(:final name) => '!$name!',
+  Articulation.staccato => '.',
+  Articulation(:final name) => '!$name!',
+  HairpinStart(:final hairpin) => '!${hairpin.name}(!',
+  HairpinEnd(:final hairpin) => '!${hairpin.name})!',
+  Annotation(:final text, placement: Placement.above) => '"^$text"',
+  Annotation(:final text, placement: Placement.below) => '"_$text"',
+};
 
 String _clefName(Clef clef) => switch (clef) {
   Clef.treble => 'treble',

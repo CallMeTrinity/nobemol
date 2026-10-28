@@ -6,6 +6,7 @@ import 'package:notation/core.dart';
 import 'package:nobemol/lessons/lesson.dart';
 import 'package:nobemol/lessons/yaml_fields.dart';
 import 'package:nobemol/reading/beats.dart';
+import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_reading.dart';
 
 void main() {
@@ -131,7 +132,8 @@ exercise:
       error(
         14,
         9,
-        '« quiz » inconnu (note-reading, identify-note, identify-duration)',
+        '« quiz » inconnu (note-reading, identify-note, identify-duration, '
+        'identify-marking)',
       ),
     );
     expect(
@@ -363,6 +365,118 @@ exercise:
               .replaceFirst('C2 z2 EF G2- | G2 c6 |]', 'C2 z2 EF | G6 |]'),
         ),
         error(9, 8, 'x/4'),
+      );
+    });
+  });
+
+  group('identify-marking', () {
+    const marking = '''
+id: test-lesson
+title: Test
+skills: [note-reading.treble]
+level: 1
+theory:
+  - text: Texte.
+exercise:
+  type: identify-marking
+  abc: |
+    X:1
+    M:4/4
+    L:1/4
+    K:C
+    !p! C D !crescendo(! E F | G A B !crescendo)! !f! c | "_cresc." c B A G |]
+  targets:
+    - { measure: 1, event: 3 }
+    - { measure: 2, event: 4 }
+    - { measure: 1, event: 1 }
+    - { measure: 3, event: 1 }
+  choices: [forte, crescendo, piano]
+''';
+
+    test('nuances, soufflet et terme : le sens de chaque signe', () {
+      final exercise = parse(marking).exercise as IdentifyMarkingExercise;
+      // Rangés dans l'ordre de Marking, pas dans l'ordre d'écriture.
+      expect(exercise.choices, [
+        Marking.piano,
+        Marking.forte,
+        Marking.crescendo,
+      ]);
+
+      final questions = exercise.questions(Random(1));
+      final answers = [
+        for (var i = 0; i < exercise.length; i++)
+          questions.next() as MarkingQuestion,
+      ];
+      expect(answers.map((q) => q.answer), [
+        Marking.crescendo,
+        // La fin du soufflet ne compte pas : seul le f est un signe.
+        Marking.forte,
+        Marking.piano,
+        // « cresc. » et le soufflet ont le même sens.
+        Marking.crescendo,
+      ]);
+      // Le signe est coloré, pas la note.
+      expect(answers.first.targets, isEmpty);
+      expect(answers.first.decorationTargets, const [
+        EventRef(staff: 0, measure: 0, event: 2),
+      ]);
+    });
+
+    test('cible sans signe', () {
+      expect(
+        () => parse(
+          marking.replaceFirst('measure: 1, event: 3', 'measure: 1, event: 2'),
+        ),
+        error(16, 7, 'aucun signe'),
+      );
+    });
+
+    test('cible à plusieurs signes : ambiguë', () {
+      expect(
+        () => parse(marking.replaceFirst('!p! C D', '!p! .C D')),
+        error(18, 7, '2 signes'),
+      );
+    });
+
+    test('terme inconnu', () {
+      expect(
+        () => parse(marking.replaceFirst('"_cresc."', '"_poco"')),
+        error(19, 7, 'terme « poco » inconnu'),
+      );
+    });
+
+    test('réponse absente des choix', () {
+      expect(
+        () => parse(
+          marking.replaceFirst(
+            '[forte, crescendo, piano]',
+            '[forte, crescendo]',
+          ),
+        ),
+        error(18, 7, 'réponse « piano » absente'),
+      );
+    });
+
+    test('choix inconnu ou en nombre invalide', () {
+      expect(
+        () => parse(
+          marking.replaceFirst(
+            '[forte, crescendo, piano]',
+            '[forte, crescendo, piano, sforzando]',
+          ),
+        ),
+        error(20, 38, '« sforzando » inconnu'),
+      );
+      expect(
+        () => parse(
+          marking
+              .replaceFirst('[forte, crescendo, piano]', '[piano]')
+              .replaceAll(
+                RegExp(r'    - \{ measure: [12], event: [234] \}\n'),
+                '',
+              ),
+        ),
+        error(18, 12, 'de 2 à 8 réponses'),
       );
     });
   });

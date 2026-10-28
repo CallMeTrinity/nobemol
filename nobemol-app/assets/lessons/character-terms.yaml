@@ -1,0 +1,46 @@
+id: character-terms
+title: Les termes de caractère
+skills: [terms.character]
+level: 3
+theory:
+  - text: >-
+      Certains termes disent comment jouer, plus que quoi jouer. Dolce : avec
+      douceur. Il suit souvent la nuance.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      "_dolce" !p! E F G A | G2 E2 |]
+  - text: >-
+      Legato : lié. Les notes s'enchaînent sans coupure, le contraire du
+      staccato.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      "_legato" C D E F | G A B c |]
+  - text: >-
+      Espressivo, abrégé espress. : expressif. Cantabile : chantant, comme
+      une voix.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      "_espress." c2 B A | "_cantabile" G2 E2 |]
+exercise:
+  type: identify-marking
+  abc: |
+    X:1
+    M:3/4
+    L:1/4
+    K:Bb
+    "_dolce" F G A | "_legato" B2 A | "_espress." G F E | "_cantabile" D3 |]
+  targets:
+    - { measure: 1, event: 1 }
+    - { measure: 2, event: 1 }
+    - { measure: 3, event: 1 }
+    - { measure: 4, event: 1 }
+  choices: [dolce, legato, espressivo, cantabile]

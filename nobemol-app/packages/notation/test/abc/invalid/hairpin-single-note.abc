@@ -1,0 +1,5 @@
+% erreur : 5:13 soufflet sur une seule note
+X:1
+L:1/4
+K:C
+!crescendo(!!crescendo)!C

@@ -13,7 +13,7 @@ Le produit et les décisions techniques sont dans [IDEA.md](IDEA.md).
 | 2 | Parser ABC (sous-ensemble) + validateur | Leçons écrites en texte | En cours |
 | 3 | Mesures, chiffrage, armure, barres, hampes, **alignement entre portées** | Lecture de courtes phrases | En cours |
 | 4 | Silences, points, ligatures, liaisons de prolongation | Exercices de rythme | En cours |
-| 5 | Décorations : nuances, articulations, termes | Apprentissage des symboles | |
+| 5 | Décorations : nuances, articulations, termes | Apprentissage des symboles | En cours |
 | Plus tard | Accords, n-olets, liaisons d'expression | Au besoin | |
 
 ## Étape 0 : setup
@@ -99,8 +99,23 @@ Le produit et les décisions techniques sont dans [IDEA.md](IDEA.md).
 
 ## Étape 5 : symboles et termes
 
-- [ ] Nuances, articulations, termes (police de texte pour « dolce », « cresc. »)
-- [ ] Exercices sur les symboles et les termes
+- [x] Sous-ensemble ABC étendu avant le code : nuances `!p!`, soufflets `!crescendo(!` / `!crescendo)!`, `.`, `!tenuto!`, `!accent!`, `!fermata!`, annotations `"^…"` / `"_…"` ([doc/abc.md](nobemol-app/packages/notation/doc/abc.md))
+- [x] Modèle : `Event.decorations`, `Decoration` scellé (`Dynamic`, `Articulation`, `HairpinStart`, `HairpinEnd`, `Annotation`)
+- [x] Parser : une écriture par signe (`!staccato!`, `!>!`, `H` refusés), une nuance et une articulation par note, silence avec `!fermata!` seulement, soufflets vérifiés par voix (fermés, même type, pas de nuance ni de texte au-dessous au milieu), annotations avant les décorations
+- [x] Bravura : nuances (ancre `opticalCenter`), articulations, point d'orgue, épaisseur de soufflet
+- [x] Police de texte : Edwin Italic (MuseScore, OFL), chasses générées en Dart par `tool/edwin.dart` (lecture des tables OpenType), rendu sans crénage pour coller aux chasses
+- [x] Layout : articulations côté tête, staccato et tenuto dans un interligne, accent hors de la portée, point d'orgue au-dessus de tout ; une ligne de textes au-dessus, une ligne nuances + soufflets + textes au-dessous, sous ce qui dépasse le plus ; texte après la nuance de sa note (« p dolce »)
+- [x] Rendu : `TextCommand`, `DrawCommand.decoration` et `decorationHighlights` pour colorer un signe sans sa note
+- [x] Exercice `identify-marking` : sens du signe ciblé, réponses choisies par l'auteur (`choices`, 2 à 8), un seul signe par cible, termes connus, vérifié par le validateur
+- [x] Compétences `terms.*` et `symbols.articulations`, 5 leçons : nuances, crescendo et diminuendo, articulations, termes de mouvement, termes de caractère
+
+**Terminé quand** : une leçon `identify-marking` avec nuances, soufflet et terme se joue sur un vrai téléphone, et une cible sur une note à deux signes fait échouer la CI.
+
+À vérifier :
+
+- Goldens à générer sur la CI (commit `[goldens]`) : `markings_treble`, `markings_grand_staff`. Les 11 goldens existants ne devraient pas changer : aucune décoration, mêmes commandes de dessin.
+- Taille des termes (em = 2 interlignes) et lisibilité des nuances sur téléphone.
+- Le moteur n'évite pas les chevauchements horizontaux (deux nuances sur deux noires voisines, deux termes rapprochés) : règle d'écriture dans [doc/lessons.md](nobemol-app/doc/lessons.md). À revoir si les leçons en souffrent.
 
 ## En parallèle
 

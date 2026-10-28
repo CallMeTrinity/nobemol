@@ -542,4 +542,179 @@ void main() {
       expect(tie(layout).event, const EventRef(staff: 0, measure: 0, event: 0));
     });
   });
+
+  group('décorations', () {
+    GlyphCommand single(SystemLayout layout, Glyph glyph) =>
+        glyphs(layout, glyph).single;
+
+    double centerX(Box box) => (box.left + box.right) / 2;
+    double centerY(Box box) => (box.top + box.bottom) / 2;
+
+    List<LineCommand> hairpinLines(SystemLayout layout) => layout.commands
+        .whereType<LineCommand>()
+        .where((c) => c.decoration != null)
+        .toList();
+
+    test('staccato côté tête : sous la tête si la hampe monte', () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\n.E .c\n'));
+      final [low, high] = glyphs(layout, Glyph.noteheadBlack).toList();
+      expect(
+        single(layout, Glyph.articStaccatoBelow).bounds.top,
+        greaterThan(low.bounds.bottom),
+      );
+      expect(
+        single(layout, Glyph.articStaccatoAbove).bounds.bottom,
+        lessThan(high.bounds.top),
+      );
+    });
+
+    test('staccato centré sur la tête, dans un interligne', () {
+      // Si4 sur la ligne du milieu, hampe en bas : point dans le 4e
+      // interligne (position 7), pas sur la 4e ligne.
+      final layout = layoutSystem(parse('L:1/4\nK:C\n.B\n'));
+      final head = single(layout, Glyph.noteheadBlack).bounds;
+      final dot = single(layout, Glyph.articStaccatoAbove).bounds;
+      expect(centerX(dot), closeTo(centerX(head), 1e-9));
+      expect(centerY(dot), closeTo(0.5, 1e-9));
+    });
+
+    test('tenuto : un interligne au-delà de la tête', () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\n!tenuto!A\n'));
+      final head = single(layout, Glyph.noteheadBlack).bounds;
+      final line = single(layout, Glyph.articTenutoBelow).bounds;
+      expect(centerY(line) - centerY(head), closeTo(1, 1e-9));
+    });
+
+    test('accent hors de la portée', () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\n!accent!G\n'));
+      final accent = single(layout, Glyph.articAccentBelow).bounds;
+      expect(accent.top, closeTo(4.5, 1e-9));
+    });
+
+    test("point d'orgue au-dessus de la portée et de la hampe", () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\n!fermata!G\n'));
+      final stem = layout.commands.whereType<LineCommand>().singleWhere(
+        (c) => c.thickness == EngravingDefaults.stemThickness,
+      );
+      final fermata = single(layout, Glyph.fermataAbove).bounds;
+      expect(fermata.bottom, closeTo(stem.bounds.top - 0.75, 1e-9));
+    });
+
+    test("point d'orgue sur un silence, centré", () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\n!fermata!z\n'));
+      final rest = single(layout, Glyph.restQuarter).bounds;
+      final fermata = single(layout, Glyph.fermataAbove).bounds;
+      expect(centerX(fermata), closeTo(centerX(rest), 1e-9));
+      expect(fermata.bottom, lessThan(math.min(0, rest.top)));
+    });
+
+    test('nuances centrées sous leur note, sur une même ligne', () {
+      final layout = layoutSystem(parse('L:1/2\nK:C\n!p!C !f!c\n'));
+      final [low, high] = glyphs(layout, Glyph.noteheadHalf).toList();
+      final piano = single(layout, Glyph.dynamicPiano);
+      final forte = single(layout, Glyph.dynamicForte);
+      expect(
+        piano.x + Glyph.dynamicPiano.opticalCenter!.$1,
+        closeTo(centerX(low.bounds), 1e-9),
+      );
+      expect(
+        forte.x + Glyph.dynamicForte.opticalCenter!.$1,
+        closeTo(centerX(high.bounds), 1e-9),
+      );
+      expect(piano.y, forte.y);
+    });
+
+    test('la ligne des nuances passe sous la note la plus basse', () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\n!p!C, E\n'));
+      final lowest = layout.commands
+          .where((c) => c.event != null)
+          .map((c) => c.bounds.bottom)
+          .reduce(math.max);
+      expect(lowest, greaterThan(6));
+      expect(
+        single(layout, Glyph.dynamicPiano).bounds.top,
+        greaterThan(lowest),
+      );
+    });
+
+    test('crescendo : s’ouvre vers la droite, entre les deux nuances', () {
+      final layout = layoutSystem(
+        parse('L:1/4\nK:C\n!p!!crescendo(!C D E !crescendo)!!f!F\n'),
+      );
+      final [upper, lower] = hairpinLines(layout);
+      expect(upper.y1, lower.y1);
+      expect(lower.y2 - upper.y2, closeTo(1, 1e-9));
+      expect(
+        upper.x1,
+        closeTo(single(layout, Glyph.dynamicPiano).bounds.right + 0.5, 1e-9),
+      );
+      expect(
+        upper.x2,
+        closeTo(single(layout, Glyph.dynamicForte).bounds.left - 0.5, 1e-9),
+      );
+    });
+
+    test('diminuendo : se ferme vers la droite, de tête à tête', () {
+      final layout = layoutSystem(
+        parse('M:2/4\nL:1/4\nK:C\n!diminuendo(!C D | E !diminuendo)!F |]\n'),
+      );
+      final heads = glyphs(layout, Glyph.noteheadBlack).toList();
+      final [upper, lower] = hairpinLines(layout);
+      expect(upper.x1, heads.last.bounds.right);
+      expect(upper.x2, heads.first.x);
+      expect(upper.y1, lower.y1);
+    });
+
+    test('termes : au-dessus de la portée, ou sur la ligne des nuances', () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\n"^rit."C "_dolce"!p!E\n'));
+      final heads = glyphs(layout, Glyph.noteheadBlack).toList();
+      final [rit, dolce] = layout.commands.whereType<TextCommand>().toList();
+      expect(rit.text, 'rit.');
+      expect(rit.x, heads.first.x);
+      expect(rit.bounds.bottom, lessThan(0));
+      expect(dolce.x, greaterThan(heads.last.x));
+      expect(dolce.y, single(layout, Glyph.dynamicPiano).y);
+    });
+
+    test('un texte suit la nuance de sa note', () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\n"_dolce"!p!E\n'));
+      final dolce = layout.commands.whereType<TextCommand>().single;
+      expect(
+        dolce.x,
+        closeTo(single(layout, Glyph.dynamicPiano).bounds.right + 0.5, 1e-9),
+      );
+    });
+
+    test('largeur d’un texte : somme des chasses', () {
+      const text = TextCommand('dim.', 0, 0, size: 2);
+      final advances = 'dim.'.codeUnits.map((c) => TextFont.advances[c]!);
+      expect(text.width, closeTo(advances.reduce((a, b) => a + b) * 2, 1e-9));
+    });
+
+    test('grande portée : les nuances du haut entre les deux portées', () {
+      final layout = layoutSystem(
+        parse('%%score {RH LH}\nL:1/4\nK:C\nV:RH\n!p!c\nV:LH clef=bass\nC,\n'),
+      );
+      final piano = single(layout, Glyph.dynamicPiano).bounds;
+      expect(piano.top, greaterThan(4));
+      expect(piano.bottom, lessThan(10));
+    });
+
+    test('chaque signe désigne son événement, sans le colorer', () {
+      const first = EventRef(staff: 0, measure: 0, event: 0);
+      final layout = layoutSystem(
+        parse('L:1/4\nK:C\n!p!!crescendo(!.C D "_cresc."!crescendo)!E\n'),
+      );
+      final signs = layout.commands.where((c) => c.decoration != null);
+      expect(signs.every((c) => c.event == null), isTrue);
+      // p, point, deux traits du soufflet.
+      expect(signs.where((c) => c.decoration == first), hasLength(4));
+      expect(
+        signs.where(
+          (c) => c.decoration == const EventRef(staff: 0, measure: 0, event: 2),
+        ),
+        hasLength(1),
+      );
+    });
+  });
 }

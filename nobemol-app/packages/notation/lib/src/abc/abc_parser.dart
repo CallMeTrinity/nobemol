@@ -1,5 +1,6 @@
 import 'package:notation/src/abc/abc_exception.dart';
 import 'package:notation/src/model/clef.dart';
+import 'package:notation/src/model/decoration.dart';
 import 'package:notation/src/model/fraction.dart';
 import 'package:notation/src/model/key_signature.dart';
 import 'package:notation/src/model/pitch.dart';
@@ -42,6 +43,10 @@ class _Voice {
   /// départ et position du `-`.
   ({Pitch pitch, int line, int column})? tie;
 
+  /// Soufflet ouvert qui attend sa dernière note : sens et position du
+  /// début.
+  ({Hairpin hairpin, int line, int column})? hairpin;
+
   /// Dernier événement lu, dans la mesure en cours ou la précédente.
   Event? get lastEvent => events.lastOrNull ?? measures.lastOrNull?.events.last;
 
@@ -52,6 +57,7 @@ class _Voice {
       note.pitch,
       value: note.value,
       dotted: note.dotted,
+      decorations: note.decorations,
       tiedToNext: tiedToNext ?? note.tiedToNext,
       beamedToNext: beamedToNext ?? note.beamedToNext,
     );
@@ -60,6 +66,10 @@ class _Voice {
 
 /// Élément de `%%score` : une voix seule ou des voix sous accolade.
 typedef _ScoreItem = ({List<String> ids, bool brace});
+
+/// Annotation ou décoration lue devant sa note, avec sa colonne et son
+/// écriture pour les erreurs.
+typedef _Prefix = ({Decoration decoration, int column, String text});
 
 final _field = RegExp('^([A-Za-z]):');
 final _voiceId = RegExp(r'^[A-Za-z0-9_]+$');
@@ -94,6 +104,41 @@ final Map<Fraction, ({NoteValue value, bool dotted})> _noteValues = {
       value.duration * const Fraction(3, 2): (value: value, dotted: true),
   },
 };
+
+/// Décorations acceptées entre `!`, par nom.
+const Map<String, Decoration> _decorations = {
+  'ppp': Dynamic.ppp,
+  'pp': Dynamic.pp,
+  'p': Dynamic.p,
+  'mp': Dynamic.mp,
+  'mf': Dynamic.mf,
+  'f': Dynamic.f,
+  'ff': Dynamic.ff,
+  'fff': Dynamic.fff,
+  'tenuto': Articulation.tenuto,
+  'accent': Articulation.accent,
+  'fermata': Articulation.fermata,
+  'crescendo(': HairpinStart(Hairpin.crescendo),
+  'crescendo)': HairpinEnd(Hairpin.crescendo),
+  'diminuendo(': HairpinStart(Hairpin.diminuendo),
+  'diminuendo)': HairpinEnd(Hairpin.diminuendo),
+};
+
+/// Autres écritures ABC d'une décoration acceptée : refusées, avec la bonne.
+const Map<String, String> _decorationAliases = {
+  'staccato': '.',
+  '>': '!accent!',
+  'emphasis': '!accent!',
+  '<(': '!crescendo(!',
+  '<)': '!crescendo)!',
+  '>(': '!diminuendo(!',
+  '>)': '!diminuendo)!',
+};
+
+/// Caractères d'une annotation : lettres (accents compris), chiffres, espace
+/// et `.,'-`.
+final _annotationText = RegExp(r"^[A-Za-zÀ-ÖØ-öø-ÿ0-9 .,'-]+$");
+final _annotationChar = RegExp("[A-Za-zÀ-ÖØ-öø-ÿ0-9 .,'-]");
 
 const Map<String, Clef> _clefs = {
   'treble': Clef.treble,
@@ -486,8 +531,12 @@ class _Parser {
     var index = 0;
 
     // Vrai si l'élément précédent est collé à celui-ci (même ligne, sans
-    // espace ni barre) : deux croches collées sont ligaturées.
+    // espace ni barre) : deux croches collées sont ligaturées. Une
+    // décoration ne les sépare pas.
     var glued = false;
+
+    // Annotations et décorations lues, en attente de leur note.
+    final prefixes = <_Prefix>[];
 
     while (index < content.length) {
       final char = content[index];
@@ -496,13 +545,28 @@ class _Parser {
         glued = false;
         continue;
       }
+      if (char == '"') {
+        index = _annotation(content, index, prefixes);
+        continue;
+      }
+      if (char == '!' || char == '.') {
+        index = _decoration(content, index, prefixes);
+        continue;
+      }
       if (char == '|') {
+        if (prefixes.isNotEmpty) {
+          throw _error(
+            'décoration « ${prefixes.first.text} » sans note avant la barre',
+            prefixes.first.column,
+          );
+        }
         index = _barline(voice, content, index);
         glued = false;
         continue;
       }
       if (char == 'z') {
-        index = _rest(voice, content, index, glued: glued);
+        index = _rest(voice, content, index, glued: glued, prefixes: prefixes);
+        prefixes.clear();
         glued = true;
         continue;
       }
@@ -554,8 +618,12 @@ class _Parser {
           voice.updateLastNote(beamedToNext: true);
         }
       }
+      final decorations = _decorate(voice, prefixes, rest: false);
+      prefixes.clear();
       voice
-        ..events.add(Note(pitch, value: value, dotted: dotted))
+        ..events.add(
+          Note(pitch, value: value, dotted: dotted, decorations: decorations),
+        )
         ..lastLine = _line
         ..lastColumn = noteColumn;
 
@@ -567,10 +635,209 @@ class _Parser {
       }
       glued = true;
     }
+
+    if (prefixes.isNotEmpty) {
+      throw _error(
+        'décoration « ${prefixes.first.text} » sans note en fin de ligne : '
+        'la placer devant sa note, sur la même ligne',
+        prefixes.first.column,
+      );
+    }
+  }
+
+  /// Lit l'annotation `"^texte"` ou `"_texte"` qui commence à [index],
+  /// l'ajoute à [prefixes] et renvoie l'index qui la suit.
+  int _annotation(String content, int index, List<_Prefix> prefixes) {
+    final column = index + 1;
+    final end = content.indexOf('"', index + 1);
+    if (end < 0) throw _error('annotation non fermée : « " » attendu', column);
+    final inner = content.substring(index + 1, end);
+    final placement = switch (inner.isEmpty ? '' : inner[0]) {
+      '^' => Placement.above,
+      '_' => Placement.below,
+      '<' || '>' || '@' => throw _error(
+        'annotation « ${inner[0]} » non supportée : '
+        '"^texte" (au-dessus) ou "_texte" (au-dessous)',
+        column,
+      ),
+      _ => throw _error(
+        'accord chiffré non supporté : écrire "^texte" ou "_texte" '
+        'pour un terme',
+        column,
+      ),
+    };
+    if (prefixes.any((prefix) => prefix.decoration is! Annotation)) {
+      throw _error(
+        'annotation après une décoration : '
+        "l'écrire avant (\"_dolce\" !p! C)",
+        column,
+      );
+    }
+
+    final text = inner.substring(1);
+    if (text.isEmpty) throw _error('annotation vide', column);
+    if (text.trim() != text) {
+      throw _error('espace au début ou à la fin de l’annotation', column);
+    }
+    if (!_annotationText.hasMatch(text)) {
+      final char = text
+          .split('')
+          .firstWhere((char) => !_annotationChar.hasMatch(char));
+      throw _error(
+        'caractère « $char » non supporté dans une annotation : '
+        "lettres, chiffres, espaces et .,'-",
+        column,
+      );
+    }
+    prefixes.add((
+      decoration: Annotation(text, placement: placement),
+      column: column,
+      text: '"$inner"',
+    ));
+    return end + 1;
+  }
+
+  /// Lit la décoration `.` ou `!nom!` qui commence à [index], l'ajoute à
+  /// [prefixes] et renvoie l'index qui la suit.
+  int _decoration(String content, int index, List<_Prefix> prefixes) {
+    final column = index + 1;
+    if (content[index] == '.') {
+      prefixes.add((
+        decoration: Articulation.staccato,
+        column: column,
+        text: '.',
+      ));
+      return index + 1;
+    }
+    final end = content.indexOf('!', index + 1);
+    if (end < 0) throw _error('décoration non fermée : « ! » attendu', column);
+    final name = content.substring(index + 1, end);
+    final text = '!$name!';
+    final decoration = _decorations[name];
+    if (decoration == null) {
+      throw _error(switch (_decorationAliases[name]) {
+        final alias? => 'décoration « $text » : écrire « $alias »',
+        null => 'décoration « $text » non supportée',
+      }, column);
+    }
+    prefixes.add((decoration: decoration, column: column, text: text));
+    return end + 1;
+  }
+
+  /// Vérifie les signes [prefixes] d'une note, ou d'un silence si [rest],
+  /// et suit les soufflets de [voice]. Renvoie les décorations de
+  /// l'événement, dans l'ordre d'écriture.
+  List<Decoration> _decorate(
+    _Voice voice,
+    List<_Prefix> prefixes, {
+    required bool rest,
+  }) {
+    final seen = <Decoration>{};
+    final placements = <Placement>{};
+    _Prefix? dynamicPrefix;
+    _Prefix? articulationPrefix;
+    for (final prefix in prefixes) {
+      final decoration = prefix.decoration;
+      AbcException error(String message) => _error(message, prefix.column);
+      if (!seen.add(decoration)) {
+        throw error('décoration « ${prefix.text} » en double');
+      }
+      switch (decoration) {
+        case Annotation(:final placement):
+          if (!placements.add(placement)) {
+            throw error(switch (placement) {
+              Placement.above => 'deux annotations au-dessus de la même note',
+              Placement.below => 'deux annotations au-dessous de la même note',
+            });
+          }
+        case Articulation.fermata when rest:
+          break;
+        case _ when rest:
+          throw error(
+            '« ${prefix.text} » sur un silence : '
+            'seuls !fermata! et les annotations sont admis',
+          );
+        case Dynamic():
+          if (dynamicPrefix != null) {
+            throw error('deux nuances sur la même note');
+          }
+          dynamicPrefix = prefix;
+        case Articulation():
+          if (articulationPrefix != null) {
+            throw error('deux articulations sur la même note (au besoin)');
+          }
+          articulationPrefix = prefix;
+        case HairpinStart() || HairpinEnd():
+          break;
+      }
+    }
+
+    // Soufflets : la fin d'abord, pour qu'un soufflet puisse finir là où le
+    // suivant commence.
+    for (final prefix in prefixes) {
+      if (prefix.decoration case HairpinEnd(:final hairpin)) {
+        final open = voice.hairpin;
+        if (open == null) {
+          final single = seen.contains(HairpinStart(hairpin));
+          throw _error(
+            single
+                ? 'soufflet sur une seule note'
+                : 'fin de soufflet sans début : '
+                      '!${hairpin.name}(! manquant',
+            prefix.column,
+          );
+        }
+        if (open.hairpin != hairpin) {
+          throw _error(
+            '« ${prefix.text} » ferme un ${open.hairpin.name} : '
+            'écrire !${open.hairpin.name})!',
+            prefix.column,
+          );
+        }
+        voice.hairpin = null;
+      }
+    }
+    // Sur la ligne du dessous, rien ne coupe un soufflet.
+    if (voice.hairpin case final open?) {
+      for (final prefix in prefixes) {
+        final sign = switch (prefix.decoration) {
+          Dynamic() => 'nuance',
+          Annotation(placement: Placement.below) => 'texte au-dessous',
+          _ => null,
+        };
+        if (sign != null) {
+          throw _error(
+            '$sign au milieu d’un soufflet : '
+            'le finir sur cette note (!${open.hairpin.name})!)',
+            prefix.column,
+          );
+        }
+      }
+    }
+    for (final prefix in prefixes) {
+      if (prefix.decoration case HairpinStart(:final hairpin)) {
+        if (voice.hairpin case final open?) {
+          throw _error(
+            'soufflet déjà ouvert (ligne ${open.line}) : '
+            'le fermer avant d’en ouvrir un autre',
+            prefix.column,
+          );
+        }
+        voice.hairpin = (hairpin: hairpin, line: _line, column: prefix.column);
+      }
+    }
+
+    return List.unmodifiable(prefixes.map((prefix) => prefix.decoration));
   }
 
   /// Lit le silence qui commence à [index] et renvoie l'index qui le suit.
-  int _rest(_Voice voice, String content, int index, {required bool glued}) {
+  int _rest(
+    _Voice voice,
+    String content,
+    int index, {
+    required bool glued,
+    required List<_Prefix> prefixes,
+  }) {
     final column = index + 1;
     if (voice.tie case final tie?) {
       throw AbcException(
@@ -592,8 +859,9 @@ class _Parser {
     if (end < content.length && content[end] == '-') {
       throw _error('liaison de prolongation après un silence', end + 1);
     }
+    final decorations = _decorate(voice, prefixes, rest: true);
     voice
-      ..events.add(Rest(value: value, dotted: dotted))
+      ..events.add(Rest(value: value, dotted: dotted, decorations: decorations))
       ..lastLine = _line
       ..lastColumn = column;
     return end;
@@ -804,6 +1072,14 @@ class _Parser {
           column: tie.column,
         );
       }
+      if (voice.hairpin case final hairpin?) {
+        throw AbcException(
+          'soufflet sans fin : ajouter !${hairpin.hairpin.name})! '
+          'devant sa dernière note',
+          line: hairpin.line,
+          column: hairpin.column,
+        );
+      }
       if (voice.events.isEmpty) continue;
       if (time == null) {
         voice.measures.add(Measure(List.unmodifiable(voice.events)));
@@ -894,10 +1170,11 @@ String _unexpected(String content, int index) {
       'liaison de prolongation sans note de départ : coller « - » à la '
           'note',
     '>' || '<' => 'rythme pointé non supporté : écrire les durées (C3/2 D/)',
-    '!' || '+' || '.' || '~' => 'décoration non supportée (étape 5)',
+    '+' => 'décoration « +…+ » non supportée : écrire « !…! »',
+    'H' => 'raccourci « H » non supporté : écrire « !fermata! »',
+    '~' || 'T' || 'u' || 'v' => 'décoration « $char » non supportée',
     '(' || ')' => "liaison d'expression ou n-olet non supporté (plus tard)",
     '{' || '}' => "note d'ornement non supportée",
-    '"' => 'annotation ou accord chiffré non supporté',
     r'\' => 'continuation de ligne non supportée',
     _ when int.tryParse(char) != null =>
       'durée sans note : pas d’espace entre une note et sa durée',

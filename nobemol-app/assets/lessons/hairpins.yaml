@@ -1,0 +1,50 @@
+id: hairpins
+title: Crescendo et diminuendo
+skills: [terms.dynamic-changes]
+level: 3
+theory:
+  - text: >-
+      Le crescendo fait monter le volume petit à petit. Il s'écrit avec un
+      soufflet qui s'ouvre, de la nuance de départ à celle d'arrivée.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      !p! !crescendo(! C D E F | G A B !crescendo)! !f! c |]
+  - text: >-
+      Le diminuendo fait l'inverse : de moins en moins fort. Son soufflet se
+      referme.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      !f! !diminuendo(! c B A G | F E D !diminuendo)! !p! C |]
+  - text: >-
+      Le mot remplace parfois le soufflet, abrégé sous la portée : cresc.
+      pour crescendo, dim. pour diminuendo. Decresc. (decrescendo) veut dire
+      la même chose que dim.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      "_cresc." C D E F | G A B c | "_dim." c B A G | F E D C |]
+exercise:
+  type: identify-marking
+  abc: |
+    X:1
+    M:4/4
+    L:1/4
+    K:G
+    !p! G A !crescendo(! B c | d e !crescendo)! !f! d2 |
+    !diminuendo(! c B A !diminuendo)! !p! G | "_cresc." A B c !f! d |]
+  targets:
+    - { measure: 1, event: 1 }
+    - { measure: 1, event: 3 }
+    - { measure: 2, event: 3 }
+    - { measure: 3, event: 1 }
+    - { measure: 3, event: 4 }
+    - { measure: 4, event: 1 }
+  choices: [piano, forte, crescendo, diminuendo]

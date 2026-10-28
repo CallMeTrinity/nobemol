@@ -1,0 +1,58 @@
+id: articulations
+title: Les articulations
+skills: [symbols.articulations]
+level: 3
+theory:
+  - text: >-
+      Le point, c'est le staccato : la note est piquée, jouée courte et
+      détachée. Il se place du côté de la tête de note, à l'opposé de la
+      hampe.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      .G .A .B .c | .d .c B2 |]
+  - text: >-
+      Le trait, c'est le tenuto : la note est tenue sur toute sa durée, un
+      peu appuyée.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      !tenuto!c !tenuto!B !tenuto!A !tenuto!G | c4 |]
+  - text: >-
+      Le signe > est un accent : on attaque la note plus fort que les
+      autres.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      !accent!G A B c | !accent!d B G2 |]
+  - text: >-
+      Le point d'orgue suspend la mesure : on prolonge la note, ou le
+      silence, aussi longtemps qu'on veut. Il se place toujours au-dessus de
+      la portée.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      G A B c | !fermata!d2 !fermata!z2 |]
+exercise:
+  type: identify-marking
+  abc: |
+    X:1
+    M:3/4
+    L:1/4
+    K:D
+    .d .c .B | !accent!A2 !tenuto!F | !tenuto!G .E .C | !fermata!D3 |]
+  targets:
+    - { measure: 1, event: 1 }
+    - { measure: 2, event: 1 }
+    - { measure: 2, event: 2 }
+    - { measure: 3, event: 2 }
+    - { measure: 4, event: 1 }
+  choices: [staccato, tenuto, accent, fermata]

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:notation/core.dart';
 
 import 'package:nobemol/reading/beats.dart';
+import 'package:nobemol/reading/markings.dart';
 
 /// Nombre de notes d'une session de lecture paramétrique.
 const sessionLength = 20;
@@ -136,6 +137,40 @@ class IdentifyDurationExercise extends ReadingExercise {
   QuestionSource questions(Random random) => _DurationQuestions(this);
 }
 
+/// Signes ciblés dans une phrase écrite en ABC (nuance, soufflet,
+/// articulation, terme) : donner leur sens, dans l'ordre.
+///
+/// Clé de la session comparée par identité : la leçon est chargée une fois.
+class IdentifyMarkingExercise extends ReadingExercise {
+  const IdentifyMarkingExercise({
+    required this.system,
+    required this.targets,
+    required this.choices,
+  });
+
+  /// La phrase, affichée telle quelle à chaque question.
+  final System system;
+
+  /// Événements dont le signe est à reconnaître, dans l'ordre. Vérifié au
+  /// chargement de la leçon : chacun porte un seul signe, dont le sens est
+  /// dans [choices].
+  final List<EventRef> targets;
+
+  /// Réponses proposées, choisies par l'auteur de la leçon, dans l'ordre de
+  /// [Marking].
+  @override
+  final List<Marking> choices;
+
+  @override
+  int get length => targets.length;
+
+  @override
+  LayoutOptions get layoutOptions => const LayoutOptions();
+
+  @override
+  QuestionSource questions(Random random) => _MarkingQuestions(this);
+}
+
 /// Une question : ce qui s'affiche, et la bonne réponse parmi les choix de
 /// l'exercice.
 sealed class Question {
@@ -146,6 +181,9 @@ sealed class Question {
 
   /// Événements à colorer dans [system], vide si rien n'est ciblé.
   List<EventRef> get targets;
+
+  /// Événements dont les décorations sont à colorer, sans leur note.
+  List<EventRef> get decorationTargets => const [];
 
   /// Bonne réponse.
   Enum get answer;
@@ -183,6 +221,28 @@ class DurationQuestion extends Question {
 
   @override
   final Beats answer;
+}
+
+/// Un signe à reconnaître.
+class MarkingQuestion extends Question {
+  const MarkingQuestion({
+    required super.system,
+    required this.target,
+    required this.answer,
+  });
+
+  /// L'événement qui porte le signe.
+  final EventRef target;
+
+  /// Seul le signe est coloré, pas sa note.
+  @override
+  List<EventRef> get targets => const [];
+
+  @override
+  List<EventRef> get decorationTargets => [target];
+
+  @override
+  final Marking answer;
 }
 
 /// Fournit les questions d'une session, une par une.
@@ -280,6 +340,27 @@ class _DurationQuestions implements QuestionSource {
       system: system,
       targets: targets,
       answer: Beats.of(beatsOf(system, targets))!,
+    );
+  }
+}
+
+/// Les cibles d'un [IdentifyMarkingExercise], dans l'ordre.
+class _MarkingQuestions implements QuestionSource {
+  _MarkingQuestions(this.exercise);
+
+  final IdentifyMarkingExercise exercise;
+  var _index = 0;
+
+  @override
+  MarkingQuestion next({Question? previous}) {
+    final system = exercise.system;
+    final target = exercise.targets[_index++];
+    // Le chargement de la leçon a vérifié le signe et son sens.
+    final sign = signsOf(system.event(target)!).single;
+    return MarkingQuestion(
+      system: system,
+      target: target,
+      answer: markingOf(sign)!,
     );
   }
 }

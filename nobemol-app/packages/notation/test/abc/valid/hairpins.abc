@@ -1,0 +1,12 @@
+% attendu : {RH:treble 3/4(!p!!crescendo(!C4:4 D4:4 E4:4 | F4:4 G4:4 !crescendo)!!diminuendo(!A4:4 | G4:4 z:4 !diminuendo)!C4:4 |]) LH:bass 3/4(!diminuendo(!C3:2. | z:2. | !diminuendo)!!pp!C3:2. |])}
+% Soufflets : à travers la barre, fin et début sur la même note, silence
+% au milieu, un soufflet par voix.
+X:1
+%%score {RH LH}
+M:3/4
+L:1/4
+K:C
+V:RH
+!p! !crescendo(! C D E | F G !crescendo)! !diminuendo(! A | G z !diminuendo)! C |]
+V:LH clef=bass
+!diminuendo(! C,3 | z3 | !diminuendo)! !pp! C,3 |]

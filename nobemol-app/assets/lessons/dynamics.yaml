@@ -1,0 +1,53 @@
+id: dynamics
+title: Les nuances
+skills: [terms.dynamics]
+level: 2
+theory:
+  - text: >-
+      Les nuances disent à quel volume jouer. Ce sont des mots italiens,
+      abrégés en lettres sous la portée : p pour piano, doux, et f pour
+      forte, fort.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      !p! G G G G | !f! G G G G |]
+  - text: >-
+      Une lettre de plus renforce la nuance. pp, pianissimo : très doux. ff,
+      fortissimo : très fort. Avec trois lettres, ppp et fff, on va aux
+      extrêmes.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      !pp! G2 !p! G2 | !f! G2 !ff! G2 |]
+  - text: >-
+      Entre les deux, m pour mezzo, « à moitié ». mp : moyennement doux. mf :
+      moyennement fort. Du plus doux au plus fort : pp, p, mp, mf, f, ff.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      !pp! C2 !p! D2 | !mp! E2 !mf! F2 | !f! G2 !ff! A2 |]
+  - text: >-
+      Une nuance vaut jusqu'à la suivante. Elle se place sous la portée,
+      centrée sous la note où elle commence.
+exercise:
+  type: identify-marking
+  abc: |
+    X:1
+    M:4/4
+    L:1/4
+    K:C
+    !mf! E G !p! c B | !f! A2 !mp! G2 | !ff! c4 | !pp! C4 |]
+  targets:
+    - { measure: 1, event: 1 }
+    - { measure: 1, event: 3 }
+    - { measure: 2, event: 1 }
+    - { measure: 2, event: 2 }
+    - { measure: 3, event: 1 }
+    - { measure: 4, event: 1 }
+  choices: [pianissimo, piano, mezzo-piano, mezzo-forte, forte, fortissimo]
