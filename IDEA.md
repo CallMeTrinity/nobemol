@@ -68,7 +68,7 @@ Application mobile pour apprendre et réviser le solfège. Le but n'est pas d'af
 | Version Flutter | Figée (FVM ou mise) | Même version en local et en CI. |
 | Lint | `very_good_analysis` (package), `flutter_lints` (appli) | Strict là où c'est publiable. |
 | Tests | Unitaires (parser, layout) + **golden tests** (rendu) | Goldens générés sur une seule plateforme (CI Linux) : le rendu des polices varie selon l'OS. |
-| CI | GitHub Actions : analyze, test, build APK | |
+| CI | GitHub Actions : analyze, test, build APK. Un tag `vX.Y.Z` sur `main` publie une release avec l'APK | Clé de signature fixe dans les secrets GitHub : une mise à jour s'installe par-dessus sans perdre la progression. |
 
 ## Architecture
 

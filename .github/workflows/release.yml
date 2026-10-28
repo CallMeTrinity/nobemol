@@ -1,0 +1,83 @@
+name: Release
+
+# Un tag vX.Y.Z poussé sur un commit de main : vérifie, construit l'APK signé
+# et publie la release GitHub avec la section du CHANGELOG comme notes.
+# Procédure : README.md, Releases.
+on:
+  push:
+    tags: ['v*.*.*']
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # GitHub ne filtre pas les tags par branche : on le vérifie ici.
+      - name: Tag sur main
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "::error::$GITHUB_REF_NAME ne pointe pas sur un commit de main"
+            exit 1
+          }
+
+      # Le tag, pubspec.yaml et CHANGELOG.md doivent dire la même version.
+      - name: Version
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          pubspec=$(sed -n 's/^version: \([^+]*\).*/\1/p' nobemol-app/pubspec.yaml)
+          if [ "$pubspec" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME, mais pubspec.yaml dit $pubspec"
+            exit 1
+          fi
+          grep -q "^## \[$version\]" CHANGELOG.md || {
+            echo "::error::Pas de section ## [$version] dans CHANGELOG.md"
+            exit 1
+          }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  check:
+    needs: verify
+    uses: ./.github/workflows/flutter.yml
+    with:
+      release: true
+    secrets: inherit
+
+  publish:
+    needs: [verify, check]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.verify.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: nobemol-apk
+
+      - name: Release
+        run: |
+          # Section de la version, sans son titre, jusqu'à la suivante.
+          awk -v v="$VERSION" '
+            index($0, "## [" v "]") == 1 { on = 1; next }
+            on && /^## \[/ { exit }
+            on && /^\[[^]]+\]: / { exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          apk="nobemol-$VERSION.apk"
+          mv app-release.apk "$apk"
+          # Bêta tant que la version commence par 0.
+          prerelease=()
+          case "$VERSION" in 0.*) prerelease=(--prerelease) ;; esac
+          gh release create "$GITHUB_REF_NAME" "$apk" \
+            --title "Nobémol $VERSION" \
+            --notes-file notes.md \
+            "${prerelease[@]}"

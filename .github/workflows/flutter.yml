@@ -6,6 +6,12 @@ on:
     paths: ['nobemol-app/**', '.github/workflows/flutter.yml']
   pull_request:
     paths: ['nobemol-app/**', '.github/workflows/flutter.yml']
+  # Appelé par release.yml : même vérification, APK signé obligatoire.
+  workflow_call:
+    inputs:
+      release:
+        type: boolean
+        default: false
 
 defaults:
   run:
@@ -69,6 +75,33 @@ jobs:
 
       - name: Tests de l'appli
         run: flutter test
+
+      # Clé de release depuis les secrets (voir README.md, Releases). Sans
+      # secrets (PR d'un fork), l'APK est signé en debug, sauf pour une
+      # release : un APK debug ne s'installe pas par-dessus la version d'avant.
+      - name: Clé de signature
+        env:
+          RELEASE: ${{ inputs.release || false }}
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            if [ "$RELEASE" = true ]; then
+              echo "::error::Secrets de signature absents, release impossible"
+              exit 1
+            fi
+            echo "Pas de clé de release : APK signé en debug"
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          cat > android/key.properties <<EOF
+          storeFile=$RUNNER_TEMP/release.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
 
       - name: Build APK
         run: flutter build apk --release
