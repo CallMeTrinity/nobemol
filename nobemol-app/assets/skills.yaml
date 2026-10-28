@@ -62,3 +62,23 @@
 - id: rhythm.sixteenths
   title: Lire les doubles croches
   requires: [rhythm.dotted]
+
+- id: terms.dynamics
+  title: Lire les nuances
+  requires: [note-reading.phrases]
+
+- id: terms.dynamic-changes
+  title: Lire les crescendos et les diminuendos
+  requires: [terms.dynamics]
+
+- id: symbols.articulations
+  title: Lire les articulations
+  requires: [rhythm.beats]
+
+- id: terms.tempo
+  title: Lire les termes de mouvement
+  requires: [rhythm.beats]
+
+- id: terms.character
+  title: Lire les termes de caractère
+  requires: [terms.dynamics]

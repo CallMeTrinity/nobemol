@@ -11,6 +11,7 @@ import 'package:nobemol/lessons/content_provider.dart';
 import 'package:nobemol/lessons/lesson_screen.dart';
 import 'package:nobemol/main.dart';
 import 'package:nobemol/reading/beats.dart';
+import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/reading/reading_screen.dart';
 import 'package:nobemol/reading/session.dart';
@@ -256,6 +257,61 @@ void main() {
       container.read(sessionProvider(exercise)).question.answer,
       Beats.three,
     );
+
+    for (var i = 0; i < exercise.length; i++) {
+      final question = container.read(sessionProvider(exercise)).question;
+      await tester.tap(find.byKey(ValueKey('answer-${question.answer.name}')));
+      await tester.pump();
+      await tester.pump(wrongAnswerDelay);
+    }
+    await tester.pumpAndSettle();
+    expect(
+      find.text('${exercise.length} / ${exercise.length}'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('une leçon identify-marking : le signe est coloré, pas la note', (
+    tester,
+  ) async {
+    await startSession(tester, 'Les articulations', expectReading: false);
+    while (find.text('Suivant').evaluate().isNotEmpty) {
+      await tester.tap(find.text('Suivant'));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.text("S'entraîner"));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Signes et termes'), findsOneWidget);
+    expect(find.text('Que veut dire ce signe ?'), findsOneWidget);
+    expect(find.text('piqué'), findsOneWidget);
+    expect(find.text('prolongé à volonté'), findsOneWidget);
+
+    final exercise =
+        content.lesson('articulations')!.exercise as IdentifyMarkingExercise;
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ReadingScreen)),
+    );
+    final view = tester.widget<NotationView>(find.byType(NotationView));
+    expect(view.highlights, isEmpty);
+    expect(view.decorationHighlights.keys, [exercise.targets.first]);
+    expect(
+      container.read(sessionProvider(exercise)).question.answer,
+      Marking.staccato,
+    );
+
+    // Des mots : deux boutons par ligne.
+    final staccato = tester.getTopLeft(
+      find.byKey(const ValueKey('answer-staccato')),
+    );
+    final tenuto = tester.getTopLeft(
+      find.byKey(const ValueKey('answer-tenuto')),
+    );
+    final accent = tester.getTopLeft(
+      find.byKey(const ValueKey('answer-accent')),
+    );
+    expect(tenuto.dy, staccato.dy);
+    expect(accent.dy, greaterThan(staccato.dy));
 
     for (var i = 0; i < exercise.length; i++) {
       final question = container.read(sessionProvider(exercise)).question;

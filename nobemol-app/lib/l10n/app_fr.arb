@@ -23,6 +23,8 @@
   "readingTitle": "Lecture de notes",
   "rhythmTitle": "Lecture rythmique",
   "rhythmQuestion": "Combien de temps dure-t-elle ?",
+  "symbolsTitle": "Signes et termes",
+  "markingQuestion": "Que veut dire ce signe ?",
   "readingProgress": "{current} / {total}",
   "@readingProgress": {
     "placeholders": {
@@ -58,5 +60,26 @@
   "noteF": "fa",
   "noteG": "sol",
   "noteA": "la",
-  "noteB": "si"
+  "noteB": "si",
+  "markingPianississimo": "extrêmement doux",
+  "markingPianissimo": "très doux",
+  "markingPiano": "doux",
+  "markingMezzoPiano": "moyennement doux",
+  "markingMezzoForte": "moyennement fort",
+  "markingForte": "fort",
+  "markingFortissimo": "très fort",
+  "markingFortississimo": "extrêmement fort",
+  "markingCrescendo": "de plus en plus fort",
+  "markingDiminuendo": "de moins en moins fort",
+  "markingStaccato": "piqué",
+  "markingTenuto": "tenu",
+  "markingAccent": "accentué",
+  "markingFermata": "prolongé à volonté",
+  "markingRitardando": "en ralentissant",
+  "markingAccelerando": "en accélérant",
+  "markingATempo": "au mouvement initial",
+  "markingDolce": "avec douceur",
+  "markingLegato": "lié",
+  "markingEspressivo": "expressif",
+  "markingCantabile": "chantant"
 }

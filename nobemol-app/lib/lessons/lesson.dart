@@ -3,6 +3,7 @@ import 'package:yaml/yaml.dart';
 
 import 'package:nobemol/lessons/yaml_fields.dart';
 import 'package:nobemol/reading/beats.dart';
+import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_reading.dart';
 
 /// Page de théorie : un texte, et de la musique si besoin.
@@ -140,6 +141,10 @@ const _exerciseFields = {
     required: {'type', 'abc', 'targets'},
     optional: <String>{},
   ),
+  'identify-marking': (
+    required: {'type', 'abc', 'targets', 'choices'},
+    optional: <String>{},
+  ),
 };
 
 ReadingExercise _exercise(YamlNode node, String source) {
@@ -172,6 +177,7 @@ ReadingExercise _exercise(YamlNode node, String source) {
   return switch (name) {
     'identify-note' => _identifyNote(fields, source),
     'identify-duration' => _identifyDuration(fields, source),
+    'identify-marking' => _identifyMarking(fields, source),
     _ => _noteReading(fields),
   };
 }
@@ -236,6 +242,57 @@ IdentifyDurationExercise _identifyDuration(YamlFields fields, String source) {
       return null;
     }),
   );
+}
+
+IdentifyMarkingExercise _identifyMarking(YamlFields fields, String source) {
+  final system = _abc(fields, source);
+  final choices = _choices(fields);
+  return IdentifyMarkingExercise(
+    system: system,
+    choices: choices,
+    targets: _targets(fields, system, (target, path) {
+      final signs = signsOf(system.event(target)!).toList();
+      if (signs.isEmpty) return '$path : aucun signe sur cet événement';
+      if (signs.length > 1) {
+        return '$path : ${signs.length} signes sur cet événement, '
+            'la question serait ambiguë';
+      }
+      final marking = markingOf(signs.single);
+      if (marking == null) {
+        final text = (signs.single as Annotation).text;
+        return '$path : terme « $text » inconnu (${terms.keys.join(', ')})';
+      }
+      if (!choices.contains(marking)) {
+        return '$path : réponse « ${marking.id} » absente de exercise.choices';
+      }
+      return null;
+    }),
+  );
+}
+
+/// Lit les réponses proposées : de 2 à 8 sens, rangés dans l'ordre de
+/// [Marking] quel que soit l'ordre d'écriture.
+List<Marking> _choices(YamlFields fields) {
+  final nodes = fields.list('choices').nodes;
+  final choices = <Marking>[];
+  for (final (index, id) in fields.strings('choices').indexed) {
+    final marking = Marking.byId(id);
+    if (marking == null) {
+      final ids = Marking.values.map((marking) => marking.id).join(', ');
+      throw fields.error(
+        nodes[index],
+        '${fields.name('choices')} : « $id » inconnu ($ids)',
+      );
+    }
+    choices.add(marking);
+  }
+  if (choices.length < 2 || choices.length > 8) {
+    throw fields.error(
+      fields.node('choices')!,
+      '${fields.name('choices')} : de 2 à 8 réponses',
+    );
+  }
+  return choices..sort((a, b) => a.index.compareTo(b.index));
 }
 
 /// Lit les cibles d'un exercice, sans doublon. [check] renvoie un message
