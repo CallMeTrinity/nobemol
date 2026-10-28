@@ -38,3 +38,27 @@
 - id: note-reading.tenor
   title: Lire en clé d'ut 4e ligne
   requires: [note-reading.alto]
+
+- id: rhythm.beats
+  title: Compter les temps
+  requires: [note-reading.phrases]
+
+- id: rhythm.rests
+  title: Lire les silences
+  requires: [rhythm.beats]
+
+- id: rhythm.eighths
+  title: Lire les croches
+  requires: [rhythm.beats]
+
+- id: rhythm.dotted
+  title: Lire les notes pointées
+  requires: [rhythm.eighths]
+
+- id: rhythm.ties
+  title: Lire les liaisons de prolongation
+  requires: [rhythm.beats]
+
+- id: rhythm.sixteenths
+  title: Lire les doubles croches
+  requires: [rhythm.dotted]

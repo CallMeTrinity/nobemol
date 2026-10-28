@@ -21,6 +21,8 @@
   "lessonNext": "Suivant",
   "lessonPractice": "S'entraîner",
   "readingTitle": "Lecture de notes",
+  "rhythmTitle": "Lecture rythmique",
+  "rhythmQuestion": "Combien de temps dure-t-elle ?",
   "readingProgress": "{current} / {total}",
   "@readingProgress": {
     "placeholders": {

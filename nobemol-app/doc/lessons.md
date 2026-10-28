@@ -52,6 +52,7 @@ Tout champ inconnu est une erreur : une faute de frappe (`ledger_lines`) ne pass
 |---|---|---|
 | `note-reading` | `staff`, `ledger-lines`, `accidentals` | Lecture de notes paramétrique, la même que les points de départ de l'accueil. 20 notes tirées au hasard. |
 | `identify-note` | `abc`, `targets` | Une phrase écrite en ABC. Chaque cible est colorée à son tour, et il faut la nommer. Une question par cible, dans l'ordre. |
+| `identify-duration` | `abc`, `targets` | Même principe, mais il faut donner la durée de la cible en temps : ¼, ½, ¾, 1, 1½, 2, 3 ou 4. |
 
 ### `identify-note`
 
@@ -74,16 +75,41 @@ exercise:
 ```
 
 - `staff` : identifiant de la voix (`V:`). Facultatif s'il n'y a qu'une portée, obligatoire sinon.
-- `measure`, `event` : comptés **à partir de 1**. `event` compte les notes de la mesure, de gauche à droite.
+- `measure`, `event` : comptés **à partir de 1**. `event` compte les notes **et les silences** de la mesure, de gauche à droite.
 - Le chargement vérifie que chaque cible existe (portée, mesure, note) et qu'elle n'est pas en double. La CI échoue sinon.
 - La réponse est le nom de la note, sans l'altération : un fa dièse par l'armure se nomme fa.
 - Les cibles peuvent sauter des notes et suivre n'importe quel ordre : la note demandée est colorée.
+- Une cible est une note, pas un silence (un silence n'a pas de nom).
+
+### `identify-duration`
+
+```yaml
+exercise:
+  type: identify-duration
+  abc: |
+    X:1
+    M:4/4
+    L:1/8
+    K:C
+    C2 z2 EF G2- | G2 c6 |]
+  targets:
+    - { measure: 1, event: 2 }   # le soupir : 1 temps
+    - { measure: 1, event: 5 }   # sol lié : 1 + 1 = 2 temps
+```
+
+Mêmes cibles que `identify-note`, avec ces différences :
+
+- **Chiffrage en x/4 obligatoire** (`M:2/4`, `M:3/4`, `M:4/4`...) : les réponses comptent en noires. En 6/8, « un temps » vaut une noire pointée, et les boutons ne voudraient plus rien dire.
+- Une cible peut être un **silence**.
+- Une note liée compte **toute sa liaison**, et toute la liaison est colorée. La cible vise la **première** note de la liaison : viser une note d'arrivée est une erreur.
+- La durée de chaque cible doit avoir un bouton : ¼, ½, ¾, 1, 1½, 2, 3 ou 4 temps. Une liaison de 2 temps et demi est refusée.
 
 ## Conventions
 
 - **Pièges YAML** : `>-` replie les lignes en un seul paragraphe, `|` garde les retours à la ligne (obligatoire pour l'ABC). Un texte qui contient `: ` se met entre guillemets.
 - **ABC** : pas de ligne vide dans un bloc `abc` (en ABC, elle termine le morceau). `L:` est obligatoire dès qu'il y a une note : `L:1/1` pour des rondes sans rythme.
-- **Phrases** : 3 ou 4 mesures au plus. Elles s'affichent sur une seule ligne, à la largeur de l'écran : au-delà, les notes deviennent trop petites.
+- **Phrases** : 3 ou 4 mesures au plus. Elles s'affichent sur une seule ligne, à la largeur de l'écran : au-delà, les notes deviennent trop petites. Avec des croches et des doubles croches, viser 2 ou 3 mesures.
+- **Ligatures** : en ABC, des croches collées sont ligaturées (`CDEF`), une espace coupe le groupe (`CD EF`). Un groupe par temps, en général.
 - **Noms de notes** : en do-ré-mi dans les textes. L'ABC reste en lettres.
 - **Cibles** (`identify-note`) : `measure` et `event` comptent **à partir de 1**, comme on compte les mesures en musique (« mesure 1, 2e note »). La conversion en index du code se fait au chargement.
 

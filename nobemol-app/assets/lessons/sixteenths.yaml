@@ -1,0 +1,47 @@
+id: sixteenths
+title: Les doubles croches
+skills: [rhythm.sixteenths]
+level: 4
+theory:
+  - text: >-
+      La double croche dure un quart de temps : quatre doubles croches font
+      une noire. Elle porte deux crochets, ou deux ligatures.
+    abc: |
+      X:1
+      M:2/4
+      L:1/16
+      K:C
+      G4 G2A2 | GABc d4 |]
+  - text: >-
+      Le quart de soupir vaut une double croche.
+    abc: |
+      X:1
+      M:2/4
+      L:1/16
+      K:C
+      z GAB c4 | z GAB c4 |]
+  - text: >-
+      Une croche pointée vaut trois doubles croches. Suivie d'une double
+      croche, elle remplit un temps. Le petit bout de ligature montre que la
+      double croche complète le temps.
+    abc: |
+      X:1
+      M:2/4
+      L:1/16
+      K:C
+      G3A B3c | d8 |]
+exercise:
+  type: identify-duration
+  abc: |
+    X:1
+    M:2/4
+    L:1/16
+    K:C
+    CDEF G4 | A3B c4 | z2 cB A2G2 |]
+  targets:
+    - { measure: 1, event: 1 }
+    - { measure: 1, event: 5 }
+    - { measure: 2, event: 1 }
+    - { measure: 2, event: 2 }
+    - { measure: 3, event: 1 }
+    - { measure: 3, event: 4 }

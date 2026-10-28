@@ -2,6 +2,7 @@ import 'package:notation/core.dart';
 import 'package:yaml/yaml.dart';
 
 import 'package:nobemol/lessons/yaml_fields.dart';
+import 'package:nobemol/reading/beats.dart';
 import 'package:nobemol/reading/note_reading.dart';
 
 /// Page de théorie : un texte, et de la musique si besoin.
@@ -135,6 +136,10 @@ const _exerciseFields = {
     optional: {'ledger-lines', 'accidentals'},
   ),
   'identify-note': (required: {'type', 'abc', 'targets'}, optional: <String>{}),
+  'identify-duration': (
+    required: {'type', 'abc', 'targets'},
+    optional: <String>{},
+  ),
 };
 
 ReadingExercise _exercise(YamlNode node, String source) {
@@ -166,6 +171,7 @@ ReadingExercise _exercise(YamlNode node, String source) {
   );
   return switch (name) {
     'identify-note' => _identifyNote(fields, source),
+    'identify-duration' => _identifyDuration(fields, source),
     _ => _noteReading(fields),
   };
 }
@@ -191,15 +197,67 @@ NoteReadingParams _noteReading(YamlFields fields) {
 
 IdentifyNoteExercise _identifyNote(YamlFields fields, String source) {
   final system = _abc(fields, source);
+  return IdentifyNoteExercise(
+    system: system,
+    targets: _targets(fields, system, (target, path) {
+      if (system.event(target) is Rest) {
+        return '$path : un silence n’a pas de nom de note';
+      }
+      return null;
+    }),
+  );
+}
+
+IdentifyDurationExercise _identifyDuration(YamlFields fields, String source) {
+  final system = _abc(fields, source);
+  // La noire vaut un temps : seulement en x/4.
+  final time = system.staves.first.time;
+  if (time == null || time.beatUnit != 4) {
+    throw fields.error(
+      fields.node('abc')!,
+      'exercise.abc : chiffrage en x/4 attendu (M:4/4), '
+      'les réponses comptent en noires',
+    );
+  }
+  return IdentifyDurationExercise(
+    system: system,
+    targets: _targets(fields, system, (target, path) {
+      final chain = system.tieChain(target);
+      if (chain.first != target) {
+        return '$path : note d’arrivée d’une liaison, '
+            'viser la première note (mesure ${chain.first.measure + 1}, '
+            'événement ${chain.first.event + 1})';
+      }
+      final beats = beatsOf(system, chain);
+      if (Beats.of(beats) == null) {
+        return '$path : $beats temps, pas de bouton pour cette durée '
+            '(de ¼ à 4 temps)';
+      }
+      return null;
+    }),
+  );
+}
+
+/// Lit les cibles d'un exercice, sans doublon. [check] renvoie un message
+/// d'erreur si une cible ne convient pas à l'exercice.
+List<EventRef> _targets(
+  YamlFields fields,
+  System system,
+  String? Function(EventRef target, String path) check,
+) {
   final targets = <EventRef>[];
   for (final (index, node) in fields.list('targets').nodes.indexed) {
-    final target = _target(node, 'exercise.targets[${index + 1}]', system);
+    final path = 'exercise.targets[${index + 1}]';
+    final target = _target(node, path, system);
     if (targets.contains(target)) {
-      throw fields.error(node, 'exercise.targets[${index + 1}] : en double');
+      throw fields.error(node, '$path : en double');
+    }
+    if (check(target, path) case final message?) {
+      throw fields.error(node, message);
     }
     targets.add(target);
   }
-  return IdentifyNoteExercise(system: system, targets: targets);
+  return targets;
 }
 
 /// Lit une cible `{ staff, measure, event }`, écrite en base 1 (« mesure 1,
@@ -235,7 +293,7 @@ EventRef _target(YamlNode node, String path, System system) {
 
   final measures = staves[staffIndex].measures;
   if (measures.isEmpty) {
-    throw fields.error(node, '$path : la portée ne contient aucune note');
+    throw fields.error(node, '$path : la portée est vide');
   }
   final measure = fields.integer('measure', min: 1, max: measures.length) - 1;
   final events = measures[measure].events;

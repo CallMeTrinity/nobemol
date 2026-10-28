@@ -96,13 +96,13 @@ void main() {
       targets: targets,
     ).questions(Random(1));
 
-    final first = questions.next();
-    final second = questions.next(previous: first);
-    expect(first.target, targets[0]);
+    final first = questions.next() as NoteQuestion;
+    final second = questions.next(previous: first) as NoteQuestion;
+    expect(first.targets, [targets[0]]);
     // f en sol majeur : écrit sans altération, la réponse est fa.
     expect(first.pitch, const Pitch(DiatonicStep.f, 5));
     expect(first.answer, DiatonicStep.f);
-    expect(second.target, targets[1]);
+    expect(second.targets, [targets[1]]);
     expect(second.answer, DiatonicStep.b);
     expect(second.system, same(system));
   });

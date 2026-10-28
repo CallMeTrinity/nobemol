@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:notation/notation.dart';
 
 import 'package:nobemol/reading/note_reading.dart';
 
@@ -45,7 +44,7 @@ class SessionState {
     this.finishedAt,
   });
 
-  final NoteQuestion question;
+  final Question question;
   final SessionPhase phase;
 
   /// Nombre de réponses données, question en cours comprise.
@@ -53,7 +52,7 @@ class SessionState {
   final int correct;
 
   /// Réponse donnée à la question en cours, `null` en attente.
-  final DiatonicStep? choice;
+  final Enum? choice;
 
   final DateTime startedAt;
 
@@ -79,18 +78,18 @@ class SessionNotifier extends Notifier<SessionState> {
     );
   }
 
-  void answer(DiatonicStep step) {
+  void answer(Enum choice) {
     final current = state;
     if (current.phase != SessionPhase.asking) return;
 
-    final right = step == current.question.answer;
+    final right = choice == current.question.answer;
     final answered = current.answered + 1;
     state = SessionState(
       question: current.question,
       phase: SessionPhase.feedback,
       answered: answered,
       correct: current.correct + (right ? 1 : 0),
-      choice: step,
+      choice: choice,
       startedAt: current.startedAt,
       finishedAt: answered == exercise.length
           ? ref.read(clockProvider)()

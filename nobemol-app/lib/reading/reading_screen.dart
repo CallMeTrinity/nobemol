@@ -12,8 +12,8 @@ import 'package:nobemol/reading/note_reading.dart';
 
 const _rightColor = Color(0xFF2E7D32);
 
-/// Écran de lecture de notes : une note (seule ou ciblée dans une phrase),
-/// 7 boutons, score et chrono.
+/// Écran de lecture : une note (seule ou ciblée dans une phrase), un bouton
+/// par réponse possible (nom de note ou durée), score et chrono.
 class ReadingScreen extends ConsumerWidget {
   const ReadingScreen({super.key, required this.exercise});
 
@@ -25,7 +25,12 @@ class ReadingScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.readingTitle)),
+      appBar: AppBar(
+        title: Text(switch (exercise) {
+          IdentifyDurationExercise() => l10n.rhythmTitle,
+          _ => l10n.readingTitle,
+        }),
+      ),
       body: SafeArea(
         child: session.phase == SessionPhase.finished
             ? _Results(exercise: exercise, session: session)
@@ -71,10 +76,8 @@ class _Exercise extends ConsumerWidget {
                   options: exercise.layoutOptions,
                   color: theme.colorScheme.onSurface,
                   highlights: {
-                    ?session.question.target: _targetColor(
-                      session,
-                      theme.colorScheme,
-                    ),
+                    for (final target in session.question.targets)
+                      target: _targetColor(session, theme.colorScheme),
                   },
                 ),
               ),
@@ -87,22 +90,30 @@ class _Exercise extends ConsumerWidget {
             ),
             style: theme.textTheme.labelLarge,
           ),
+          if (exercise is IdentifyDurationExercise) ...[
+            const SizedBox(height: 8),
+            Text(l10n.rhythmQuestion, style: theme.textTheme.titleMedium),
+          ],
           const SizedBox(height: 16),
-          Row(
-            children: [
-              for (final step in DiatonicStep.values)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    child: _NoteButton(
-                      step: step,
-                      session: session,
-                      onPressed: () => notifier.answer(step),
+          for (final row in _rows(exercise.choices))
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                children: [
+                  for (final choice in row)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: _AnswerButton(
+                          choice: choice,
+                          session: session,
+                          onPressed: () => notifier.answer(choice),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-            ],
-          ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -119,14 +130,21 @@ Color _targetColor(SessionState session, ColorScheme scheme) =>
       _ => scheme.error,
     };
 
-class _NoteButton extends StatelessWidget {
-  const _NoteButton({
-    required this.step,
+/// Les 7 notes tiennent sur une ligne. Au-delà, deux lignes égales.
+List<List<Enum>> _rows(List<Enum> choices) {
+  if (choices.length <= 7) return [choices];
+  final half = (choices.length + 1) ~/ 2;
+  return [choices.sublist(0, half), choices.sublist(half)];
+}
+
+class _AnswerButton extends StatelessWidget {
+  const _AnswerButton({
+    required this.choice,
     required this.session,
     required this.onPressed,
   });
 
-  final DiatonicStep step;
+  final Enum choice;
   final SessionState session;
   final VoidCallback onPressed;
 
@@ -136,14 +154,14 @@ class _NoteButton extends StatelessWidget {
     final feedback = session.phase == SessionPhase.feedback;
 
     // Correction : la bonne réponse en vert, la mauvaise réponse en rouge.
-    final Color? color = switch (step) {
-      _ when feedback && step == session.question.answer => _rightColor,
-      _ when feedback && step == session.choice => scheme.error,
+    final Color? color = switch (choice) {
+      _ when feedback && choice == session.question.answer => _rightColor,
+      _ when feedback && choice == session.choice => scheme.error,
       _ => null,
     };
 
     return FilledButton.tonal(
-      key: ValueKey('note-${step.name}'),
+      key: ValueKey('answer-${choice.name}'),
       onPressed: onPressed,
       style: FilledButton.styleFrom(
         minimumSize: const Size(0, 56),
@@ -151,7 +169,7 @@ class _NoteButton extends StatelessWidget {
         backgroundColor: color,
         foregroundColor: color == null ? null : Colors.white,
       ),
-      child: Text(AppLocalizations.of(context).noteName(step)),
+      child: Text(AppLocalizations.of(context).answerLabel(choice)),
     );
   }
 }
