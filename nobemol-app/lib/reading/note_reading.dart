@@ -2,15 +2,21 @@ import 'dart:math';
 
 import 'package:notation/core.dart';
 
+import 'package:nobemol/reading/beats.dart';
+
 /// Nombre de notes d'une session de lecture paramétrique.
 const sessionLength = 20;
 
-/// Exercice de lecture : des notes à nommer, une par une.
+/// Exercice de lecture : des questions une par une, une réponse à choisir
+/// parmi des boutons (nom de note, durée).
 sealed class ReadingExercise {
   const ReadingExercise();
 
   /// Nombre de questions d'une session.
   int get length;
+
+  /// Réponses possibles, une par bouton, dans l'ordre d'affichage.
+  List<Enum> get choices;
 
   /// Réglages du layout, communs à toutes les questions.
   LayoutOptions get layoutOptions;
@@ -49,6 +55,9 @@ class NoteReadingParams extends ReadingExercise {
 
   @override
   int get length => sessionLength;
+
+  @override
+  List<Enum> get choices => DiatonicStep.values;
 
   /// Réserve la place de la note la plus haute et la plus basse, altération
   /// comprise : la portée ne bouge pas d'une question à l'autre.
@@ -90,18 +99,61 @@ class IdentifyNoteExercise extends ReadingExercise {
   int get length => targets.length;
 
   @override
+  List<Enum> get choices => DiatonicStep.values;
+
+  @override
   LayoutOptions get layoutOptions => const LayoutOptions();
 
   @override
   QuestionSource questions(Random random) => _TargetQuestions(this);
 }
 
-/// Une question : une note à nommer.
-class NoteQuestion {
-  const NoteQuestion({required this.system, required this.pitch, this.target});
+/// Notes et silences ciblés dans une phrase écrite en ABC : donner leur
+/// durée en temps, dans l'ordre. Une note liée compte toute sa liaison.
+///
+/// Clé de la session comparée par identité : la leçon est chargée une fois.
+class IdentifyDurationExercise extends ReadingExercise {
+  const IdentifyDurationExercise({required this.system, required this.targets});
+
+  /// La phrase, en x/4 : la noire vaut un temps.
+  final System system;
+
+  /// Événements à mesurer, dans l'ordre. Vérifié au chargement de la leçon :
+  /// chacun existe, commence sa liaison et dure un nombre de temps de
+  /// [Beats].
+  final List<EventRef> targets;
+
+  @override
+  int get length => targets.length;
+
+  @override
+  List<Enum> get choices => Beats.values;
+
+  @override
+  LayoutOptions get layoutOptions => const LayoutOptions();
+
+  @override
+  QuestionSource questions(Random random) => _DurationQuestions(this);
+}
+
+/// Une question : ce qui s'affiche, et la bonne réponse parmi les choix de
+/// l'exercice.
+sealed class Question {
+  const Question({required this.system});
 
   /// Ce qui s'affiche.
   final System system;
+
+  /// Événements à colorer dans [system], vide si rien n'est ciblé.
+  List<EventRef> get targets;
+
+  /// Bonne réponse.
+  Enum get answer;
+}
+
+/// Une note à nommer.
+class NoteQuestion extends Question {
+  const NoteQuestion({required super.system, required this.pitch, this.target});
 
   /// La note à trouver.
   final Pitch pitch;
@@ -109,14 +161,34 @@ class NoteQuestion {
   /// La note à colorer dans [system], `null` si elle y est seule.
   final EventRef? target;
 
-  /// Bonne réponse : le nom de la note, altération ignorée.
+  @override
+  List<EventRef> get targets => [?target];
+
+  /// Le nom de la note, altération ignorée.
+  @override
   DiatonicStep get answer => pitch.step;
+}
+
+/// Une durée à donner en temps.
+class DurationQuestion extends Question {
+  const DurationQuestion({
+    required super.system,
+    required this.targets,
+    required this.answer,
+  });
+
+  /// La note ou le silence visé, et les notes qui lui sont liées.
+  @override
+  final List<EventRef> targets;
+
+  @override
+  final Beats answer;
 }
 
 /// Fournit les questions d'une session, une par une.
 abstract interface class QuestionSource {
   /// Question suivante. [previous] est la question d'avant.
-  NoteQuestion next({NoteQuestion? previous});
+  Question next({Question? previous});
 }
 
 /// Tire des questions au hasard selon des [NoteReadingParams].
@@ -128,10 +200,11 @@ class NoteGenerator implements QuestionSource {
 
   /// Tire une question, différente de [previous] pour que la note bouge.
   @override
-  NoteQuestion next({NoteQuestion? previous}) {
+  NoteQuestion next({Question? previous}) {
+    final last = previous is NoteQuestion ? previous.pitch : null;
     while (true) {
       final question = _draw();
-      if (question.pitch != previous?.pitch) return question;
+      if (question.pitch != last) return question;
     }
   }
 
@@ -180,11 +253,33 @@ class _TargetQuestions implements QuestionSource {
   var _index = 0;
 
   @override
-  NoteQuestion next({NoteQuestion? previous}) {
+  NoteQuestion next({Question? previous}) {
     final target = exercise.targets[_index++];
-    final pitch = switch (exercise.system.event(target)!) {
-      Note(:final pitch) => pitch,
-    };
-    return NoteQuestion(system: exercise.system, pitch: pitch, target: target);
+    // Le chargement de la leçon a vérifié que chaque cible est une note.
+    final note = exercise.system.event(target)! as Note;
+    return NoteQuestion(
+      system: exercise.system,
+      pitch: note.pitch,
+      target: target,
+    );
+  }
+}
+
+/// Les cibles d'un [IdentifyDurationExercise], dans l'ordre.
+class _DurationQuestions implements QuestionSource {
+  _DurationQuestions(this.exercise);
+
+  final IdentifyDurationExercise exercise;
+  var _index = 0;
+
+  @override
+  DurationQuestion next({Question? previous}) {
+    final system = exercise.system;
+    final targets = system.tieChain(exercise.targets[_index++]);
+    return DurationQuestion(
+      system: system,
+      targets: targets,
+      answer: Beats.of(beatsOf(system, targets))!,
+    );
   }
 }

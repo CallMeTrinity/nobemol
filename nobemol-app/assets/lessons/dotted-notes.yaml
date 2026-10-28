@@ -1,0 +1,46 @@
+id: dotted-notes
+title: Les notes pointées
+skills: [rhythm.dotted]
+level: 3
+theory:
+  - text: >-
+      Un point après une note augmente sa durée de moitié. Une blanche
+      pointée dure deux temps, plus un : trois temps.
+    abc: |
+      X:1
+      M:3/4
+      L:1/4
+      K:C
+      G3 | G2 G | G3 |]
+  - text: >-
+      Une noire pointée dure un temps et demi. Elle est souvent suivie d'une
+      croche, qui complète le deuxième temps.
+    abc: |
+      X:1
+      M:4/4
+      L:1/8
+      K:C
+      G3 A B2 c2 | d3 c B4 |]
+  - text: >-
+      Le point se place à droite de la tête. Quand la note est sur une
+      ligne, il monte dans l'interligne du dessus pour rester visible.
+    abc: |
+      X:1
+      M:3/4
+      L:1/4
+      K:C
+      E3 | F3 | G3 |]
+exercise:
+  type: identify-duration
+  abc: |
+    X:1
+    M:3/4
+    L:1/8
+    K:C
+    C3 D E2 | F6 | G3 A B2 |]
+  targets:
+    - { measure: 1, event: 1 }
+    - { measure: 1, event: 2 }
+    - { measure: 2, event: 1 }
+    - { measure: 3, event: 1 }
+    - { measure: 3, event: 3 }

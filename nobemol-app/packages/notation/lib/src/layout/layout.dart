@@ -95,6 +95,21 @@ const _middleLine = 4;
 /// Longueur d'une hampe : une octave.
 const _stemLength = 3.5;
 
+/// Distance entre une tête (ou un silence) et son point.
+const _dotGap = 0.3;
+
+/// Dénivelé maximal d'une ligature, d'un bout à l'autre.
+const _beamMaxRise = 1.0;
+
+/// Pente maximale d'une ligature : un groupe serré reste presque à plat.
+const _beamMaxSlope = 0.25;
+
+/// Longueur d'un tronçon de ligature (double croche isolée dans un groupe).
+const _beamStub = 1.0;
+
+/// Distance entre le centre d'une tête et les bouts de sa liaison.
+const _tieOffset = 0.5;
+
 /// Calcule la liste de dessin de [system].
 ///
 /// Le placement horizontal est commun à tout le système : deux événements
@@ -199,25 +214,39 @@ class _Column {
 /// Placement horizontal du système : une abscisse par instant (colonnes
 /// d'événements et barres de mesure).
 class _Timeline {
-  new(List<Staff> staves, {required double start}) {
+  new(List<Staff> staves, {required this.start}) {
     final columns = <Fraction, _Column>{};
     final barlines = <Fraction>{};
 
     for (final staff in staves) {
       var time = Fraction.zero;
       for (final measure in staff.measures) {
+        Event? previous;
         for (final event in measure.events) {
           final column = columns[time] ??= _Column(time);
-          if (event case Note(:final pitch, :final value)) {
-            final accidental = pitch.accidental;
-            if (accidental != null) {
-              column.left = math.max(
-                column.left,
-                _width(_accidentalGlyph(accidental)) + _accidentalGap,
+          switch (event) {
+            case Note(:final pitch):
+              final accidental = pitch.accidental;
+              if (accidental != null) {
+                column.left = math.max(
+                  column.left,
+                  _width(_accidentalGlyph(accidental)) + _accidentalGap,
+                );
+              }
+              final beamed =
+                  event.beamedToNext ||
+                  (previous is Note && previous.beamedToNext);
+              column.right = math.max(
+                column.right,
+                _noteRight(event, staff.clef, beamed: beamed),
               );
-            }
-            column.right = math.max(column.right, _width(_notehead(value)));
+            case Rest(:final value, :final dotted):
+              column.right = math.max(
+                column.right,
+                _dotRight(_width(_restGlyph(value)), dotted: dotted),
+              );
           }
+          previous = event;
           time += event.duration;
         }
         if (measure.barline != null) barlines.add(time);
@@ -289,6 +318,9 @@ class _Timeline {
   final _columnX = <Fraction, double>{};
   final _barlineX = <Fraction, double>{};
 
+  /// Fin de l'en-tête, début de la première mesure.
+  final double start;
+
   /// Fin des portées : la dernière barre, ou un peu après la dernière note.
   late final double end;
 
@@ -297,7 +329,37 @@ class _Timeline {
 
   /// Bord droit de la barre à [time].
   double barlineX(Fraction time) => _barlineX[time]!;
+
+  /// Bord gauche d'un élément de largeur [width] centré dans la mesure qui
+  /// va de [from] à [to].
+  double centered(Fraction from, Fraction to, double width) {
+    final left = _barlineX[from] ?? start;
+    final right = _barlineX[to] ?? end;
+    return (left + right - width) / 2;
+  }
 }
+
+/// Place prise à droite du début d'une tête : la tête, son point et son
+/// crochet, s'il est à droite (hampe vers le haut).
+double _noteRight(Note note, Clef clef, {required bool beamed}) {
+  final head = _notehead(note.value);
+  final right = _dotRight(_width(head), dotted: note.dotted);
+  if (note.value.flags == 0 ||
+      beamed ||
+      !_stemUp(clef.staffPosition(note.pitch))) {
+    return right;
+  }
+  final flag = _flagGlyph(note.value, up: true);
+  return math.max(
+    right,
+    head.stemUpSE!.$1 - EngravingDefaults.stemThickness + _width(flag),
+  );
+}
+
+/// Place prise par un élément de largeur [width], suivi de son point si
+/// [dotted].
+double _dotRight(double width, {required bool dotted}) =>
+    dotted ? width + _dotGap + _width(Glyph.augmentationDot) : width;
 
 /// Place qui suit une note de durée [duration] : √2 de plus à chaque
 /// doublement.
@@ -334,29 +396,113 @@ void _layoutStaff(
     _layoutTimeSignature(commands, time, header: header, top: top);
   }
 
+  // Têtes de la portée, de gauche à droite, et groupes ligaturés (une
+  // note seule forme un groupe d'un élément).
+  final heads = <_Head>[];
+  final groups = <List<_Head>>[];
   var time = Fraction.zero;
   for (final (measureIndex, measure) in staff.measures.indexed) {
+    final measureStart = time;
+    var beamOpen = false;
     for (final (eventIndex, event) in measure.events.indexed) {
       final ref = EventRef(
         staff: staffIndex,
         measure: measureIndex,
         event: eventIndex,
       );
+      final x = timeline.columnX(time);
       switch (event) {
-        case Note():
-          _layoutNote(
+        case Note(:final value):
+          final head = _layoutHead(commands, event, clef, ref, top: top, x: x);
+          heads.add(head);
+          if (beamOpen && value.flags > 0) {
+            groups.last.add(head);
+          } else {
+            groups.add([head]);
+          }
+          beamOpen = event.beamedToNext && value.flags > 0;
+        case Rest(:final value, :final dotted):
+          // Silence d'une mesure entière : centré dans la mesure.
+          final alone = staff.time != null && measure.events.length == 1;
+          _layoutRest(
             commands,
             event,
-            clef,
             ref,
             top: top,
-            x: timeline.columnX(time),
+            x: alone
+                ? timeline.centered(
+                    measureStart,
+                    measureStart + measure.duration,
+                    _dotRight(_width(_restGlyph(value)), dotted: dotted),
+                  )
+                : x,
           );
+          beamOpen = false;
       }
       time += event.duration;
     }
   }
+
+  for (final group in groups) {
+    if (group.length == 1) {
+      if (group.single.note.value != NoteValue.whole) {
+        _layoutStem(commands, group.single);
+      }
+    } else {
+      _layoutBeamGroup(commands, group, top: top);
+    }
+  }
+
+  // Après les hampes : le sens de la hampe fixe le côté de la liaison.
+  for (final (index, head) in heads.indexed) {
+    if (head.note.tiedToNext && index + 1 < heads.length) {
+      _layoutTie(commands, head, heads[index + 1]);
+    }
+  }
 }
+
+/// Tête de note placée, avec le sens de sa hampe.
+class _Head {
+  new(
+    this.note,
+    this.ref, {
+    required this.x,
+    required this.y,
+    required this.position,
+  });
+
+  final Note note;
+  final EventRef ref;
+
+  /// Abscisse de la tête.
+  final double x;
+
+  /// Ordonnée du centre de la tête.
+  final double y;
+
+  /// Position sur la portée.
+  final int position;
+
+  /// Sens de la hampe : selon la position, sauf dans une ligature, où le
+  /// groupe impose le sien.
+  late bool up = _stemUp(position);
+
+  Glyph get glyph => _notehead(note.value);
+
+  /// Ancre SMuFL de la hampe sur la tête. Axe y vers le haut.
+  (double, double) get _anchor => up ? glyph.stemUpSE! : glyph.stemDownNW!;
+
+  /// Abscisse de l'axe de la hampe.
+  double get stemX {
+    const thickness = EngravingDefaults.stemThickness;
+    return x + _anchor.$1 + (up ? -thickness / 2 : thickness / 2);
+  }
+
+  /// Ordonnée du pied de la hampe, sur la tête.
+  double get stemStartY => y - _anchor.$2;
+}
+
+bool _stemUp(int position) => position < _middleLine;
 
 void _layoutKeySignature(
   List<DrawCommand> commands,
@@ -441,7 +587,9 @@ List<Glyph> _digits(int value) => [
 double _digitsWidth(List<Glyph> glyphs) =>
     glyphs.fold(0, (width, glyph) => width + _width(glyph));
 
-void _layoutNote(
+/// Tête, altération, lignes supplémentaires et point d'une note. Les
+/// hampes et les liaisons viennent ensuite, groupe par groupe.
+_Head _layoutHead(
   List<DrawCommand> commands,
   Note note,
   Clef clef,
@@ -482,37 +630,194 @@ void _layoutNote(
     );
   }
   commands.add(GlyphCommand(head, x, y, event: ref));
-  if (note.value != NoteValue.whole) {
-    _layoutStem(commands, head, ref, x: x, y: y, position: position);
+  if (note.dotted) {
+    // Sur une ligne, le point monte dans l'interligne du dessus.
+    final dotPosition = position.isEven ? position + 1 : position;
+    commands.add(
+      GlyphCommand(
+        Glyph.augmentationDot,
+        x + _width(head) + _dotGap,
+        _y(top, dotPosition),
+        event: ref,
+      ),
+    );
+  }
+  return _Head(note, ref, x: x, y: y, position: position);
+}
+
+/// Silence : la pause pend sous la 4e ligne, la demi-pause est posée sur la
+/// 3e, les autres sont centrés sur la 3e. Le point va dans le 3e
+/// interligne.
+void _layoutRest(
+  List<DrawCommand> commands,
+  Rest rest,
+  EventRef ref, {
+  required double top,
+  required double x,
+}) {
+  final glyph = _restGlyph(rest.value);
+  final position = rest.value == NoteValue.whole ? 6 : _middleLine;
+  commands.add(GlyphCommand(glyph, x, _y(top, position), event: ref));
+  if (rest.dotted) {
+    commands.add(
+      GlyphCommand(
+        Glyph.augmentationDot,
+        x + _width(glyph) + _dotGap,
+        _y(top, _middleLine + 1),
+        event: ref,
+      ),
+    );
   }
 }
 
-/// Hampe : vers le haut sous la ligne du milieu, vers le bas à partir
-/// d'elle. Une octave de long, et jamais moins que jusqu'à la ligne du
-/// milieu.
-void _layoutStem(
-  List<DrawCommand> commands,
-  Glyph head,
-  EventRef ref, {
-  required double x,
-  required double y,
-  required int position,
-}) {
+/// Hampe d'une note seule : vers le haut sous la ligne du milieu, vers le
+/// bas à partir d'elle. Une octave de long, et jamais moins que jusqu'à la
+/// ligne du milieu. Crochet au bout pour une croche ou une double croche.
+void _layoutStem(List<DrawCommand> commands, _Head head) {
   const thickness = EngravingDefaults.stemThickness;
-  final length = math.max(_stemLength, (position - _middleLine).abs() / 2);
-  final up = position < _middleLine;
-
-  // Ancres SMuFL : axe y vers le haut, d'où le changement de signe.
-  final (anchorX, anchorY) = up ? head.stemUpSE! : head.stemDownNW!;
-  final stemX = x + anchorX + (up ? -thickness / 2 : thickness / 2);
+  final length = math.max(_stemLength, (head.position - _middleLine).abs() / 2);
+  final up = head.up;
+  final tip = up ? head.y - length : head.y + length;
+  final stemX = head.stemX;
   commands.add(
-    LineCommand(
-      stemX,
-      y - anchorY,
-      stemX,
-      up ? y - length : y + length,
-      thickness,
-      event: ref,
+    LineCommand(stemX, head.stemStartY, stemX, tip, thickness, event: head.ref),
+  );
+
+  final value = head.note.value;
+  if (value.flags == 0) return;
+  // Ancres SMuFL : le coin de la hampe, côté gauche, axe y vers le haut.
+  final flag = _flagGlyph(value, up: up);
+  final (anchorX, anchorY) = up ? flag.stemUpNW! : flag.stemDownSW!;
+  commands.add(
+    GlyphCommand(
+      flag,
+      stemX - thickness / 2 - anchorX,
+      tip + anchorY,
+      event: head.ref,
+    ),
+  );
+}
+
+/// Groupe de croches et de doubles croches ligaturées.
+///
+/// Les hampes vont toutes dans le sens de la note la plus éloignée de la
+/// ligne du milieu. La ligature suit la pente des notes extrêmes, limitée,
+/// et reste à plat si une note intérieure est plus près d'elle que les deux
+/// extrêmes. Elle est placée pour que la hampe la plus courte fasse une
+/// octave, et que chaque hampe atteigne la ligne du milieu.
+void _layoutBeamGroup(
+  List<DrawCommand> commands,
+  List<_Head> group, {
+  required double top,
+}) {
+  final above = group.map((h) => h.position - _middleLine).reduce(math.max);
+  final below = group.map((h) => _middleLine - h.position).reduce(math.max);
+  final up = below > above;
+  for (final head in group) {
+    head.up = up;
+  }
+
+  final first = group.first;
+  final last = group.last;
+  final x0 = first.stemX;
+  final width = last.stemX - x0;
+  final inner = group.sublist(1, group.length - 1);
+  final flat = up
+      ? inner.any((h) => h.y < math.min(first.y, last.y))
+      : inner.any((h) => h.y > math.max(first.y, last.y));
+  final maxRise = math.min(_beamMaxRise, width * _beamMaxSlope);
+  final slope = flat
+      ? 0.0
+      : (last.y - first.y).clamp(-maxRise, maxRise) / width;
+
+  // Ordonnée de la ligature au droit de la hampe de chaque note, si elle
+  // passait par 0 en x0. On la décale ensuite d'un seul bloc.
+  double rise(_Head head) => slope * (head.stemX - x0);
+  final middle = top + _staffHeight - _middleLine / 2;
+  final offsets = [
+    for (final head in group) ...[
+      (up ? head.y - _stemLength : head.y + _stemLength) - rise(head),
+      middle - rise(head),
+    ],
+  ];
+  final offset = up ? offsets.reduce(math.min) : offsets.reduce(math.max);
+  double beamY(double x) => offset + slope * (x - x0);
+
+  const thickness = EngravingDefaults.stemThickness;
+  for (final head in group) {
+    commands.add(
+      LineCommand(
+        head.stemX,
+        head.stemStartY,
+        head.stemX,
+        beamY(head.stemX),
+        thickness,
+        event: head.ref,
+      ),
+    );
+  }
+
+  // Ligne médiane de la ligature de niveau [level] (0 pour la croche),
+  // côté tête par rapport au bout des hampes.
+  const beam = EngravingDefaults.beamThickness;
+  final inward = up ? 1 : -1;
+  void segment(double left, double right, int level) {
+    final shift =
+        inward * (beam / 2 + level * (beam + EngravingDefaults.beamSpacing));
+    commands.add(
+      BeamCommand(left, beamY(left) + shift, right, beamY(right) + shift, beam),
+    );
+  }
+
+  segment(x0 - thickness / 2, last.stemX + thickness / 2, 0);
+
+  // Deuxième ligature sur chaque suite de doubles croches, tronçon pour une
+  // double croche isolée : vers la droite en tête de groupe, vers la gauche
+  // sinon.
+  var index = 0;
+  while (index < group.length) {
+    if (group[index].note.value.flags < 2) {
+      index++;
+      continue;
+    }
+    var end = index;
+    while (end + 1 < group.length && group[end + 1].note.value.flags > 1) {
+      end++;
+    }
+    final x = group[index].stemX;
+    if (end > index) {
+      segment(x - thickness / 2, group[end].stemX + thickness / 2, 1);
+    } else {
+      final neighbour = index == 0 ? group[1] : group[index - 1];
+      final length = math.min(_beamStub, (neighbour.stemX - x).abs() / 2);
+      if (index == 0) {
+        segment(x - thickness / 2, x + length, 1);
+      } else {
+        segment(x - length, x + thickness / 2, 1);
+      }
+    }
+    index = end + 1;
+  }
+}
+
+/// Liaison de prolongation de [from] à [to], du côté opposé à la hampe de
+/// [from]. Elle part après le point d'une note pointée.
+void _layoutTie(List<DrawCommand> commands, _Head from, _Head to) {
+  final sign = from.up ? 1 : -1;
+  final headWidth = _width(from.glyph);
+  final x1 = from.note.dotted
+      ? from.x + _dotRight(headWidth, dotted: true) + _dotGap / 2
+      : from.x + headWidth * 0.75;
+  final x2 = to.x + _width(to.glyph) * 0.25;
+  commands.add(
+    TieCommand(
+      x1,
+      x2,
+      from.y + sign * _tieOffset,
+      height: sign * math.min(1, 0.3 + 0.1 * (x2 - x1)),
+      endThickness: EngravingDefaults.tieEndpointThickness,
+      midThickness: EngravingDefaults.tieMidpointThickness,
+      event: from.ref,
     ),
   );
 }
@@ -611,7 +916,23 @@ Glyph _clefGlyph(Clef clef) => switch (clef.sign) {
 Glyph _notehead(NoteValue value) => switch (value) {
   NoteValue.whole => Glyph.noteheadWhole,
   NoteValue.half => Glyph.noteheadHalf,
-  NoteValue.quarter => Glyph.noteheadBlack,
+  NoteValue.quarter ||
+  NoteValue.eighth ||
+  NoteValue.sixteenth => Glyph.noteheadBlack,
+};
+
+Glyph _restGlyph(NoteValue value) => switch (value) {
+  NoteValue.whole => Glyph.restWhole,
+  NoteValue.half => Glyph.restHalf,
+  NoteValue.quarter => Glyph.restQuarter,
+  NoteValue.eighth => Glyph.rest8th,
+  NoteValue.sixteenth => Glyph.rest16th,
+};
+
+/// Crochet d'une note seule, [value] croche ou plus courte.
+Glyph _flagGlyph(NoteValue value, {required bool up}) => switch (value.flags) {
+  1 => up ? Glyph.flag8thUp : Glyph.flag8thDown,
+  _ => up ? Glyph.flag16thUp : Glyph.flag16thDown,
 };
 
 Glyph _accidentalGlyph(Accidental accidental) => switch (accidental) {

@@ -36,11 +36,21 @@ final List<String> _glyphs = [
   'accidentalNatural',
   'accidentalSharp',
   'accidentalDoubleSharp',
+  'augmentationDot',
+  'flag8thUp',
+  'flag8thDown',
+  'flag16thUp',
+  'flag16thDown',
+  'restWhole',
+  'restHalf',
+  'restQuarter',
+  'rest8th',
+  'rest16th',
   for (var digit = 0; digit <= 9; digit++) 'timeSig$digit',
 ];
 
 /// Points d'ancrage utilisés par le moteur, s'ils existent pour le glyphe.
-const _anchors = ['stemUpSE', 'stemDownNW'];
+const _anchors = ['stemUpSE', 'stemDownNW', 'stemUpNW', 'stemDownSW'];
 
 /// Valeurs de gravure par défaut utilisées par le moteur.
 const _engravingDefaults = [
@@ -52,6 +62,10 @@ const _engravingDefaults = [
   'barlineSeparation',
   'thinThickBarlineSeparation',
   'stemThickness',
+  'beamThickness',
+  'beamSpacing',
+  'tieEndpointThickness',
+  'tieMidpointThickness',
 ];
 
 Future<void> main() async {
@@ -135,6 +149,8 @@ String _generate(Map<String, dynamic> metadata, Map<String, dynamic> names) {
     ..writeln('    required this.bBoxNE,')
     ..writeln('    this.stemUpSE,')
     ..writeln('    this.stemDownNW,')
+    ..writeln('    this.stemUpNW,')
+    ..writeln('    this.stemDownSW,')
     ..writeln('  });')
     ..writeln()
     ..writeln('  /// Codepoint dans la police.')
@@ -151,6 +167,12 @@ String _generate(Map<String, dynamic> metadata, Map<String, dynamic> names) {
     ..writeln()
     ..writeln("  /// Attache d'une hampe vers le bas (x, y).")
     ..writeln('  final (double, double)? stemDownNW;')
+    ..writeln()
+    ..writeln("  /// Attache d'un crochet sur une hampe vers le haut (x, y).")
+    ..writeln('  final (double, double)? stemUpNW;')
+    ..writeln()
+    ..writeln("  /// Attache d'un crochet sur une hampe vers le bas (x, y).")
+    ..writeln('  final (double, double)? stemDownSW;')
     ..writeln('}')
     ..writeln()
     ..writeln('/// Valeurs de gravure par défaut de Bravura, en interlignes.')

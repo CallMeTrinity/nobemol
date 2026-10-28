@@ -118,3 +118,78 @@ class LineCommand extends DrawCommand {
     math.max(y1, y2),
   ).inflate(thickness / 2);
 }
+
+/// Ligature : parallélogramme dont les côtés gauche et droit sont verticaux.
+class BeamCommand extends DrawCommand {
+  /// Crée une ligature dont la ligne médiane va de ([x1], [y1]) à ([x2],
+  /// [y2]).
+  const new(this.x1, this.y1, this.x2, this.y2, this.thickness);
+
+  /// Abscisse du bord gauche.
+  final double x1;
+
+  /// Ordonnée de la ligne médiane, à gauche.
+  final double y1;
+
+  /// Abscisse du bord droit.
+  final double x2;
+
+  /// Ordonnée de la ligne médiane, à droite.
+  final double y2;
+
+  /// Épaisseur, mesurée verticalement.
+  final double thickness;
+
+  @override
+  Box get bounds => Box(
+    x1,
+    math.min(y1, y2) - thickness / 2,
+    x2,
+    math.max(y1, y2) + thickness / 2,
+  );
+}
+
+/// Liaison de prolongation : un arc plein, effilé aux deux bouts, entre deux
+/// notes de même hauteur.
+class TieCommand extends DrawCommand {
+  /// Crée une liaison de ([x1], [y]) à ([x2], [y]), dont le milieu s'écarte
+  /// de [height] : négatif vers le haut, positif vers le bas.
+  const new(
+    this.x1,
+    this.x2,
+    this.y, {
+    required this.height,
+    required this.endThickness,
+    required this.midThickness,
+    super.event,
+  });
+
+  /// Abscisse de départ.
+  final double x1;
+
+  /// Abscisse d'arrivée.
+  final double x2;
+
+  /// Ordonnée des deux bouts.
+  final double y;
+
+  /// Écart du milieu de l'arc par rapport à [y].
+  final double height;
+
+  /// Épaisseur aux bouts.
+  final double endThickness;
+
+  /// Épaisseur au milieu.
+  final double midThickness;
+
+  @override
+  Box get bounds {
+    final peak = y + height + height.sign * midThickness / 2;
+    return Box(
+      x1,
+      math.min(y - endThickness / 2, peak),
+      x2,
+      math.max(y + endThickness / 2, peak),
+    );
+  }
+}

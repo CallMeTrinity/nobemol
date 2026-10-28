@@ -27,6 +27,16 @@ K:G
 G A B | c2 B | A2 G |]
 ```
 
+Du rythme : silences, croches liées par une ligature, notes pointées, liaison de prolongation :
+
+```abc
+X:1
+M:4/4
+L:1/8
+K:C
+C2 z2 EF G2 | A3 B c2- c2 | z4 G4 |]
+```
+
 Une grande portée en mesures :
 
 ```abc
@@ -41,7 +51,7 @@ V:LH clef=bass
 C, G, | C,2 |]
 ```
 
-## Grammaire (étape 3)
+## Grammaire (étape 4)
 
 ```ebnf
 morceau      = { ligne-vide | commentaire } , en-tête , corps ;
@@ -60,10 +70,11 @@ tonalité     = lettre-note , [ "#" | "b" ] , [ "m" ] ;
 lettre-note  = "C" | "D" | "E" | "F" | "G" | "A" | "B" ;
 
 corps        = { champ-V | ligne-musique | commentaire } ;
-ligne-musique = { espace } , { ( note | barre ) , { espace } } ;
+ligne-musique = { espace } , { ( note | silence | barre ) , { espace } } ;
 
 note         = [ altération ] , ( grave , { "," } | aiguë , { "'" } ) ,
-               [ durée ] ;
+               [ durée ] , [ "-" ] ;
+silence      = "z" , [ durée ] ;
 altération   = "^^" | "^" | "=" | "_" | "__" ;
 grave        = lettre-note ;
 aiguë        = "c" | "d" | "e" | "f" | "g" | "a" | "b" ;
@@ -75,7 +86,7 @@ id-voix      = ( lettre | chiffre | "_" ) , { lettre | chiffre | "_" } ;
 commentaire  = "%" , { caractère } ;
 ```
 
-Les espaces sont libres autour des notes, des barres et des éléments de `%%score`. Pas d'espace entre une note et sa durée.
+Les espaces sont libres autour des notes, des silences, des barres et des éléments de `%%score`. Pas d'espace entre une note et sa durée, ni entre la durée et `-`. Une seule exception : les croches et les doubles croches **collées** sont reliées par une ligature (voir Ligatures).
 
 ## Règles
 
@@ -95,10 +106,33 @@ Les espaces sont libres autour des notes, des barres et des éléments de `%%sco
 
 ### Durées
 
-- `L:` donne l'unité : `1/1`, `1/2`, `1/4`, `1/8` ou `1/16`. **`L:` est obligatoire dès que le morceau contient une note**. L'ABC standard prend la croche ou la double croche par défaut selon `M:` : un piège pour qui écrit une leçon, donc le sous-ensemble ne devine pas.
+- `L:` donne l'unité : `1/1`, `1/2`, `1/4`, `1/8` ou `1/16`. **`L:` est obligatoire dès que le morceau contient une note ou un silence**. L'ABC standard prend la croche ou la double croche par défaut selon `M:` : un piège pour qui écrit une leçon, donc le sous-ensemble ne devine pas.
 - La durée d'une note = `L:` × son multiplicateur : `C2` (double), `C/2` ou `C/` (moitié), `C//` (quart), `C3/2`.
-- À l'étape 3, une note dure une **ronde**, une **blanche** ou une **noire**. Le reste est refusé : notes pointées et croches (étape 4), plus long qu'une ronde, durées qui demandent une liaison (`C5` avec `L:1/4`).
+- Une note dure une **ronde**, une **blanche**, une **noire**, une **croche** ou une **double croche**, avec **un point** ou sans : `C3` avec `L:1/8` est une noire pointée.
+- Refusé : plus long qu'une ronde (ronde pointée comprise), plus court qu'une double croche, double point (`C7` avec `L:1/16`), durées qui demandent une liaison (`C5` avec `L:1/8` : écrire `C4-C`).
+- Les rythmes pointés `C>D` et `C<D` sont refusés : écrire les durées, `C3/2 D/`. Une durée s'écrit d'une seule façon.
 - Des notes sans rythme s'écrivent en rondes : `L:1/1`.
+
+### Silences
+
+- `z` suivi de sa durée, comme une note : `z` (une unité), `z2`, `z/`, `z3/2`. Mêmes figures que les notes, point compris.
+- Refusés : `Z` (silence de plusieurs mesures, écrire `z` avec sa durée) et `x` (silence invisible).
+- Un silence se place sur la portée à une hauteur fixe : la pause pend sous la 4e ligne, la demi-pause est posée sur la 3e, les autres sont centrés sur la portée.
+
+### Ligatures
+
+- Des croches et des doubles croches **collées**, sans espace, sont reliées par une ligature : `CDEF` donne quatre croches liées, `CD EF` deux groupes de deux (avec `L:1/8`). C'est la règle de l'ABC standard.
+- Une espace, une barre, une fin de ligne ou une note plus longue coupe la ligature. Une croche seule porte un crochet.
+- Un silence ne se place pas dans une ligature : un silence collé à une croche ou une double croche (`CzD` avec `L:1/8`) est refusé. Écrire `C z D`.
+- Les doubles croches d'un groupe partagent une deuxième ligature. Une double croche isolée dans le groupe (croche pointée et double croche) porte un tronçon de ligature.
+- Le moteur ne regroupe rien de lui-même : c'est l'auteur qui choisit les groupes, en général un groupe par temps.
+
+### Liaisons de prolongation
+
+- `-` collé après la note (après sa durée) la lie à la **note suivante de la même voix** : `C2-C`, `c4-|c2`. Les durées s'additionnent.
+- La liaison peut traverser une barre et une fin de ligne. Elle ne traverse pas un silence.
+- Les deux notes ont la même hauteur. La note d'arrivée s'écrit **sans altération** : `^F2-F`, comme sur la partition, où l'altération ne se répète pas. Deux hauteurs différentes, c'est une liaison d'expression (plus tard).
+- Refusé : `-` sans note d'arrivée (fin du morceau), `-` après un silence.
 
 ### Mesures et barres
 
@@ -106,7 +140,7 @@ Les espaces sont libres autour des notes, des barres et des éléments de `%%sco
 - **Sans `M:`**, pas de barre : la musique forme une seule mesure, de longueur libre.
 - Barres : `|` simple, `||` double, `|]` finale. Les reprises (`|:`, `:|`), fins alternatives (`|1`) et `[|` sont refusées.
 - **Chaque mesure est complète**, la dernière aussi, même sans barre. Pas de levée (anacrouse) pour l'instant.
-- Pas de barre avant la première note, pas de mesure vide (`| |`).
+- Pas de barre avant la première note, pas de mesure vide (`| |`) : une mesure sans note s'écrit avec un silence.
 - Une mesure peut continuer à la ligne suivante.
 
 ### Hauteurs
@@ -134,7 +168,7 @@ Une voix ABC = une portée du modèle (`Staff.id` = identifiant de la voix).
 - **Avec `V:`** : la musique suit toujours une ligne `V:` du corps. Un `V:` dans le corps sélectionne la voix (et la crée si besoin).
 - **Avec `%%score`** : il fixe l'ordre des portées, de haut en bas. `{RH LH}` les lie par une accolade (grande portée). Une voix du corps absente de `%%score` est une erreur (l'ABC ne l'afficherait pas). Une voix de `%%score` sans musique donne une portée vide.
 - **Sans `%%score`** : les portées suivent l'ordre d'apparition des voix, sans accolade.
-- **Avec `M:`**, toutes les voix qui ont de la musique ont **le même nombre de mesures et les mêmes barres**. Les notes de deux voix qui commencent au même instant sont alignées verticalement.
+- **Avec `M:`**, toutes les voix qui ont de la musique ont **le même nombre de mesures et les mêmes barres**. Les notes et les silences de deux voix qui commencent au même instant sont alignés verticalement.
 - Le chiffrage et l'armure valent pour toutes les voix.
 
 ### Lignes
@@ -147,11 +181,10 @@ Une voix ABC = une portée du modèle (`Staff.id` = identifiant de la voix).
 
 | Syntaxe | Exemple | Étape |
 |---|---|---|
-| Croches et valeurs plus courtes | `C` avec `L:1/8` | 4 |
-| Notes pointées | `C3` avec `L:1/8` | 4 |
-| Silences | `z` | 4 |
-| Liaisons de prolongation | `C-C` | 4 |
-| Rythmes pointés | `C>D` | 4 |
+| Rythmes pointés | `C>D` (écrire `C3/2 D/`) | non prévu |
+| Silences de plusieurs mesures, silences invisibles | `Z`, `x` | non prévu |
+| Triples croches, doubles points | `C/` avec `L:1/16`, `C7` avec `L:1/16` | plus tard |
+| Ligature à travers un silence | `CzD` avec `L:1/8` | non prévu |
 | Décorations | `!p!`, `.C` | 5 |
 | Accords, n-olets, liaisons | `[CEG]`, `(3`, `(CD)` | plus tard |
 | Levée (première mesure incomplète) | `C \| D E F G \|` | plus tard |

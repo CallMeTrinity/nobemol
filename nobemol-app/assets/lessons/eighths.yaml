@@ -1,0 +1,46 @@
+id: eighths
+title: Les croches
+skills: [rhythm.eighths]
+level: 3
+theory:
+  - text: >-
+      La croche dure un demi-temps : deux croches font une noire. Seule,
+      elle porte un crochet au bout de sa hampe.
+    abc: |
+      X:1
+      M:2/4
+      L:1/8
+      K:C
+      G2 G2 | G G G2 |]
+  - text: >-
+      Les croches qui se suivent sont souvent reliées par une barre, la
+      ligature. En général, une ligature regroupe les croches d'un même
+      temps.
+    abc: |
+      X:1
+      M:2/4
+      L:1/8
+      K:C
+      GA Bc | d2 B2 | GA B2 |]
+  - text: >-
+      Le demi-soupir vaut une croche : un demi-temps de silence.
+    abc: |
+      X:1
+      M:2/4
+      L:1/8
+      K:C
+      G z G z | z G AB |]
+exercise:
+  type: identify-duration
+  abc: |
+    X:1
+    M:4/4
+    L:1/8
+    K:C
+    C2 DE F2 G2 | AB c2 z c B2 | A2 GF E4 |]
+  targets:
+    - { measure: 1, event: 1 }
+    - { measure: 1, event: 2 }
+    - { measure: 2, event: 4 }
+    - { measure: 2, event: 5 }
+    - { measure: 3, event: 4 }

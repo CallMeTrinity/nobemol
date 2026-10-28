@@ -1,0 +1,40 @@
+id: rests
+title: Les silences
+skills: [rhythm.rests]
+level: 2
+theory:
+  - text: >-
+      Un silence est un moment où l'on ne joue pas. Il se compte comme une
+      note : chaque figure de note a son silence, de même durée.
+  - text: >-
+      Le soupir vaut une noire : un temps.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      G z G z | z G G G |]
+  - text: >-
+      La pause vaut une ronde, la demi-pause une blanche. Elles se
+      ressemblent : la pause pend sous la 4e ligne, la demi-pause est posée
+      sur la 3e.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      z4 | z2 G2 | G2 z2 |]
+exercise:
+  type: identify-duration
+  abc: |
+    X:1
+    M:4/4
+    L:1/4
+    K:C
+    C z E z | z2 G2 | z4 | c2 z2 |]
+  targets:
+    - { measure: 1, event: 2 }
+    - { measure: 1, event: 3 }
+    - { measure: 2, event: 1 }
+    - { measure: 3, event: 1 }
+    - { measure: 4, event: 2 }

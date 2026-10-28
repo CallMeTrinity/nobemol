@@ -1,0 +1,8 @@
+% attendu : treble 2/4([C4:8 D4:8 E4:8 F4:8] | [G4:8 A4:8] [B4:8 C5:8] | G4:8 z:8 G4:4 |])
+% Croches collées : une ligature. Une espace coupe le groupe, une croche
+% seule porte un crochet.
+X:1
+M:2/4
+L:1/8
+K:C
+CDEF | GA Bc | G z G2 |]

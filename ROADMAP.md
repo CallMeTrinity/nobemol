@@ -12,7 +12,7 @@ Le produit et les décisions techniques sont dans [IDEA.md](IDEA.md).
 | 1 | Modèle avec grande portée, rendu portée + clé + **une note** | **MVP** : lecture de notes | En cours |
 | 2 | Parser ABC (sous-ensemble) + validateur | Leçons écrites en texte | En cours |
 | 3 | Mesures, chiffrage, armure, barres, hampes, **alignement entre portées** | Lecture de courtes phrases | En cours |
-| 4 | Silences, points, ligatures, liaisons de prolongation | Exercices de rythme | |
+| 4 | Silences, points, ligatures, liaisons de prolongation | Exercices de rythme | En cours |
 | 5 | Décorations : nuances, articulations, termes | Apprentissage des symboles | |
 | Plus tard | Accords, n-olets, liaisons d'expression | Au besoin | |
 
@@ -81,8 +81,21 @@ Le produit et les décisions techniques sont dans [IDEA.md](IDEA.md).
 
 ## Étape 4 : rythme
 
-- [ ] Silences, points, ligatures, liaisons de prolongation
-- [ ] Exercices de rythme
+- [x] Sous-ensemble ABC étendu avant le code : silences `z`, croches et doubles croches, un point, ligatures par collage, `-` ([doc/abc.md](nobemol-app/packages/notation/doc/abc.md))
+- [x] Modèle : `Rest`, `NoteValue` jusqu'à la double croche, `dotted`, `tiedToNext`, `beamedToNext`, `System.tieChain`
+- [x] Parser : liaison vers la même hauteur sans altération écrite, pas de silence dans une ligature, `>` refusé (une durée s'écrit d'une seule façon)
+- [x] Bravura : silences, point, crochets, ancres `stemUpNW` / `stemDownSW`, épaisseurs de ligature et de liaison
+- [x] Layout : silences (pause d'une mesure entière centrée), points, crochets, ligatures (sens commun, pente limitée, deuxième ligature, tronçon), liaisons du côté opposé à la hampe
+- [x] Rendu : `BeamCommand` et `TieCommand` (arcs de Bézier pleins)
+- [x] Exercice `identify-duration` : durée en temps (¼ à 4), chiffrages x/4, liaison entière colorée et comptée, vérifié par le validateur
+- [x] Compétences `rhythm.*` et 6 leçons : temps, silences, croches, notes pointées, liaisons, doubles croches
+
+**Terminé quand** : une leçon `identify-duration` avec croches ligaturées et liaison se joue sur un vrai téléphone, et une cible sur une note d'arrivée de liaison fait échouer la CI.
+
+À vérifier :
+
+- Goldens à générer sur la CI (commit `[goldens]`) : `rhythm_treble`, `rhythm_sixteenths`, `rhythm_grand_staff`. Les 8 goldens existants ne devraient pas changer : mêmes commandes de dessin, seules les hampes sont dessinées après les têtes (vérifié sur la liste de dessin, même couleur partout).
+- Lisibilité des doubles croches sur téléphone (leçon « Les doubles croches », 3 mesures en 2/4).
 
 ## Étape 5 : symboles et termes
 

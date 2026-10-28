@@ -1,0 +1,7 @@
+% attendu : treble 2/4([C4:16 D4:16 E4:16 F4:16] [G4:8 A4:16 B4:16] | [C5:16 B4:8.] A4:4 |])
+% Doubles croches, mêlées aux croches dans un même groupe.
+X:1
+M:2/4
+L:1/16
+K:C
+CDEF G2AB | cB3 A4 |]

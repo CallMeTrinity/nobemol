@@ -1,0 +1,8 @@
+% attendu : treble 4/4(z | z:2 C4:2 | z:4 D4:4 z:8. E4:16 z:8 E4:8 | z:2. G4:4 |])
+% Silences : pause, demi-pause, soupir, demi-soupir, quart de soupir,
+% pointés ou non. Un silence s'écrit z, avec une durée comme une note.
+X:1
+M:4/4
+L:1/16
+K:C
+z16 | z8 C8 | z4 D4 z3 E z2 E2 | z12 G4 |]

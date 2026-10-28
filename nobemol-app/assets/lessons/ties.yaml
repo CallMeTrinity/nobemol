@@ -1,0 +1,47 @@
+id: ties
+title: Les liaisons de prolongation
+skills: [rhythm.ties]
+level: 3
+theory:
+  - text: >-
+      Une liaison de prolongation relie deux notes de même hauteur. On joue
+      la première et on la tient pendant la durée des deux : la deuxième ne
+      se rejoue pas.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      G2- G G | c4 |]
+  - text: >-
+      La liaison traverse la barre de mesure, ce qu'aucune figure ne peut
+      faire.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      G G c2- | c G G2 |]
+  - text: >-
+      La liaison se place du côté opposé à la hampe : en dessous si la hampe
+      monte, au-dessus si elle descend.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      E2- E2 | c2- c2 |]
+exercise:
+  type: identify-duration
+  abc: |
+    X:1
+    M:4/4
+    L:1/4
+    K:C
+    C D E2- | E F G2- | G2 A B | c4 |]
+  targets:
+    - { measure: 1, event: 3 }
+    - { measure: 2, event: 2 }
+    - { measure: 2, event: 3 }
+    - { measure: 3, event: 2 }
+    - { measure: 4, event: 1 }

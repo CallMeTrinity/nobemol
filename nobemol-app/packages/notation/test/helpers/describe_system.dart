@@ -5,8 +5,11 @@ import 'package:notation/notation.dart';
 ///
 /// `{RH:treble 1# 3/4(C5:2 E5:4 |]) LH:bass(C3)}` : groupes séparés par une
 /// espace, accolade entre `{ }`, portée `id:clé armure chiffrage(mesures)`.
-/// Une note est suivie de sa figure (`:2` blanche, `:4` noire), sauf la
-/// ronde. Chaque mesure est suivie de sa barre, s'il y en a une.
+/// Une note est suivie de sa figure (`:2` blanche, `:4` noire, `:8`
+/// croche), sauf la ronde, puis de `.` si elle est pointée et de `-` si elle
+/// est liée à la suivante. Un silence s'écrit `z`, avec sa figure. Les notes
+/// ligaturées sont entre crochets. Chaque mesure est suivie de sa barre,
+/// s'il y en a une.
 String describeSystem(System system) => system.groups
     .map((group) {
       final staves = group.staves.map(_describeStaff).join(' ');
@@ -23,13 +26,24 @@ String _describeStaff(Staff staff) {
 }
 
 String _describeMeasure(Measure measure) {
-  final events = measure.events.map(
-    (event) => switch (event) {
-      Note(:final pitch, value: NoteValue.whole) => '$pitch',
-      Note(:final pitch, :final value) =>
-        '$pitch:${1 ~/ value.duration.toDouble()}',
-    },
-  );
+  final events = <String>[];
+  var beamOpen = false;
+  for (final event in measure.events) {
+    final value = event.value == NoteValue.whole
+        ? ''
+        : ':${1 ~/ event.value.duration.toDouble()}';
+    final dot = event.dotted ? '.' : '';
+    var text = switch (event) {
+      Note(:final pitch, :final tiedToNext) =>
+        '$pitch$value$dot${tiedToNext ? '-' : ''}',
+      Rest() => 'z$value$dot',
+    };
+    final beamed = event is Note && event.beamedToNext;
+    if (beamed && !beamOpen) text = '[$text';
+    if (!beamed && beamOpen) text = '$text]';
+    beamOpen = beamed;
+    events.add(text);
+  }
   final barline = switch (measure.barline) {
     null => '',
     Barline.regular => ' |',

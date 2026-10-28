@@ -81,12 +81,64 @@ void main() {
       expect(() => parseAbc('X:1\nM:4/4\nK:C\n^C\n'), error(4, 1, 'L:'));
     });
 
+    test('figures pointées et courtes', () {
+      expect(
+        parse('X:1\nL:1/16\nK:C\nC12 D6 E3 F\n'),
+        'treble(C4:2. D4:4. E4:8. F4:16)',
+      );
+      expect(parse('X:1\nL:1/4\nK:C\nz/ z3\n'), 'treble(z:8 z:2.)');
+    });
+
     test('valeurs refusées', () {
-      expect(() => parseAbc('X:1\nL:1/4\nK:C\nC6\n'), error(4, 1, 'pointée'));
-      expect(() => parseAbc('X:1\nL:1/4\nK:C\nC7\n'), error(4, 1, 'pointée'));
+      expect(() => parseAbc('X:1\nL:1/4\nK:C\nC6\n'), error(4, 1, 'ronde'));
       expect(() => parseAbc('X:1\nL:1/4\nK:C\nC5\n'), error(4, 1, 'ronde'));
       expect(() => parseAbc('X:1\nL:1/4\nK:C\nC0\n'), error(4, 2, 'nulle'));
-      expect(() => parseAbc('X:1\nL:1/16\nK:C\nC D4\n'), error(4, 1, 'croche'));
+      expect(() => parseAbc('X:1\nL:1/8\nK:C\nz5\n'), error(4, 1, 'silences'));
+      expect(() => parseAbc('X:1\nK:C\nz\n'), error(3, 1, 'L:'));
+    });
+  });
+
+  group('ligatures', () {
+    test('une fin de ligne coupe le groupe', () {
+      expect(
+        parse('X:1\nL:1/8\nK:C\nCD\nEF\n'),
+        'treble([C4:8 D4:8] [E4:8 F4:8])',
+      );
+    });
+
+    test('une note plus longue coupe le groupe', () {
+      expect(parse('X:1\nL:1/8\nK:C\nCD2E\n'), 'treble(C4:8 D4:4 E4:8)');
+    });
+
+    test('une liaison collée ne coupe pas le groupe', () {
+      expect(parse('X:1\nL:1/8\nK:C\nC-CD\n'), 'treble([C4:8- C4:8 D4:8])');
+    });
+
+    test('un silence non ligaturable peut être collé', () {
+      expect(parse('X:1\nL:1/8\nK:C\nCz2D\n'), 'treble(C4:8 z:4 D4:8)');
+    });
+  });
+
+  group('liaisons de prolongation', () {
+    test('entre voix entrelacées, chaque voix garde la sienne', () {
+      expect(
+        parse(
+          'X:1\n%%score {A B}\nM:2/4\nL:1/2\nK:C\n'
+          'V:A\nc- |\nV:B\nC |\nV:A\nc |]\nV:B\nC |]\n',
+        ),
+        '{A:treble 2/4(C5:2- | C5:2 |]) B:treble 2/4(C4:2 | C4:2 |])}',
+      );
+    });
+
+    test('tieChain : toute la liaison, quelle que soit la note visée', () {
+      final system = parseAbc('X:1\nM:2/4\nL:1/4\nK:C\nC D- | D- D |]\n');
+      EventRef ref(int measure, int event) =>
+          EventRef(staff: 0, measure: measure, event: event);
+      final chain = [ref(0, 1), ref(1, 0), ref(1, 1)];
+      expect(system.tieChain(ref(0, 1)), chain);
+      expect(system.tieChain(ref(1, 1)), chain);
+      expect(system.tieChain(ref(0, 0)), [ref(0, 0)]);
+      expect(system.tieChain(ref(2, 0)), isEmpty);
     });
   });
 

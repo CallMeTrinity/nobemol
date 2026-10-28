@@ -1,8 +1,11 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notation/core.dart';
 
 import 'package:nobemol/lessons/lesson.dart';
 import 'package:nobemol/lessons/yaml_fields.dart';
+import 'package:nobemol/reading/beats.dart';
 import 'package:nobemol/reading/note_reading.dart';
 
 void main() {
@@ -125,7 +128,11 @@ exercise:
     );
     expect(
       () => parse(valid.replaceFirst('note-reading\n', 'quiz\n')),
-      error(14, 9, '« quiz » inconnu (note-reading, identify-note)'),
+      error(
+        14,
+        9,
+        '« quiz » inconnu (note-reading, identify-note, identify-duration)',
+      ),
     );
     expect(
       () => parse(valid.replaceFirst('note-reading\n', 'identify-note\n')),
@@ -259,6 +266,103 @@ exercise:
       expect(
         () => parse(identify.replaceFirst(RegExp(r'  targets:(.|\n)*'), '')),
         error(8, 3, '« targets » manquant'),
+      );
+    });
+  });
+
+  group('identify-note : cible', () {
+    test('un silence n’a pas de nom', () {
+      expect(
+        () => parse('''
+id: test-lesson
+title: Test
+skills: [note-reading.treble]
+level: 1
+theory:
+  - text: Texte.
+exercise:
+  type: identify-note
+  abc: |
+    X:1
+    L:1/4
+    K:C
+    C z
+  targets:
+    - { measure: 1, event: 2 }
+'''),
+        error(15, 7, 'silence'),
+      );
+    });
+  });
+
+  group('identify-duration', () {
+    const duration = '''
+id: test-lesson
+title: Test
+skills: [note-reading.treble]
+level: 1
+theory:
+  - text: Texte.
+exercise:
+  type: identify-duration
+  abc: |
+    X:1
+    M:4/4
+    L:1/8
+    K:C
+    C2 z2 EF G2- | G2 c6 |]
+  targets:
+    - { measure: 1, event: 2 }
+    - { measure: 1, event: 5 }
+''';
+
+    test('silences et notes liées', () {
+      final exercise = parse(duration).exercise as IdentifyDurationExercise;
+      expect(exercise.targets, const [
+        EventRef(staff: 0, measure: 0, event: 1),
+        EventRef(staff: 0, measure: 0, event: 4),
+      ]);
+      expect(exercise.choices, Beats.values);
+
+      final questions = exercise.questions(Random(1));
+      final rest = questions.next() as DurationQuestion;
+      expect(rest.answer, Beats.one);
+      expect(rest.targets, [exercise.targets[0]]);
+
+      // Sol noire liée à sol noire : deux temps, les deux notes colorées.
+      final tied = questions.next(previous: rest) as DurationQuestion;
+      expect(tied.answer, Beats.two);
+      expect(tied.targets, const [
+        EventRef(staff: 0, measure: 0, event: 4),
+        EventRef(staff: 0, measure: 1, event: 0),
+      ]);
+    });
+
+    test('note d’arrivée d’une liaison refusée', () {
+      expect(
+        () => parse(
+          duration.replaceFirst('measure: 1, event: 5', 'measure: 2, event: 1'),
+        ),
+        error(17, 7, 'viser la première note (mesure 1, événement 5)'),
+      );
+    });
+
+    test('durée sans bouton', () {
+      // Noire liée à une noire pointée : 2 temps et demi.
+      expect(
+        () => parse(duration.replaceFirst('| G2 c6 |]', '| G3 A c4 |]')),
+        error(17, 7, '5/2 temps, pas de bouton'),
+      );
+    });
+
+    test('chiffrage en x/4 obligatoire', () {
+      expect(
+        () => parse(
+          duration
+              .replaceFirst('M:4/4', 'M:6/8')
+              .replaceFirst('C2 z2 EF G2- | G2 c6 |]', 'C2 z2 EF | G6 |]'),
+        ),
+        error(9, 8, 'x/4'),
       );
     });
   });

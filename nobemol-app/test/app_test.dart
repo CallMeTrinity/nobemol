@@ -10,6 +10,7 @@ import 'package:nobemol/lessons/content.dart';
 import 'package:nobemol/lessons/content_provider.dart';
 import 'package:nobemol/lessons/lesson_screen.dart';
 import 'package:nobemol/main.dart';
+import 'package:nobemol/reading/beats.dart';
 import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/reading/reading_screen.dart';
 import 'package:nobemol/reading/session.dart';
@@ -48,10 +49,12 @@ void main() {
 
     expect(find.text('Par où commencer ?'), findsOneWidget);
     // Les leçons sont en bas de l'accueil. dragUntilVisible glisse avant de
-    // vérifier : on ne l'appelle que si l'entrée est hors de l'écran.
+    // vérifier : on ne l'appelle que si l'entrée est hors de l'écran. Le
+    // finder hitTestable continue tant que l'entrée n'est pas touchable :
+    // construite juste sous le bord, elle n'est pas encore à l'écran.
     if (find.text(levelTitle).hitTestable().evaluate().isEmpty) {
       await tester.dragUntilVisible(
-        find.text(levelTitle),
+        find.text(levelTitle).hitTestable(),
         find.byType(ListView),
         const Offset(0, -200),
       );
@@ -81,7 +84,7 @@ void main() {
         ? expected
         : DiatonicStep.values[(expected.index + 1) % 7];
     now = now.add(const Duration(seconds: 3));
-    await tester.tap(find.byKey(ValueKey('note-${step.name}')));
+    await tester.tap(find.byKey(ValueKey('answer-${step.name}')));
     await tester.pump();
     await tester.pump(wrongAnswerDelay);
   }
@@ -114,8 +117,8 @@ void main() {
     final params = StartLevel.knowsTreble.params;
     final expected = container.read(sessionProvider(params)).question.answer;
 
-    await tester.tap(find.byKey(ValueKey('note-${expected.name}')));
-    await tester.tap(find.byKey(ValueKey('note-${expected.name}')));
+    await tester.tap(find.byKey(ValueKey('answer-${expected.name}')));
+    await tester.tap(find.byKey(ValueKey('answer-${expected.name}')));
     await tester.pump();
 
     final session = container.read(sessionProvider(params));
@@ -203,16 +206,64 @@ void main() {
 
     for (var i = 0; i < exercise.length; i++) {
       final question = container.read(sessionProvider(exercise)).question;
-      expect(question.target, exercise.targets[i]);
+      expect(question.targets, [exercise.targets[i]]);
       expect(question.system, same(exercise.system));
       now = now.add(const Duration(seconds: 2));
-      await tester.tap(find.byKey(ValueKey('note-${question.answer.name}')));
+      await tester.tap(find.byKey(ValueKey('answer-${question.answer.name}')));
       await tester.pump();
       await tester.pump(wrongAnswerDelay);
     }
     await tester.pumpAndSettle();
 
     expect(find.text('Session terminée'), findsOneWidget);
+    expect(
+      find.text('${exercise.length} / ${exercise.length}'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('une leçon identify-duration : la liaison entière est colorée', (
+    tester,
+  ) async {
+    await startSession(
+      tester,
+      'Les liaisons de prolongation',
+      expectReading: false,
+    );
+    while (find.text('Suivant').evaluate().isNotEmpty) {
+      await tester.tap(find.text('Suivant'));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.text("S'entraîner"));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lecture rythmique'), findsOneWidget);
+    expect(find.text('Combien de temps dure-t-elle ?'), findsOneWidget);
+    expect(find.text('1½'), findsOneWidget);
+
+    final exercise =
+        content.lesson('ties')!.exercise as IdentifyDurationExercise;
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ReadingScreen)),
+    );
+    // Première cible : mi blanche liée à mi noire, sur deux mesures.
+    final view = tester.widget<NotationView>(find.byType(NotationView));
+    expect(view.highlights.keys, const [
+      EventRef(staff: 0, measure: 0, event: 2),
+      EventRef(staff: 0, measure: 1, event: 0),
+    ]);
+    expect(
+      container.read(sessionProvider(exercise)).question.answer,
+      Beats.three,
+    );
+
+    for (var i = 0; i < exercise.length; i++) {
+      final question = container.read(sessionProvider(exercise)).question;
+      await tester.tap(find.byKey(ValueKey('answer-${question.answer.name}')));
+      await tester.pump();
+      await tester.pump(wrongAnswerDelay);
+    }
+    await tester.pumpAndSettle();
     expect(
       find.text('${exercise.length} / ${exercise.length}'),
       findsOneWidget,
