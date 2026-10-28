@@ -273,7 +273,13 @@ enum Glyph {
   timeSig8(codepoint: 0xE088, bBoxSW: (0.08, -1.036), bBoxNE: (1.664, 1.036)),
 
   /// Time signature 9.
-  timeSig9(codepoint: 0xE089, bBoxSW: (0.08, -0.996), bBoxNE: (1.656, 1.004));
+  timeSig9(codepoint: 0xE089, bBoxSW: (0.08, -0.996), bBoxNE: (1.656, 1.004)),
+
+  /// Quarter note (crotchet) stem up.
+  noteQuarterUp(codepoint: 0xE1D5, bBoxSW: (0.0, -0.564), bBoxNE: (1.328, 3.5)),
+
+  /// Eighth note (quaver) stem up.
+  note8thUp(codepoint: 0xE1D7, bBoxSW: (0.0, -0.552), bBoxNE: (2.264, 3.492));
 
   new({
     required this.codepoint,

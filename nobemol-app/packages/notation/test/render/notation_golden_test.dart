@@ -19,8 +19,13 @@ void main() {
   Future<void> expectGolden(
     WidgetTester tester,
     System system,
-    String name,
-  ) async {
+    String name, {
+    Map<EventRef, Color> highlights = const {},
+    Map<EventRef, Color> decorationHighlights = const {},
+    Map<EventRef, Color> halos = const {},
+    Map<EventRef, Color> decorationHalos = const {},
+    Map<EventRef, String> labels = const {},
+  }) async {
     await tester.pumpWidget(
       Directionality(
         textDirection: TextDirection.ltr,
@@ -28,7 +33,21 @@ void main() {
           child: RepaintBoundary(
             child: ColoredBox(
               color: const Color(0xFFFFFFFF),
-              child: NotationView(system: system, staffSpace: 16),
+              child: NotationView(
+                system: system,
+                staffSpace: 16,
+                highlights: highlights,
+                decorationHighlights: decorationHighlights,
+                halos: halos,
+                decorationHalos: decorationHalos,
+                labels: labels,
+                // Les polices de l'interface ne sont pas dans le package.
+                labelStyle: const TextStyle(
+                  fontFamily: 'Edwin',
+                  package: 'notation',
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ),
           ),
         ),
@@ -222,5 +241,53 @@ void main() {
       ),
       'markings_grand_staff',
     );
+  });
+
+  group('cibles', () {
+    const accent = Color(0xFFEF5B36);
+    const soft = Color(0xFFFFE7DF);
+    EventRef ref(int measure, int event) =>
+        EventRef(staff: 0, measure: measure, event: event);
+
+    testWidgets('halo : note, altération, silence, liaison', skip: _skip, (
+      tester,
+    ) async {
+      final targets = [ref(0, 0), ref(0, 2), ref(0, 3), ref(1, 0)];
+      await expectGolden(
+        tester,
+        parseAbc('X:1\nM:4/4\nL:1/4\nK:C\n^f z D2- | D2 B,2 |]\n'),
+        'halo_targets',
+        highlights: {for (final target in targets) target: accent},
+        halos: {for (final target in targets) target: soft},
+      );
+    });
+
+    testWidgets('halo : nuance et soufflet', skip: _skip, (tester) async {
+      await expectGolden(
+        tester,
+        parseAbc(
+          'X:1\nM:4/4\nL:1/4\nK:C\n'
+          '!mf! E G !crescendo(! c B | A2 !crescendo)! !f! G2 |]\n',
+        ),
+        'halo_markings',
+        decorationHighlights: {ref(0, 0): accent, ref(0, 2): accent},
+        decorationHalos: {ref(0, 0): soft, ref(0, 2): soft},
+      );
+    });
+
+    testWidgets('noms sous les notes', skip: _skip, (tester) async {
+      await expectGolden(
+        tester,
+        parseAbc('X:1\nL:1/1\nK:C\nF G A C\n'),
+        'labels',
+        highlights: {ref(0, 1): accent},
+        labels: {
+          ref(0, 0): 'fa',
+          ref(0, 1): 'sol',
+          ref(0, 2): 'la',
+          ref(0, 3): 'do',
+        },
+      );
+    });
   });
 }

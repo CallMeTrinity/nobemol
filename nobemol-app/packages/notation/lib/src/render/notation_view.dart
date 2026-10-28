@@ -13,6 +13,10 @@ class NotationView extends StatelessWidget {
     this.color,
     this.highlights = const {},
     this.decorationHighlights = const {},
+    this.halos = const {},
+    this.decorationHalos = const {},
+    this.labels = const {},
+    this.labelStyle,
     super.key,
   });
 
@@ -35,10 +39,24 @@ class NotationView extends StatelessWidget {
   /// sans leur note.
   final Map<EventRef, Color> decorationHighlights;
 
+  /// Pastille de couleur derrière la tête de certains événements (cible).
+  final Map<EventRef, Color> halos;
+
+  /// Pastille de couleur derrière les décorations de certains événements.
+  final Map<EventRef, Color> decorationHalos;
+
+  /// Nom écrit sous certaines notes (« fa, sol, la »).
+  final Map<EventRef, String> labels;
+
+  /// Police et couleur des noms, par défaut la police du texte ambiant et
+  /// la couleur de la notation. Taille ignorée : celle du layout. Une note
+  /// de [highlights] colore aussi son nom.
+  final TextStyle? labelStyle;
+
   @override
   Widget build(BuildContext context) {
     final painter = NotationPainter(
-      layoutSystem(system, options: options),
+      layoutSystem(system, options: options, labels: labels),
       staffSpace: staffSpace,
       color:
           color ??
@@ -46,6 +64,11 @@ class NotationView extends StatelessWidget {
           const Color(0xFF000000),
       highlights: highlights,
       decorationHighlights: decorationHighlights,
+      halos: halos,
+      decorationHalos: decorationHalos,
+      labelStyle:
+          labelStyle ??
+          DefaultTextStyle.of(context).style.copyWith(color: color),
     );
     return CustomPaint(size: painter.size, painter: painter);
   }

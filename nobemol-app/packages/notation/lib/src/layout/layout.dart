@@ -41,13 +41,21 @@ class LayoutOptions {
 /// Origine : début de la ligne du haut de la première portée.
 class SystemLayout {
   /// Crée un résultat.
-  const new({required this.commands, required this.bounds});
+  const new({
+    required this.commands,
+    required this.bounds,
+    this.heads = const {},
+  });
 
   /// Éléments à dessiner.
   final List<DrawCommand> commands;
 
   /// Rectangle à afficher, marge comprise.
   final Box bounds;
+
+  /// Tête de chaque note, altération comprise, ou glyphe de chaque silence.
+  /// Sans hampe ni crochet : c'est là que se pose un halo.
+  final Map<EventRef, Box> heads;
 }
 
 /// Distance entre le début de la portée et la clé.
@@ -143,16 +151,28 @@ const _hairpinGap = 0.5;
 /// Longueur minimale d'un soufflet.
 const _hairpinMinLength = 1.0;
 
+/// Taille du em des noms sous les notes.
+const _labelSize = 1.15;
+
+/// Distance minimale entre la ligne du bas de la portée et la ligne de base
+/// des noms. Ils restent alignés d'une note à l'autre.
+const _labelDrop = 3.6;
+
 /// Calcule la liste de dessin de [system].
 ///
 /// Le placement horizontal est commun à tout le système : deux événements
 /// qui commencent au même instant sont alignés, quelle que soit leur
 /// portée.
+///
+/// [labels] écrit un nom sous certaines notes, sur une ligne commune à
+/// chaque portée, sous tout ce qui dépasse en bas.
 SystemLayout layoutSystem(
   System system, {
   LayoutOptions options = const LayoutOptions(),
+  Map<EventRef, String> labels = const {},
 }) {
   final commands = <DrawCommand>[];
+  final heads = <EventRef, Box>{};
   final staves = system.staves.toList();
   final header = _Header(staves);
   final timeline = _Timeline(staves, start: header.end);
@@ -166,10 +186,12 @@ SystemLayout layoutSystem(
       staffTops.add(top);
       _layoutStaff(
         commands,
+        heads,
         staff,
         staffIndex++,
         header: header,
         timeline: timeline,
+        labels: labels,
         top: top,
       );
       top += _staffHeight + options.staffDistance;
@@ -193,7 +215,7 @@ SystemLayout layoutSystem(
       .fold(reserved, (box, other) => box.union(other))
       .inflate(options.margin);
 
-  return SystemLayout(commands: commands, bounds: bounds);
+  return SystemLayout(commands: commands, bounds: bounds, heads: heads);
 }
 
 /// Début de chaque portée : clé, armure, chiffrage. Chaque élément occupe
@@ -402,10 +424,12 @@ double _space(Fraction duration) =>
 
 void _layoutStaff(
   List<DrawCommand> commands,
+  Map<EventRef, Box> headBoxes,
   Staff staff,
   int staffIndex, {
   required _Header header,
   required _Timeline timeline,
+  required Map<EventRef, String> labels,
   required double top,
 }) {
   final from = commands.length;
@@ -448,7 +472,15 @@ void _layoutStaff(
       final x = timeline.columnX(time);
       switch (event) {
         case Note(:final value):
-          final head = _layoutHead(commands, event, clef, ref, top: top, x: x);
+          final head = _layoutHead(
+            commands,
+            headBoxes,
+            event,
+            clef,
+            ref,
+            top: top,
+            x: x,
+          );
           heads.add(head);
           placed.add(_Placed(event, ref, head.glyph, x: x, head: head));
           if (beamOpen && value.flags > 0) {
@@ -468,7 +500,7 @@ void _layoutStaff(
                   _dotRight(_width(glyph), dotted: dotted),
                 )
               : x;
-          _layoutRest(commands, event, ref, top: top, x: restX);
+          _layoutRest(commands, headBoxes, event, ref, top: top, x: restX);
           placed.add(_Placed(event, ref, glyph, x: restX));
           beamOpen = false;
       }
@@ -494,6 +526,44 @@ void _layoutStaff(
   }
 
   _layoutDecorations(commands, placed, from: from, start: header.end, top: top);
+  _layoutLabels(commands, placed, labels, from: from, top: top);
+}
+
+/// Noms sous les notes de la portée : une ligne de base commune, sous tout
+/// ce qui dépasse (lignes supplémentaires, hampes, nuances), et jamais plus
+/// près de la portée que [_labelDrop].
+void _layoutLabels(
+  List<DrawCommand> commands,
+  List<_Placed> placed,
+  Map<EventRef, String> labels, {
+  required int from,
+  required double top,
+}) {
+  final named = [
+    for (final item in placed)
+      if (labels[item.ref] case final text?) (item, text),
+  ];
+  if (named.isEmpty) return;
+
+  final lowest = commands
+      .skip(from)
+      .map((command) => command.bounds.bottom)
+      .fold(top + _staffHeight, math.max);
+  final baseline = math.max(
+    top + _staffHeight + _labelDrop,
+    lowest + _lineGap + LabelCommand.ascent * _labelSize,
+  );
+  for (final (item, text) in named) {
+    commands.add(
+      LabelCommand(
+        text,
+        item.center,
+        baseline,
+        size: _labelSize,
+        event: item.ref,
+      ),
+    );
+  }
 }
 
 /// Note ou silence placé, pour ses décorations.
@@ -648,6 +718,7 @@ double _digitsWidth(List<Glyph> glyphs) =>
 /// hampes et les liaisons viennent ensuite, groupe par groupe.
 _Head _layoutHead(
   List<DrawCommand> commands,
+  Map<EventRef, Box> heads,
   Note note,
   Clef clef,
   EventRef ref, {
@@ -680,13 +751,21 @@ _Head _layoutHead(
     );
   }
 
+  final headCommand = GlyphCommand(head, x, y, event: ref);
+  var headBox = headCommand.bounds;
   if (accidental != null) {
     final glyph = _accidentalGlyph(accidental);
-    commands.add(
-      GlyphCommand(glyph, x - _accidentalGap - _width(glyph), y, event: ref),
+    final command = GlyphCommand(
+      glyph,
+      x - _accidentalGap - _width(glyph),
+      y,
+      event: ref,
     );
+    commands.add(command);
+    headBox = headBox.union(command.bounds);
   }
-  commands.add(GlyphCommand(head, x, y, event: ref));
+  commands.add(headCommand);
+  heads[ref] = headBox;
   if (note.dotted) {
     // Sur une ligne, le point monte dans l'interligne du dessus.
     final dotPosition = position.isEven ? position + 1 : position;
@@ -707,6 +786,7 @@ _Head _layoutHead(
 /// interligne.
 void _layoutRest(
   List<DrawCommand> commands,
+  Map<EventRef, Box> heads,
   Rest rest,
   EventRef ref, {
   required double top,
@@ -714,7 +794,9 @@ void _layoutRest(
 }) {
   final glyph = _restGlyph(rest.value);
   final position = rest.value == NoteValue.whole ? 6 : _middleLine;
-  commands.add(GlyphCommand(glyph, x, _y(top, position), event: ref));
+  final command = GlyphCommand(glyph, x, _y(top, position), event: ref);
+  commands.add(command);
+  heads[ref] = command.bounds;
   if (rest.dotted) {
     commands.add(
       GlyphCommand(

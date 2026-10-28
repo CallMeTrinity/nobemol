@@ -717,4 +717,83 @@ void main() {
       );
     });
   });
+
+  group('têtes', () {
+    const first = EventRef(staff: 0, measure: 0, event: 0);
+    const second = EventRef(staff: 0, measure: 0, event: 1);
+    const third = EventRef(staff: 0, measure: 0, event: 2);
+
+    test('tête et altération, sans hampe ; silence seul', () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\n^C D z\n'));
+      final sharp = glyphs(layout, Glyph.accidentalSharp).single.bounds;
+      final heads = layout.commands
+          .whereType<GlyphCommand>()
+          .where((c) => c.glyph == Glyph.noteheadBlack)
+          .toList();
+
+      expect(layout.heads.keys, {first, second, third});
+      expect(layout.heads[first]!.left, sharp.left);
+      expect(layout.heads[first]!.right, heads[0].bounds.right);
+      expect(layout.heads[second]!.top, heads[1].bounds.top);
+      expect(layout.heads[second]!.bottom, heads[1].bounds.bottom);
+      expect(
+        layout.heads[third]!.top,
+        glyphs(layout, Glyph.restQuarter).single.bounds.top,
+      );
+    });
+  });
+
+  group('noms sous les notes', () {
+    const fa = EventRef(staff: 0, measure: 0, event: 0);
+    const sol = EventRef(staff: 0, measure: 0, event: 1);
+
+    Iterable<LabelCommand> labels(SystemLayout layout) =>
+        layout.commands.whereType<LabelCommand>();
+
+    test('centrés sous la tête, sur une ligne commune', () {
+      final layout = layoutSystem(
+        parse('L:1/1\nK:C\nF G\n'),
+        labels: {fa: 'fa', sol: 'sol'},
+      );
+      final heads = glyphs(layout, Glyph.noteheadWhole).toList();
+      final named = labels(layout).toList();
+
+      expect(named.map((l) => l.text), ['fa', 'sol']);
+      expect(named.map((l) => l.event), [fa, sol]);
+      for (final (index, label) in named.indexed) {
+        final head = heads[index].bounds;
+        expect(label.x, (head.left + head.right) / 2);
+        expect(label.y, 4 + 3.6);
+      }
+    });
+
+    test('sous une note grave et ses lignes supplémentaires', () {
+      final layout = layoutSystem(
+        parse('L:1/1\nK:C\nF A,\n'),
+        labels: {fa: 'fa'},
+      );
+      final low = glyphs(layout, Glyph.noteheadWhole).last.bounds;
+      expect(labels(layout).single.bounds.top, greaterThan(low.bottom));
+    });
+
+    test("l'encombrement contient les noms", () {
+      final layout = layoutSystem(parse('L:1/1\nK:C\nF\n'), labels: {fa: 'fa'});
+      expect(
+        layout.bounds.bottom,
+        greaterThanOrEqualTo(labels(layout).single.bounds.bottom),
+      );
+    });
+
+    test("un nom d'une autre portée ne change rien", () {
+      final system = parse('L:1/1\nK:C\nF G\n');
+      final plain = layoutSystem(system);
+      final other = layoutSystem(
+        system,
+        labels: {const EventRef(staff: 1, measure: 0, event: 0): 'fa'},
+      );
+      expect(other.commands, hasLength(plain.commands.length));
+      expect(other.bounds.bottom, plain.bounds.bottom);
+      expect(labels(plain), isEmpty);
+    });
+  });
 }

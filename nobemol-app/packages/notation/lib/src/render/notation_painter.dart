@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:notation/src/layout/draw_list.dart';
@@ -15,6 +17,9 @@ class NotationPainter extends CustomPainter {
     required this.color,
     this.highlights = const {},
     this.decorationHighlights = const {},
+    this.halos = const {},
+    this.decorationHalos = const {},
+    this.labelStyle = const TextStyle(),
   });
 
   /// Liste de dessin.
@@ -33,6 +38,17 @@ class NotationPainter extends CustomPainter {
   /// sans leur note.
   final Map<EventRef, Color> decorationHighlights;
 
+  /// Pastille de couleur derrière la tête de certains événements (cible).
+  final Map<EventRef, Color> halos;
+
+  /// Pastille de couleur derrière les décorations de certains événements.
+  final Map<EventRef, Color> decorationHalos;
+
+  /// Police et couleur des noms sous les notes, ceux de l'interface. Sa
+  /// taille est celle du layout. Sans couleur, celle de la notation ; une
+  /// note colorée colore aussi son nom.
+  final TextStyle labelStyle;
+
   /// Taille en pixels du dessin complet.
   Size get size =>
       Size(layout.bounds.width * staffSpace, layout.bounds.height * staffSpace);
@@ -47,6 +63,7 @@ class NotationPainter extends CustomPainter {
       ..save()
       ..translate(-layout.bounds.left * s, -layout.bounds.top * s);
 
+    _paintHalos(canvas);
     for (final command in layout.commands) {
       final color =
           highlights[command.event] ??
@@ -92,10 +109,78 @@ class NotationPainter extends CustomPainter {
             fontSize: command.size * s,
             color: color,
           );
+        case LabelCommand():
+          _paintLabel(
+            canvas,
+            command,
+            highlights[command.event] ?? labelStyle.color ?? this.color,
+          );
       }
     }
 
     canvas.restore();
+  }
+
+  /// Halos, sous tout le reste, portée comprise : les lignes restent
+  /// visibles à travers.
+  void _paintHalos(Canvas canvas) {
+    final s = staffSpace;
+    final paint = Paint();
+    for (final MapEntry(key: ref, value: color) in halos.entries) {
+      final head = layout.heads[ref];
+      if (head == null) continue;
+      // Un cercle autour de la tête : décalé vers l'altération, s'il y en a
+      // une, et assez grand pour la contenir.
+      final radius = math.max(head.width, head.height) / 2 + _haloPadding * 2;
+      canvas.drawCircle(
+        Offset(
+          (head.left + head.right) / 2 * s,
+          (head.top + head.bottom) / 2 * s,
+        ),
+        radius * s,
+        paint..color = color,
+      );
+    }
+    for (final MapEntry(key: ref, value: color) in decorationHalos.entries) {
+      final box = layout.commands
+          .where((command) => command.decoration == ref)
+          .map((command) => command.bounds)
+          .fold<Box?>(null, (box, other) => box?.union(other) ?? other);
+      if (box == null) continue;
+      final halo = box.inflate(_haloPadding);
+      canvas.drawRRect(
+        RRect.fromLTRBR(
+          halo.left * s,
+          halo.top * s,
+          halo.right * s,
+          halo.bottom * s,
+          const Radius.circular(_haloRadius) * s,
+        ),
+        paint..color = color,
+      );
+    }
+  }
+
+  void _paintLabel(Canvas canvas, LabelCommand label, Color color) {
+    final s = staffSpace;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: label.text,
+        style: labelStyle.copyWith(fontSize: label.size * s, color: color),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    // Même piège que drawGlyph : TextPainter peint depuis le haut de la
+    // ligne.
+    final baseline = painter.computeDistanceToActualBaseline(
+      TextBaseline.alphabetic,
+    );
+    painter
+      ..paint(
+        canvas,
+        Offset(label.x * s - painter.width / 2, label.y * s - baseline),
+      )
+      ..dispose();
   }
 
   @override
@@ -104,8 +189,18 @@ class NotationPainter extends CustomPainter {
       oldDelegate.staffSpace != staffSpace ||
       oldDelegate.color != color ||
       !mapEquals(oldDelegate.highlights, highlights) ||
-      !mapEquals(oldDelegate.decorationHighlights, decorationHighlights);
+      !mapEquals(oldDelegate.decorationHighlights, decorationHighlights) ||
+      !mapEquals(oldDelegate.halos, halos) ||
+      !mapEquals(oldDelegate.decorationHalos, decorationHalos) ||
+      oldDelegate.labelStyle != labelStyle;
 }
+
+/// Marge d'un halo autour d'une décoration, en interlignes. Le cercle d'une
+/// tête en a le double.
+const _haloPadding = 0.55;
+
+/// Rayon des coins du halo d'une décoration, en interlignes.
+const _haloRadius = 0.8;
 
 /// Contour d'une liaison : deux arcs de Bézier, l'extérieur puis
 /// l'intérieur, écartés de l'épaisseur au milieu et aux bouts.
