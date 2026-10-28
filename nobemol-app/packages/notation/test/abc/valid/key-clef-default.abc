@@ -1,0 +1,8 @@
+% attendu : A:bass(C3) B:treble(C4)
+% La clé de K: vaut pour toutes les voix, celle de V: la remplace.
+X:1
+K:C clef=bass
+V:A
+C,
+V:B clef=treble
+C

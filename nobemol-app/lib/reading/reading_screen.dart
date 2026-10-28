@@ -8,43 +8,43 @@ import 'package:notation/notation.dart';
 import 'package:nobemol/l10n/app_localizations.dart';
 import 'package:nobemol/l10n/labels.dart';
 import 'package:nobemol/reading/session.dart';
-import 'package:nobemol/reading/start_level.dart';
+import 'package:nobemol/reading/note_reading.dart';
 
 const _rightColor = Color(0xFF2E7D32);
 
 /// Écran de lecture de notes : une note, 7 boutons, score et chrono.
 class ReadingScreen extends ConsumerWidget {
-  const ReadingScreen({super.key, required this.level});
+  const ReadingScreen({super.key, required this.params});
 
-  final StartLevel level;
+  final NoteReadingParams params;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final session = ref.watch(sessionProvider(level));
+    final session = ref.watch(sessionProvider(params));
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.readingTitle)),
       body: SafeArea(
         child: session.phase == SessionPhase.finished
-            ? _Results(level: level, session: session)
-            : _Exercise(level: level, session: session),
+            ? _Results(params: params, session: session)
+            : _Exercise(params: params, session: session),
       ),
     );
   }
 }
 
 class _Exercise extends ConsumerWidget {
-  const _Exercise({required this.level, required this.session});
+  const _Exercise({required this.params, required this.session});
 
-  final StartLevel level;
+  final NoteReadingParams params;
   final SessionState session;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final notifier = ref.read(sessionProvider(level).notifier);
+    final notifier = ref.read(sessionProvider(params).notifier);
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -67,7 +67,7 @@ class _Exercise extends ConsumerWidget {
                 child: NotationView(
                   system: session.question.system,
                   staffSpace: 24,
-                  options: level.params.layoutOptions,
+                  options: params.layoutOptions,
                   color: theme.colorScheme.onSurface,
                 ),
               ),
@@ -140,9 +140,9 @@ class _NoteButton extends StatelessWidget {
 }
 
 class _Results extends ConsumerWidget {
-  const _Results({required this.level, required this.session});
+  const _Results({required this.params, required this.session});
 
-  final StartLevel level;
+  final NoteReadingParams params;
   final SessionState session;
 
   @override
@@ -175,7 +175,7 @@ class _Results extends ConsumerWidget {
           ),
           const SizedBox(height: 32),
           FilledButton(
-            onPressed: () => ref.invalidate(sessionProvider(level)),
+            onPressed: () => ref.invalidate(sessionProvider(params)),
             child: Text(l10n.resultRestart),
           ),
           const SizedBox(height: 8),

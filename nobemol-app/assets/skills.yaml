@@ -1,0 +1,32 @@
+# Arbre de compétences. Chaque leçon en cite au moins une (skills).
+#
+# requires : compétences à maîtriser avant. Un prérequis est toujours déclaré
+# plus haut dans le fichier : l'ordre du fichier est un ordre d'apprentissage,
+# et c'est lui qui range les leçons dans l'appli.
+
+- id: note-reading.treble
+  title: Lire en clé de sol
+
+- id: note-reading.bass
+  title: Lire en clé de fa
+  requires: [note-reading.treble]
+
+- id: note-reading.ledger-lines
+  title: Lire les lignes supplémentaires
+  requires: [note-reading.treble]
+
+- id: note-reading.accidentals
+  title: Lire les altérations
+  requires: [note-reading.treble]
+
+- id: note-reading.grand
+  title: Lire la grande portée
+  requires: [note-reading.bass, note-reading.ledger-lines]
+
+- id: note-reading.alto
+  title: Lire en clé d'ut 3e ligne
+  requires: [note-reading.treble]
+
+- id: note-reading.tenor
+  title: Lire en clé d'ut 4e ligne
+  requires: [note-reading.alto]

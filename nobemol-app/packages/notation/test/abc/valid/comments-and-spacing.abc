@@ -1,0 +1,10 @@
+% attendu : treble(C4 D4 E4 F4)
+
+% Commentaires et lignes vides admis avant X:, lignes vides admises à la fin.
+X:1 % numéro du morceau
+K:C
+CD   E % notes collées ou espacées
+% commentaire entre deux lignes de musique
+	F
+
+

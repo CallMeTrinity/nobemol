@@ -1,0 +1,28 @@
+id: accidentals
+title: Dièses et bémols
+skills: [note-reading.accidentals]
+level: 2
+theory:
+  - text: >-
+      Le dièse monte une note d'un demi-ton, le bémol la descend d'un
+      demi-ton. Ils s'écrivent devant la note, à la même hauteur.
+    abc: |
+      X:1
+      K:C
+      ^F _B
+  - text: >-
+      Le nom de la note ne change pas : un fa dièse se lit à la place
+      du fa. C'est toujours un fa.
+    abc: |
+      X:1
+      K:C
+      F ^F
+  - text: "Le bécarre annule un dièse ou un bémol."
+    abc: |
+      X:1
+      K:C
+      ^F =F
+exercise:
+  type: note-reading
+  staff: treble
+  accidentals: true

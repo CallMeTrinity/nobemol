@@ -1,0 +1,10 @@
+% erreur : 9:3 absente de %%score
+X:1
+%%score {RH LH}
+V:RH clef=treble
+V:LH clef=bass
+K:C
+V:RH
+c
+V:X
+C

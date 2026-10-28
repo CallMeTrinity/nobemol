@@ -1,0 +1,25 @@
+id: bass-clef
+title: La clé de fa
+skills: [note-reading.bass]
+level: 1
+theory:
+  - text: >-
+      La clé de fa se pose sur la 4e ligne, entre ses deux points.
+      La note posée sur cette ligne est un fa.
+    abc: |
+      X:1
+      K:C clef=bass
+      F,
+  - text: "Sur les lignes, de bas en haut : sol, si, ré, fa, la."
+    abc: |
+      X:1
+      K:C clef=bass
+      G,, B,, D, F, A,
+  - text: "Dans les interlignes, de bas en haut : la, do, mi, sol."
+    abc: |
+      X:1
+      K:C clef=bass
+      A,, C, E, G,
+exercise:
+  type: note-reading
+  staff: bass

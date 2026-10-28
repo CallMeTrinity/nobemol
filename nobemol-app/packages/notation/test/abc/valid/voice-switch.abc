@@ -1,0 +1,14 @@
+% attendu : {RH:treble(C5 D5) LH:bass(C3 D3)}
+X:1
+%%score {RH LH}
+V:RH
+V:LH clef=bass
+K:C
+V:RH
+c
+V:LH
+C,
+V:RH
+d
+V:LH
+D,

@@ -1,11 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:nobemol/l10n/app_localizations.dart';
+import 'package:nobemol/lessons/content_provider.dart';
 import 'package:nobemol/router.dart';
 
-void main() {
-  runApp(const ProviderScope(child: NobemolApp()));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Quelques Ko de YAML : chargés avant le premier écran, puis lus sans
+  // attente partout dans l'appli.
+  final content = await loadContent(rootBundle);
+  runApp(
+    ProviderScope(
+      overrides: [contentProvider.overrideWithValue(content)],
+      child: const NobemolApp(),
+    ),
+  );
 }
 
 /// Couleurs de l'identité visuelle (nobemol-icone.svg).

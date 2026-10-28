@@ -1,0 +1,33 @@
+id: grand-staff
+title: La grande portée
+skills: [note-reading.grand]
+level: 2
+theory:
+  - text: >-
+      La grande portée réunit deux portées liées par une accolade :
+      clé de sol en haut, clé de fa en bas. C'est celle du piano,
+      main droite en haut, main gauche en bas.
+    abc: |
+      X:1
+      %%score {RH LH}
+      V:RH clef=treble
+      V:LH clef=bass
+      K:C
+  - text: >-
+      Le do central est entre les deux portées : sur la 1re ligne
+      supplémentaire sous la clé de sol, ou au-dessus de la clé de fa.
+      C'est la même note.
+    abc: |
+      X:1
+      %%score {RH LH}
+      V:RH clef=treble
+      V:LH clef=bass
+      K:C
+      V:RH
+      C
+      V:LH
+      C
+exercise:
+  type: note-reading
+  staff: grand
+  ledger-lines: 1
