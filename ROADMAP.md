@@ -11,7 +11,7 @@ Le produit et les décisions techniques sont dans [IDEA.md](IDEA.md).
 | 0 | Setup du repo | | Fait |
 | 1 | Modèle avec grande portée, rendu portée + clé + **une note** | **MVP** : lecture de notes | En cours |
 | 2 | Parser ABC (sous-ensemble) + validateur | Leçons écrites en texte | En cours |
-| 3 | Mesures, chiffrage, armure, barres, hampes, **alignement entre portées** | Lecture de courtes phrases | |
+| 3 | Mesures, chiffrage, armure, barres, hampes, **alignement entre portées** | Lecture de courtes phrases | En cours |
 | 4 | Silences, points, ligatures, liaisons de prolongation | Exercices de rythme | |
 | 5 | Décorations : nuances, articulations, termes | Apprentissage des symboles | |
 | Plus tard | Accords, n-olets, liaisons d'expression | Au besoin | |
@@ -62,11 +62,22 @@ Le produit et les décisions techniques sont dans [IDEA.md](IDEA.md).
 
 ## Étape 3 : courtes phrases
 
-- [ ] Mesures, chiffrage, armure, barres de mesure
-- [ ] Hampes (direction, longueur)
-- [ ] Layout horizontal en **colonnes temporelles** communes à tout le système
-- [ ] Barres de mesure qui traversent la grande portée
-- [ ] Exercice `identify-note` sur une note ciblée : cibles `{ staff, measure, event }` en base 1, vérifiées par le validateur
+- [x] Sous-ensemble ABC étendu avant le code : `M:`, `L:` (obligatoire), tonalités de `K:`, durées, barres `|`, `||`, `|]` ([doc/abc.md](nobemol-app/packages/notation/doc/abc.md))
+- [x] Modèle : `Fraction` (temps exact), `KeySignature`, `TimeSignature`, `Staff > Measure > Event`, figures ronde, blanche, noire
+- [x] Parser : mesures complètes, mêmes mesures et mêmes barres dans toutes les voix
+- [x] Mesures, chiffrage, armure (positions par clé, clé d'ut 4e ligne comprise), barres de mesure
+- [x] Hampes (direction, longueur), ancres SMuFL générées depuis Bravura
+- [x] Layout horizontal en **colonnes temporelles** communes à tout le système, espacement selon la durée
+- [x] Barres de mesure qui traversent la grande portée
+- [x] Exercice `identify-note` sur une note ciblée : cibles `{ staff, measure, event }` en base 1, vérifiées par le validateur, note colorée à l'écran
+- [x] Leçons : mesures et figures, armure, grande portée en mesures
+
+**Terminé quand** : une leçon `identify-note` sur la grande portée se joue sur un vrai téléphone, notes lisibles, et une cible inexistante fait échouer la CI.
+
+À vérifier :
+
+- Goldens à générer sur la CI (commit `[goldens]`) : `phrase_treble`, `phrase_grand_staff`, `key_signatures_sharps`, `key_signatures_flats`. Les 4 goldens existants ne devraient pas changer.
+- Lisibilité sur téléphone : 3 mesures de noires en 4/4 donnent un interligne d'environ 7 px en portrait. Si c'est trop petit : phrases de 2 mesures, ou mode paysage.
 
 ## Étape 4 : rythme
 
