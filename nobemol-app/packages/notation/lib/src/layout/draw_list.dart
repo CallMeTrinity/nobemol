@@ -244,3 +244,39 @@ class TextCommand extends DrawCommand {
     y + TextFont.descender * size,
   );
 }
+
+/// Nom écrit sous une note (« do », « C »), centré sur sa tête, posé sur sa
+/// ligne de base. Dans la police de l'interface, que le layout ne connaît
+/// pas : sa largeur est estimée.
+class LabelCommand extends DrawCommand {
+  /// Crée un nom centré en [x], sur la ligne de base [y].
+  const new(this.text, this.x, this.y, {required this.size, super.event});
+
+  /// Hauteur au-dessus de la ligne de base, en em : celle des capitales
+  /// et des lettres à hampe de la plupart des polices.
+  static const ascent = 0.8;
+
+  /// Profondeur sous la ligne de base, en em.
+  static const descent = 0.25;
+
+  /// Chasse moyenne d'un caractère, en em.
+  static const _advance = 0.55;
+
+  /// Texte.
+  final String text;
+
+  /// Abscisse du milieu.
+  final double x;
+
+  /// Ordonnée de la ligne de base.
+  final double y;
+
+  /// Taille du em, en interlignes.
+  final double size;
+
+  @override
+  Box get bounds {
+    final half = text.runes.length * _advance * size / 2;
+    return Box(x - half, y - ascent * size, x + half, y + descent * size);
+  }
+}

@@ -18,7 +18,7 @@ Les étapes 6 à 12 viennent du design « Touches » (Claude Design, tour 2) : t
 | 3 | Mesures, chiffrage, armure, barres, hampes, **alignement entre portées** | Lecture de courtes phrases | Bêta 0.0.1 |
 | 4 | Silences, points, ligatures, liaisons de prolongation | Exercices de rythme | Bêta 0.0.1 |
 | 5 | Décorations : nuances, articulations, termes | Apprentissage des symboles | Bêta 0.0.1 |
-| 6 | Halo de cible, noms sous les notes | Design system, clavier, navigation à 4 onglets | |
+| 6 | Halo de cible, noms sous les notes | Design system, clavier, navigation à 4 onglets | Fait |
 | 7 | | Progression persistée : XP, niveaux, parcours | |
 | 8 | | Boucle d'exercice : feedback, combo, résultats | |
 | 9 | | Démarrage et réglages | |
@@ -141,18 +141,27 @@ Une release par version, publiée sur GitHub Releases avec l'APK signé (workflo
 
 Source : `Nobemol Touches.dc.html` et `tokens/nobemol-tokens.json` (projet Claude Design). Les écrans existants passent au nouveau design avant d'en ajouter.
 
-- [ ] Tokens clair / sombre en `ThemeExtension` : couleurs (`color.*`), rayons, profondeurs (ombre pleine décalée en Y), espacements
-- [ ] Polices **embarquées** (pas de `google_fonts`, l'appli marche hors ligne) : Bricolage Grotesque (titres), Instrument Sans (texte), DM Mono (méta). Licences OFL à côté
-- [ ] Composants : bouton à ombre pleine (repos, appui, juste, faux, inactif), tuile, chip, carte réponse
-- [ ] **Clavier** : 7 touches blanches do à si, 5 noires (inactives sans altérations), états juste / faux / appuyé
-- [ ] Navigation à 4 onglets (`StatefulShellRoute`) : Parcours, Réviser, Arcade, Profil. Écrans vides pour les trois derniers
-- [ ] Moteur : **halo** coloré derrière une note ou un signe ciblé (`color.accent.soft`), à côté de la couleur actuelle
-- [ ] Moteur : **noms sous les notes** pour la théorie (« fa, sol, la »)
-- [ ] Écrans existants refaits : théorie (pages, précédent / suivant), lecture de notes, durées (8 tuiles), signes (cartes glyphe + sens)
+- [x] Tokens clair / sombre en `ThemeExtension` : couleurs (`color.*`), rayons, profondeurs (ombre pleine décalée en Y), espacements (`lib/theme/tokens.dart`). Clair ou sombre selon le téléphone en attendant les réglages (étape 9)
+- [x] Polices **embarquées** (pas de `google_fonts`, l'appli marche hors ligne) : Bricolage Grotesque (titres), Instrument Sans (texte), DM Mono (méta). Licences OFL à côté (`fonts/`). Les deux premières sont variables : graisse et taille optique par `fontVariations`
+- [x] Composants : bouton à ombre pleine (repos, appui, juste, faux, inactif), tuile, chip, carte réponse (`lib/ui/`)
+- [x] **Clavier** : 7 touches blanches do à si, 5 noires (inactives sans altérations), états juste / faux / appuyé
+- [x] Navigation à 4 onglets (`StatefulShellRoute`) : Parcours, Réviser, Arcade, Profil. Écrans « Bientôt » pour les trois derniers. Leçons et exercices passent au-dessus de la barre
+- [x] Moteur : **halo** coloré derrière une note ou un signe ciblé (`color.accent.soft`), à côté de la couleur actuelle. Sous la portée : les lignes restent visibles
+- [x] Moteur : **noms sous les notes** pour la théorie (« fa, sol, la »). Champ `names: true` d'une page ([doc/lessons.md](nobemol-app/doc/lessons.md)), noms générés par l'appli (prêts pour C-D-E)
+- [x] Écrans existants refaits : théorie (pages, précédent / suivant), lecture de notes, durées (8 tuiles), signes (cartes)
 
 **Terminé quand** : les 4 exercices et la théorie se jouent au clavier et aux tuiles, en clair et en sombre, et les goldens existants n'ont pas changé sans halo.
 
-À trancher : le clavier remplace-t-il les 7 boutons partout, y compris sur la grande portée ?
+Tranché :
+
+- Le clavier remplace les 7 boutons **partout**, grande portée comprise : la réponse est un nom de note, sans octave.
+- Cartes de signes : **le sens seul** pendant la question, le glyphe apparaît à la correction. Avec le glyphe sur la carte, l'exercice devenait de l'appariement de formes.
+- Une note seule (lecture paramétrique) est aussi une cible : colorée et entourée d'un halo, comme dans le design.
+
+À vérifier :
+
+- Goldens du halo et des noms (`halo_targets`, `halo_markings`, `labels`) : à générer sur la CI (commit `[goldens]`), puis à relire.
+- Sur un vrai téléphone : taille du clavier sur petit écran, rendu des polices variables, thème sombre.
 
 ## Étape 7 : progression persistée
 

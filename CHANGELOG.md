@@ -6,6 +6,19 @@ Le workflow de release reprend la section de la version comme notes de release :
 
 ## [Non publié]
 
+### Ajouté
+
+- Nouveau design « Touches » : couleurs, polices embarquées (Bricolage Grotesque, Instrument Sans, DM Mono), boutons à ombre pleine, thème sombre selon le téléphone.
+- Clavier d'une octave pour nommer les notes, sur toutes les portées. Les touches noires restent inactives.
+- Navigation à quatre onglets : Parcours, Réviser, Arcade, Profil. Les trois derniers arrivent bientôt.
+- Halo coloré derrière la note ou le signe à trouver.
+- Noms des notes sous la portée dans certaines pages de théorie.
+
+### Modifié
+
+- Théorie : l'idée de la page en titre, la suite en dessous.
+- Durées en 8 tuiles, signes en cartes. Le signe s'affiche sur les cartes après la réponse.
+
 ## [0.0.1] - 2026-10-28 (bêta 1)
 
 Première bêta : le MVP, étapes 1 à 5 de la [feuille de route](https://github.com/CallMeTrinity/nobemol/blob/main/ROADMAP.md).

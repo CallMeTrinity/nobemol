@@ -63,6 +63,9 @@ final List<String> _glyphs = [
   'dynamicFF',
   'dynamicFFF',
   for (var digit = 0; digit <= 9; digit++) 'timeSig$digit',
+  // Icônes de l'appli (onglets).
+  'noteQuarterUp',
+  'note8thUp',
 ];
 
 /// Points d'ancrage utilisés par le moteur, s'ils existent pour le glyphe.

@@ -191,16 +191,21 @@ sealed class Question {
 
 /// Une note à nommer.
 class NoteQuestion extends Question {
-  const NoteQuestion({required super.system, required this.pitch, this.target});
+  const NoteQuestion({
+    required super.system,
+    required this.pitch,
+    required this.target,
+  });
 
   /// La note à trouver.
   final Pitch pitch;
 
-  /// La note à colorer dans [system], `null` si elle y est seule.
-  final EventRef? target;
+  /// La note à colorer dans [system], même seule : la cible se lit d'un
+  /// coup d'œil, et la correction la colore.
+  final EventRef target;
 
   @override
-  List<EventRef> get targets => [?target];
+  List<EventRef> get targets => [target];
 
   /// Le nom de la note, altération ignorée.
   @override
@@ -288,14 +293,24 @@ class NoteGenerator implements QuestionSource {
       Measure([Note(pitch)]),
     ];
 
-    final system = params.staff == StaffSetup.grand
+    final grand = params.staff == StaffSetup.grand;
+    final system = grand
         ? System([
             clef == Clef.treble
                 ? StaffGroup.grand(upper: measures)
                 : StaffGroup.grand(lower: measures),
           ])
         : System.single(Staff(clef: clef, measures: measures));
-    return NoteQuestion(system: system, pitch: pitch);
+    return NoteQuestion(
+      system: system,
+      pitch: pitch,
+      // Sur la grande portée, la clé de fa est la portée du bas.
+      target: EventRef(
+        staff: grand && clef == Clef.bass ? 1 : 0,
+        measure: 0,
+        event: 0,
+      ),
+    );
   }
 
   /// Une note sur trois porte un dièse ou un bémol.
