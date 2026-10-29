@@ -234,6 +234,10 @@ abstract final class Sizes {
   static const answerTile = 68.0;
   static const markingCard = 104.0;
 
+  /// Hauteur minimale du bas d'un exercice, réponses comprises : la place
+  /// du panneau de correction, qui le recouvre sans rien décaler.
+  static const answerDock = 240.0;
+
   /// Zone de toucher minimale.
   static const minTarget = 44.0;
 }

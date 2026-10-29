@@ -92,9 +92,28 @@ exercise:
 - `staff` : identifiant de la voix (`V:`). Facultatif s'il n'y a qu'une portée, obligatoire sinon.
 - `measure`, `event` : comptés **à partir de 1**. `event` compte les notes **et les silences** de la mesure, de gauche à droite.
 - Le chargement vérifie que chaque cible existe (portée, mesure, note) et qu'elle n'est pas en double. La CI échoue sinon.
-- La réponse est le nom de la note, sans l'altération : un fa dièse par l'armure se nomme fa.
+- La réponse est le nom de la note **avec l'altération qu'on lit** : écrite, reprise plus tôt dans la mesure (même note, même octave), prolongée par une liaison, ou donnée par l'armure. En sol majeur, un fa écrit sans signe se répond fa dièse. Dès que la phrase a une armure ou une altération, les touches noires du clavier s'ouvrent : une touche noire, puis l'orthographe (fa dièse ou sol bémol). Un fa dièse n'est pas un sol bémol.
+- Seules les notes d'une touche noire ou blanche se visent : mi dièse, si dièse, fa bémol, do bémol et les doubles altérations sont refusés par le validateur.
 - Les cibles peuvent sauter des notes et suivre n'importe quel ordre : la note demandée est colorée.
 - Une cible est une note, pas un silence (un silence n'a pas de nom).
+
+### Explications
+
+À la correction, l'appli explique la réponse. Par défaut, elle la génère :
+
+- **Note** : sa place sur la portée et sa clé, puis d'où vient son altération. « En clé de sol, le 1er interligne est un fa. L'armure en fait un fa dièse. »
+- **Durée** : les figures et leurs temps. « Blanche liée à une noire : 2 + 1 = 3 temps. »
+- **Signe** : comment le reconnaître, et son sens. « mp : mezzo piano, moyennement doux. »
+
+Une cible peut porter sa propre explication, `explain`, qui remplace celle générée. À réserver à ce que l'appli ne peut pas dire : un repère propre à la phrase, un piège.
+
+```yaml
+  targets:
+    - { measure: 1, event: 2, explain: "Le sol de la clé : la note posée sur la 2e ligne." }
+    - { measure: 2, event: 1 }   # explication générée
+```
+
+`explain` est un texte non vide de **160 caractères au plus** : il doit tenir en 4 lignes dans le panneau de correction, sur un petit téléphone. Le validateur le vérifie.
 
 ### `identify-duration`
 

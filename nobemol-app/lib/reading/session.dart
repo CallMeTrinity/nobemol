@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,10 +6,6 @@ import 'package:nobemol/clock.dart';
 import 'package:nobemol/progress/progress.dart';
 import 'package:nobemol/progress/xp.dart';
 import 'package:nobemol/reading/note_reading.dart';
-
-/// Durée d'affichage de la correction avant la note suivante.
-const rightAnswerDelay = Duration(milliseconds: 400);
-const wrongAnswerDelay = Duration(milliseconds: 1200);
 
 /// Hasard des exercices, remplaçable en test.
 final randomProvider = Provider<Random>((ref) => Random());
@@ -26,7 +21,8 @@ enum SessionPhase {
   /// En attente d'une réponse.
   asking,
 
-  /// Correction affichée, la note suivante arrive.
+  /// Correction affichée : la question suivante attend « Continuer »,
+  /// juste ou faux.
   feedback,
 
   /// Toutes les notes ont été jouées.
@@ -40,8 +36,10 @@ class SessionState {
     required this.askedAt,
     this.phase = SessionPhase.asking,
     this.answers = const [],
+    this.asked = const [],
     this.combo = 0,
     this.bestCombo = 0,
+    this.lostCombo = 0,
     this.choice,
     this.finishedAt,
   });
@@ -52,9 +50,15 @@ class SessionState {
   /// Réponses données, question en cours comprise.
   final List<AnswerRecord> answers;
 
+  /// Questions de ces réponses, dans le même ordre.
+  final List<Question> asked;
+
   /// Bonnes réponses d'affilée, et la plus longue série de la session.
   final int combo;
   final int bestCombo;
+
+  /// Série cassée par la dernière réponse, 0 si elle n'en a pas cassé.
+  final int lostCombo;
 
   /// Réponse donnée à la question en cours, `null` en attente.
   final Enum? choice;
@@ -78,12 +82,10 @@ class SessionNotifier extends Notifier<SessionState> {
   final ReadingExercise exercise;
 
   late QuestionSource _questions;
-  Timer? _timer;
 
   @override
   SessionState build() {
     _questions = exercise.questions(ref.watch(randomProvider));
-    ref.onDispose(() => _timer?.cancel());
     final now = ref.read(clockProvider)();
     return SessionState(
       question: _questions.next(),
@@ -112,18 +114,21 @@ class SessionNotifier extends Notifier<SessionState> {
       question: current.question,
       phase: SessionPhase.feedback,
       answers: answers,
+      asked: [...current.asked, current.question],
       combo: combo,
       bestCombo: max(combo, current.bestCombo),
+      lostCombo: right ? 0 : current.combo,
       choice: choice,
       startedAt: current.startedAt,
       askedAt: current.askedAt,
       finishedAt: answers.length == exercise.length ? now : null,
     );
-    _timer = Timer(right ? rightAnswerDelay : wrongAnswerDelay, _next);
   }
 
-  void _next() {
+  /// Passe à la question suivante, ou aux résultats après la dernière.
+  void next() {
     final current = state;
+    if (current.phase != SessionPhase.feedback) return;
     final finished = current.finishedAt != null;
     state = SessionState(
       question: finished
@@ -131,6 +136,7 @@ class SessionNotifier extends Notifier<SessionState> {
           : _questions.next(previous: current.question),
       phase: finished ? SessionPhase.finished : SessionPhase.asking,
       answers: current.answers,
+      asked: current.asked,
       combo: current.combo,
       bestCombo: current.bestCombo,
       startedAt: current.startedAt,

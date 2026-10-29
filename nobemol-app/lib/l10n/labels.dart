@@ -3,6 +3,7 @@ import 'package:notation/notation.dart';
 import 'package:nobemol/l10n/app_localizations.dart';
 import 'package:nobemol/reading/beats.dart';
 import 'package:nobemol/reading/markings.dart';
+import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/start_level.dart';
 
 /// Libellés des types du modèle et de l'appli.
@@ -18,10 +19,19 @@ extension Labels on AppLocalizations {
     DiatonicStep.b => noteB,
   };
 
-  /// Libellé d'un bouton de réponse : un nom de note, une durée ou le sens
-  /// d'un signe.
+  /// Nom de note avec son altération, en toutes lettres : « fa dièse ».
+  /// Les polices de l'interface n'ont pas les signes ♯ et ♭.
+  String noteFullName(NoteName name) => switch (name.accidental) {
+    Accidental.sharp => noteSharp(noteName(name.step)),
+    Accidental.flat => noteFlat(noteName(name.step)),
+    _ => noteName(name.step),
+  };
+
+  /// Libellé d'une réponse : un nom de note, une durée ou le sens d'un
+  /// signe.
   String answerLabel(Enum answer) => switch (answer) {
     DiatonicStep() => noteName(answer),
+    NoteName() => noteFullName(answer),
     Beats() => beatsLabel(answer),
     Marking() => markingLabel(answer),
     _ => throw ArgumentError.value(answer, 'answer', 'réponse inconnue'),

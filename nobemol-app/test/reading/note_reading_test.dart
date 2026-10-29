@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notation/notation.dart';
 
+import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
 
 void main() {
@@ -92,13 +93,25 @@ void main() {
     }
   });
 
-  test("la réponse est le nom de la note, sans l'altération", () {
-    const question = NoteQuestion(
-      system: System([]),
-      pitch: Pitch(DiatonicStep.f, 4, accidental: Accidental.sharp),
-      target: EventRef(staff: 0, measure: 0, event: 0),
+  test('la réponse porte l’altération, toujours sur une touche noire', () {
+    final questions = draw(
+      const NoteReadingParams(staff: StaffSetup.treble, accidentals: true),
     );
-    expect(question.answer, DiatonicStep.f);
+    for (final question in questions) {
+      expect(question.answer.step, question.pitch.step);
+      expect(question.answer.accidental, question.pitch.accidental);
+    }
+    // Pas de mi dièse, de si dièse, de fa bémol ni de do bémol.
+    expect(
+      questions.where(
+        (q) => switch ((q.pitch.step, q.pitch.accidental)) {
+          (DiatonicStep.e || DiatonicStep.b, Accidental.sharp) => true,
+          (DiatonicStep.f || DiatonicStep.c, Accidental.flat) => true,
+          _ => false,
+        },
+      ),
+      isEmpty,
+    );
   });
 
   test('identify-note : les cibles dans l’ordre, avec leur hauteur', () {
@@ -115,11 +128,12 @@ void main() {
     final first = questions.next() as NoteQuestion;
     final second = questions.next(previous: first) as NoteQuestion;
     expect(first.targets, [targets[0]]);
-    // f en sol majeur : écrit sans altération, la réponse est fa.
+    // f en sol majeur : écrit sans altération, l'armure en fait un fa
+    // dièse.
     expect(first.pitch, const Pitch(DiatonicStep.f, 5));
-    expect(first.answer, DiatonicStep.f);
+    expect(first.answer, NoteName.fSharp);
     expect(second.targets, [targets[1]]);
-    expect(second.answer, DiatonicStep.b);
+    expect(second.answer, NoteName.b);
     expect(second.system, same(system));
   });
 }

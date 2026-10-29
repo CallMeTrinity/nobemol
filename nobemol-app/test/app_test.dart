@@ -13,6 +13,9 @@ import 'package:notation/notation.dart';
 import 'package:nobemol/clock.dart';
 import 'package:nobemol/home/home_screen.dart';
 import 'package:nobemol/home/skill_screen.dart';
+import 'package:nobemol/l10n/app_localizations_fr.dart';
+import 'package:nobemol/l10n/explanations.dart';
+import 'package:nobemol/l10n/labels.dart';
 import 'package:nobemol/lessons/content.dart';
 import 'package:nobemol/lessons/content_provider.dart';
 import 'package:nobemol/lessons/lesson_screen.dart';
@@ -21,6 +24,7 @@ import 'package:nobemol/progress/database.dart';
 import 'package:nobemol/progress/progress_provider.dart';
 import 'package:nobemol/reading/beats.dart';
 import 'package:nobemol/reading/markings.dart';
+import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/reading/reading_screen.dart';
 import 'package:nobemol/reading/session.dart';
@@ -124,6 +128,25 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Donne [choice] : une touche, une tuile ou une carte. Une touche noire
+  /// ouvre d'abord sa bulle.
+  Future<void> give(WidgetTester tester, Enum choice) async {
+    if (choice case NoteName(:final blackKey?)) {
+      await tester.tap(find.byKey(ValueKey('black-${blackKey.name}')));
+      await tester.pump();
+    }
+    await tester.tap(find.byKey(ValueKey('answer-${choice.name}')));
+    await tester.pump();
+  }
+
+  /// Passe la correction : question suivante, ou résultats. « Continuer »
+  /// ne répond qu'une fois le panneau monté.
+  Future<void> next(WidgetTester tester) async {
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(const ValueKey('continue')));
+    await tester.pump();
+  }
+
   /// Répond à la question en cours, juste ou faux, et passe à la suivante.
   Future<void> answer(
     WidgetTester tester,
@@ -131,17 +154,15 @@ void main() {
     StartLevel level, {
     required bool right,
   }) async {
-    final expected = container
-        .read(sessionProvider(level.params))
-        .question
-        .answer;
-    final step = right
+    final expected =
+        container.read(sessionProvider(level.params)).question.answer
+            as NoteName;
+    final choice = right
         ? expected
-        : DiatonicStep.values[(expected.index + 1) % 7];
+        : NoteName.naturals[(expected.step.index + 1) % 7];
     now = now.add(const Duration(seconds: 3));
-    await tester.tap(find.byKey(ValueKey('answer-${step.name}')));
-    await tester.pump();
-    await tester.pump(wrongAnswerDelay);
+    await give(tester, choice);
+    await next(tester);
   }
 
   testWidgets('une session complète en clé de sol', (tester) async {
@@ -181,8 +202,56 @@ void main() {
     expect(session.answered, 1);
     expect(session.correct, 1);
 
-    await tester.pump(rightAnswerDelay);
+    // Juste ou faux, la question suivante attend « Continuer », qui ne
+    // répond pas tout de suite : un double appui ne saute pas la correction.
+    await tester.pump(const Duration(seconds: 5));
+    expect(
+      container.read(sessionProvider(params)).phase,
+      SessionPhase.feedback,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('continue')));
+    await tester.pump();
     expect(container.read(sessionProvider(params)).phase, SessionPhase.asking);
+  });
+
+  testWidgets('« Continuer » ignore un appui trop rapide', (tester) async {
+    final container = await startSession(tester, 'Je débute');
+    final params = StartLevel.beginner.params;
+    final expected = container.read(sessionProvider(params)).question.answer;
+    await tester.tap(find.byKey(ValueKey('answer-${expected.name}')));
+    await tester.pump();
+    // Panneau monté (200 ms), verrou encore actif (300 ms).
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.tap(find.byKey(const ValueKey('continue')));
+    await tester.pump();
+    expect(
+      container.read(sessionProvider(params)).phase,
+      SessionPhase.feedback,
+    );
+
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byKey(const ValueKey('continue')));
+    await tester.pump();
+    expect(container.read(sessionProvider(params)).phase, SessionPhase.asking);
+  });
+
+  testWidgets('le panneau de correction ne décale pas la portée', (
+    tester,
+  ) async {
+    await startSession(tester, 'Je débute');
+    final before = tester.getRect(find.byType(NotationView));
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ReadingScreen)),
+    );
+    final expected = container
+        .read(sessionProvider(StartLevel.beginner.params))
+        .question
+        .answer;
+    await tester.tap(find.byKey(ValueKey('answer-${expected.name}')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('feedback')), findsOneWidget);
+    expect(tester.getRect(find.byType(NotationView)), before);
   });
 
   testWidgets('grande portée', (tester) async {
@@ -251,9 +320,8 @@ void main() {
       expect(question.targets, [exercise.targets[i]]);
       expect(question.system, same(exercise.system));
       now = now.add(const Duration(seconds: 2));
-      await tester.tap(find.byKey(ValueKey('answer-${question.answer.name}')));
-      await tester.pump();
-      await tester.pump(wrongAnswerDelay);
+      await give(tester, question.answer);
+      await next(tester);
     }
     await tester.pumpAndSettle();
 
@@ -291,9 +359,8 @@ void main() {
 
     for (var i = 0; i < exercise.length; i++) {
       final question = container.read(sessionProvider(exercise)).question;
-      await tester.tap(find.byKey(ValueKey('answer-${question.answer.name}')));
-      await tester.pump();
-      await tester.pump(wrongAnswerDelay);
+      await give(tester, question.answer);
+      await next(tester);
     }
     await tester.pumpAndSettle();
     expect(
@@ -334,24 +401,17 @@ void main() {
     expect(card('accent').dy, card('staccato').dy);
     expect(card('fermata').dy, greaterThan(card('staccato').dy));
 
-    // Le signe n'apparaît sur les cartes qu'à la correction.
-    Finder sign(String name) => find.descendant(
-      of: find.byKey(ValueKey('answer-$name')),
-      matching: find.byType(GlyphView),
-    );
-    expect(find.byType(GlyphView), findsNothing);
+    // Le sens seul sur les cartes, jamais le signe : il suffirait de
+    // comparer les formes.
     await tester.tap(find.byKey(const ValueKey('answer-tenuto')));
     await tester.pump();
-    expect(sign('staccato'), findsOneWidget);
-    expect(sign('tenuto'), findsOneWidget);
-    await tester.pump(wrongAnswerDelay);
+    await next(tester);
     expect(find.byType(GlyphView), findsNothing);
 
     for (var i = 1; i < exercise.length; i++) {
       final question = container.read(sessionProvider(exercise)).question;
-      await tester.tap(find.byKey(ValueKey('answer-${question.answer.name}')));
-      await tester.pump();
-      await tester.pump(wrongAnswerDelay);
+      await give(tester, question.answer);
+      await next(tester);
     }
     await tester.pumpAndSettle();
     expect(
@@ -448,8 +508,25 @@ void main() {
   ) async {
     final container = await startSession(tester, 'Je débute');
     await answer(tester, container, StartLevel.beginner, right: true);
+
+    // Retour du téléphone, puis la croix : la même confirmation.
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text("Quitter l'exercice ?"), findsOneWidget);
+    expect(
+      find.text('Ta réponse et les 10 XP de cette session seront perdus.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('quit-stay')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ReadingScreen), findsOneWidget);
+
     await tester.tap(find.byKey(const ValueKey('close')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('quit-leave')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ReadingScreen), findsNothing);
+    expect(find.byType(HomeScreen), findsOneWidget);
 
     expect(await db.select(db.sessions).get(), isEmpty);
   });
@@ -525,7 +602,16 @@ void main() {
       await answer(tester, container, StartLevel.beginner, right: i > 0);
     }
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Retour'));
+    await tester.tap(find.byKey(const ValueKey('result-continue')));
+    await tester.pumpAndSettle();
+
+    // Palier : niveau 2, clé de sol maîtrisée, clé de fa débloquée.
+    expect(find.text('NIVEAU SUPÉRIEUR'), findsOneWidget);
+    expect(find.text('Niveau 2'), findsOneWidget);
+    expect(find.text('MAÎTRISÉ'), findsOneWidget);
+    expect(find.text('Lire en clé de sol'), findsOneWidget);
+    expect(find.text('Lire en clé de fa'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('milestone-continue')));
     await tester.pumpAndSettle();
     expect(find.byType(SkillScreen), findsOneWidget);
     expect(find.text('Meilleur score : 95 %'), findsOneWidget);
@@ -541,6 +627,104 @@ void main() {
     expect(
       find.descendant(of: bass, matching: find.text('À FAIRE')),
       findsOneWidget,
+    );
+  });
+
+  testWidgets('une erreur affiche son explication, et la note ratée revient '
+      'dans « À revoir »', (tester) async {
+    final container = await startSession(tester, 'Je débute');
+    final params = StartLevel.beginner.params;
+    final question =
+        container.read(sessionProvider(params)).question as NoteQuestion;
+    final expected = question.answer;
+    final given = NoteName.naturals[(expected.step.index + 1) % 7];
+    final l10n = AppLocalizationsFr();
+
+    await give(tester, given);
+    // Faux : la correction attend « Continuer ».
+    await tester.pump(const Duration(seconds: 5));
+    expect(
+      container.read(sessionProvider(params)).phase,
+      SessionPhase.feedback,
+    );
+    expect(
+      find.text("C'est un ${l10n.noteFullName(expected)}"),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Tu as répondu : ${l10n.noteFullName(given)}.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining(l10n.explain(question)), findsOneWidget);
+    await next(tester);
+
+    for (var i = 1; i < sessionLength; i++) {
+      await answer(tester, container, StartLevel.beginner, right: true);
+    }
+    await tester.pumpAndSettle();
+    await tester.dragUntilVisible(
+      find.text('pas ${l10n.noteFullName(given)}'),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
+    expect(find.text('À revoir'), findsOneWidget);
+    expect(find.text('pas ${l10n.noteFullName(given)}'), findsOneWidget);
+    // 19 justes : 4 × 10, puis 15 × 15 avec le combo.
+    expect(find.text('19 bonnes réponses × 10'), findsOneWidget);
+    expect(find.text('+190 XP'), findsOneWidget);
+    expect(find.text('+75 XP'), findsOneWidget);
+    expect(find.text('+265 XP'), findsOneWidget);
+  });
+
+  testWidgets('combo : affiché à partir de 2, perdu à la première erreur', (
+    tester,
+  ) async {
+    final container = await startSession(tester, 'Je débute');
+    const level = StartLevel.beginner;
+    await answer(tester, container, level, right: true);
+    expect(find.byKey(const ValueKey('combo')), findsNothing);
+    await answer(tester, container, level, right: true);
+    await answer(tester, container, level, right: true);
+    expect(find.text('×3'), findsOneWidget);
+
+    final expected =
+        container.read(sessionProvider(level.params)).question.answer
+            as NoteName;
+    await give(tester, NoteName.naturals[(expected.step.index + 1) % 7]);
+    expect(find.text('COMBO ×3 PERDU'), findsOneWidget);
+    await next(tester);
+    expect(find.byKey(const ValueKey('combo')), findsNothing);
+  });
+
+  testWidgets('armure : touche noire et orthographe, un fa dièse n’est pas '
+      'un sol bémol', (tester) async {
+    await openLesson(tester, 'key-signature');
+    await readTheory(tester);
+    expect(find.text('TOUCHE NOIRE POUR UN DIÈSE OU UN BÉMOL'), findsOneWidget);
+
+    // Ré majeur : ré, puis fa dièse par l'armure.
+    await give(tester, NoteName.d);
+    await next(tester);
+    await give(tester, NoteName.gFlat);
+    expect(find.text("C'est un fa dièse"), findsOneWidget);
+    expect(find.text('Tu as répondu : sol bémol.'), findsOneWidget);
+    expect(
+      find.text(
+        "En clé de sol, le 1er interligne est un fa. L'armure en fait un fa "
+        'dièse.',
+      ),
+      findsOneWidget,
+    );
+    await next(tester);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ReadingScreen)),
+    );
+    final exercise =
+        content.lesson('key-signature')!.exercise as IdentifyNoteExercise;
+    expect(
+      container.read(sessionProvider(exercise)).question.answer,
+      NoteName.a,
     );
   });
 }

@@ -122,7 +122,7 @@
     }
   },
   "keyboardNaturals": "Pas d'altérations · noires inactives",
-  "keyboardAccidentals": "Altération ignorée · touche blanche",
+  "keyboardAccidentals": "Touche noire pour un dièse ou un bémol",
   "durationsHint": "En temps · la noire vaut 1",
   "resultTitle": "Session terminée",
   "resultScore": "{correct} / {total}",
@@ -146,6 +146,105 @@
   },
   "resultRestart": "Recommencer",
   "resultChangeLevel": "Changer de niveau",
+  "resultCombo": "Meilleur combo ×{combo}",
+  "@resultCombo": {
+    "placeholders": {
+      "combo": { "type": "int" }
+    }
+  },
+  "resultXpTitle": "XP gagnés",
+  "resultXpAnswers": "{count, plural, =1{1 bonne réponse} other{{count} bonnes réponses}} × {xp}",
+  "@resultXpAnswers": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "xp": { "type": "int" }
+    }
+  },
+  "resultXpCombo": "Bonus de combo",
+  "resultXpTotal": "Total",
+  "resultReview": "À revoir",
+  "resultReviewGiven": "pas {answer}",
+  "@resultReviewGiven": {
+    "placeholders": {
+      "answer": { "type": "String" }
+    }
+  },
+  "resultNoMistake": "Aucune erreur.",
+  "resultContinue": "Continuer",
+  "milestoneLevel": "Niveau supérieur",
+  "milestoneSkill": "Compétence maîtrisée",
+  "milestoneMastered": "Maîtrisé",
+  "milestoneUnlocked": "Débloqué",
+  "feedbackRightNote": "Juste, c'est un {name}",
+  "@feedbackRightNote": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "feedbackWrongNote": "C'est un {name}",
+  "@feedbackWrongNote": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "feedbackRightDuration": "Juste, {beats} temps",
+  "@feedbackRightDuration": {
+    "placeholders": {
+      "beats": { "type": "String" }
+    }
+  },
+  "feedbackWrongDuration": "Ça dure {beats} temps",
+  "@feedbackWrongDuration": {
+    "placeholders": {
+      "beats": { "type": "String" }
+    }
+  },
+  "feedbackRightMarking": "Juste, ça veut dire « {meaning} »",
+  "@feedbackRightMarking": {
+    "placeholders": {
+      "meaning": { "type": "String" }
+    }
+  },
+  "feedbackWrongMarking": "Ça veut dire « {meaning} »",
+  "@feedbackWrongMarking": {
+    "placeholders": {
+      "meaning": { "type": "String" }
+    }
+  },
+  "feedbackGiven": "Tu as répondu : {answer}.",
+  "@feedbackGiven": {
+    "placeholders": {
+      "answer": { "type": "String" }
+    }
+  },
+  "feedbackXp": "+{xp} XP",
+  "@feedbackXp": {
+    "placeholders": {
+      "xp": { "type": "int" }
+    }
+  },
+  "feedbackCombo": "Combo ×{combo}",
+  "@feedbackCombo": {
+    "placeholders": {
+      "combo": { "type": "int" }
+    }
+  },
+  "feedbackComboLost": "Combo ×{combo} perdu",
+  "@feedbackComboLost": {
+    "placeholders": {
+      "combo": { "type": "int" }
+    }
+  },
+  "quitTitle": "Quitter l'exercice ?",
+  "quitBody": "{answered, plural, =1{Ta réponse et les {xp} XP de cette session seront perdus.} other{Tes {answered} réponses et les {xp} XP de cette session seront perdus.}}",
+  "@quitBody": {
+    "placeholders": {
+      "answered": { "type": "int" },
+      "xp": { "type": "int" }
+    }
+  },
+  "quitStay": "Continuer l'exercice",
+  "quitLeave": "Quitter",
   "noteC": "do",
   "noteD": "ré",
   "noteE": "mi",
@@ -153,6 +252,168 @@
   "noteG": "sol",
   "noteA": "la",
   "noteB": "si",
+  "noteSharp": "{note} dièse",
+  "@noteSharp": {
+    "placeholders": {
+      "note": { "type": "String" }
+    }
+  },
+  "noteFlat": "{note} bémol",
+  "@noteFlat": {
+    "placeholders": {
+      "note": { "type": "String" }
+    }
+  },
+  "clefTreble": "clé de sol",
+  "clefBass": "clé de fa",
+  "clefAlto": "clé d'ut 3e ligne",
+  "clefTenor": "clé d'ut 4e ligne",
+  "explainLine": "En {clef}, la {line, plural, =1{1re} other{{line}e}} ligne est un {note}.",
+  "@explainLine": {
+    "placeholders": {
+      "clef": { "type": "String" },
+      "line": { "type": "int" },
+      "note": { "type": "String" }
+    }
+  },
+  "explainSpace": "En {clef}, le {space, plural, =1{1er} other{{space}e}} interligne est un {note}.",
+  "@explainSpace": {
+    "placeholders": {
+      "clef": { "type": "String" },
+      "space": { "type": "int" },
+      "note": { "type": "String" }
+    }
+  },
+  "explainJustAbove": "En {clef}, juste au-dessus de la portée, c'est un {note}.",
+  "@explainJustAbove": {
+    "placeholders": {
+      "clef": { "type": "String" },
+      "note": { "type": "String" }
+    }
+  },
+  "explainJustBelow": "En {clef}, juste sous la portée, c'est un {note}.",
+  "@explainJustBelow": {
+    "placeholders": {
+      "clef": { "type": "String" },
+      "note": { "type": "String" }
+    }
+  },
+  "explainLedgerAbove": "En {clef}, la {ledger, plural, =1{1re} other{{ledger}e}} ligne supplémentaire au-dessus est un {note}.",
+  "@explainLedgerAbove": {
+    "placeholders": {
+      "clef": { "type": "String" },
+      "ledger": { "type": "int" },
+      "note": { "type": "String" }
+    }
+  },
+  "explainLedgerBelow": "En {clef}, la {ledger, plural, =1{1re} other{{ledger}e}} ligne supplémentaire en dessous est un {note}.",
+  "@explainLedgerBelow": {
+    "placeholders": {
+      "clef": { "type": "String" },
+      "ledger": { "type": "int" },
+      "note": { "type": "String" }
+    }
+  },
+  "explainOverLedger": "En {clef}, au-dessus de la {ledger, plural, =1{1re} other{{ledger}e}} ligne supplémentaire, c'est un {note}.",
+  "@explainOverLedger": {
+    "placeholders": {
+      "clef": { "type": "String" },
+      "ledger": { "type": "int" },
+      "note": { "type": "String" }
+    }
+  },
+  "explainUnderLedger": "En {clef}, sous la {ledger, plural, =1{1re} other{{ledger}e}} ligne supplémentaire, c'est un {note}.",
+  "@explainUnderLedger": {
+    "placeholders": {
+      "clef": { "type": "String" },
+      "ledger": { "type": "int" },
+      "note": { "type": "String" }
+    }
+  },
+  "explainWritten": "{sign, select, sharp{Le dièse} flat{Le bémol} other{Le bécarre}} devant la note en fait un {name}.",
+  "@explainWritten": {
+    "placeholders": {
+      "sign": { "type": "String" },
+      "name": { "type": "String" }
+    }
+  },
+  "explainMeasure": "{sign, select, sharp{Le dièse} flat{Le bémol} other{Le bécarre}} écrit plus tôt dans la mesure vaut encore : {name}.",
+  "@explainMeasure": {
+    "placeholders": {
+      "sign": { "type": "String" },
+      "name": { "type": "String" }
+    }
+  },
+  "explainTie": "La liaison prolonge l'altération : {name}.",
+  "@explainTie": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "explainKey": "L'armure en fait un {name}.",
+  "@explainKey": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "figureWhole": "ronde",
+  "figureHalf": "blanche",
+  "figureQuarter": "noire",
+  "figureEighth": "croche",
+  "figureSixteenth": "double croche",
+  "restWhole": "pause",
+  "restHalf": "demi-pause",
+  "restQuarter": "soupir",
+  "restEighth": "demi-soupir",
+  "restSixteenth": "quart de soupir",
+  "dottedFeminine": "{figure} pointée",
+  "@dottedFeminine": {
+    "placeholders": {
+      "figure": { "type": "String" }
+    }
+  },
+  "dottedMasculine": "{figure} pointé",
+  "@dottedMasculine": {
+    "placeholders": {
+      "figure": { "type": "String" }
+    }
+  },
+  "explainTied": "{first} liée à une {next}",
+  "@explainTied": {
+    "placeholders": {
+      "first": { "type": "String" },
+      "next": { "type": "String" }
+    }
+  },
+  "explainDuration": "{figures} : {beats} temps.",
+  "@explainDuration": {
+    "placeholders": {
+      "figures": { "type": "String" },
+      "beats": { "type": "String" }
+    }
+  },
+  "explainDot": "Le point ajoute la moitié de la valeur.",
+  "explainPianississimo": "Trois p : pianississimo, extrêmement doux.",
+  "explainPianissimo": "Deux p : pianissimo, très doux.",
+  "explainPiano": "p : piano, doux.",
+  "explainMezzoPiano": "mp : mezzo piano, moyennement doux. Mezzo veut dire « à moitié ».",
+  "explainMezzoForte": "mf : mezzo forte, moyennement fort. Mezzo veut dire « à moitié ».",
+  "explainForte": "f : forte, fort.",
+  "explainFortissimo": "Deux f : fortissimo, très fort.",
+  "explainFortississimo": "Trois f : fortississimo, extrêmement fort.",
+  "explainCrescendo": "Un soufflet qui s'ouvre, ou « cresc. » : le son grandit, de plus en plus fort.",
+  "explainDiminuendo": "Un soufflet qui se ferme, ou « dim. » : le son diminue, de moins en moins fort.",
+  "explainStaccato": "Le point sur ou sous la tête de note : piqué, la note est courte et détachée.",
+  "explainTenuto": "Le petit trait sur ou sous la tête de note : tenu, la note dure toute sa valeur.",
+  "explainAccent": "Le signe > : accentué, on attaque la note plus fort.",
+  "explainFermata": "Le point d'orgue : on tient la note aussi longtemps qu'on veut.",
+  "explainRitardando": "« rit. » ou « rall. » : en ralentissant.",
+  "explainAccelerando": "« accel. » : en accélérant.",
+  "explainATempo": "« a tempo » : on reprend le mouvement du début.",
+  "explainDolce": "« dolce » : avec douceur.",
+  "explainLegato": "« legato » : lié, sans couper le son entre les notes.",
+  "explainEspressivo": "« espressivo » ou « espress. » : expressif.",
+  "explainCantabile": "« cantabile » : chantant, comme une voix.",
   "markingPianississimo": "extrêmement doux",
   "markingPianissimo": "très doux",
   "markingPiano": "doux",
