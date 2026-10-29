@@ -20,7 +20,7 @@ Les étapes 6 à 12 viennent du design « Touches » (Claude Design, tour 2) : t
 | 5 | Décorations : nuances, articulations, termes | Apprentissage des symboles | Bêta 0.0.1 |
 | 6 | Halo de cible, noms sous les notes | Design system, clavier, navigation à 4 onglets | Fait |
 | 7 | | Progression persistée : XP, niveaux, parcours | Fait |
-| 8 | | Boucle d'exercice : feedback, combo, résultats | |
+| 8 | | Boucle d'exercice : feedback, combo, résultats | Fait |
 | 9 | | Démarrage et réglages | |
 | 10 | | Révision espacée | |
 | 11 | | Arcade | |
@@ -192,16 +192,32 @@ Tranché :
 
 ## Étape 8 : boucle d'exercice
 
-- [ ] Feedback juste : « Juste, c'est un ré », XP gagnés, **explication** propre à la note (repère sur la portée)
-- [ ] Feedback faux : bonne réponse, réponse donnée, explication. Bonne touche en vert, mauvaise en rouge
-- [ ] Explications : texte écrit par l'auteur dans la leçon (champ à définir dans [doc/lessons.md](nobemol-app/doc/lessons.md)) ou généré pour la lecture de notes (ligne / interligne, clé). Vérifié par le validateur
-- [ ] Combo (×n), combo perdu
-- [ ] Altérations : touche noire, puis choix de l'orthographe (fa♯ ou sol♭). Un fa♯ n'est pas un sol♭
-- [ ] Quitter la leçon : confirmation avec ce qui sera perdu
-- [ ] Résultats : score, chrono, détail de l'XP, notes à revoir (alimentent l'étape 10)
-- [ ] Écran « Niveau supérieur », avec ce qu'il débloque
+- [x] **Panneau de correction** posé sur les réponses, à leur hauteur exacte : la portée ne bouge jamais. « Continuer » toujours au même endroit, juste ou faux
+- [x] Feedback juste : « Juste, c'est un ré », XP gagnés, **explication** propre à la note (repère sur la portée)
+- [x] Feedback faux : bonne réponse, réponse donnée, explication. La cible est colorée en rouge sur la portée
+- [x] Explications : générées (note : place sur la portée, clé, cause de l'altération ; durée : figures et temps ; signe : comment le reconnaître) ou écrites par l'auteur, champ `explain` d'une cible ([doc/lessons.md](nobemol-app/doc/lessons.md)). Vérifié par le validateur, 160 caractères au plus
+- [x] Combo (×n dans la barre du haut), combo perdu
+- [x] Altérations : touche noire, puis choix de l'orthographe (fa dièse ou sol bémol). Un fa dièse n'est pas un sol bémol. L'armure et les altérations de la mesure comptent
+- [x] Quitter la leçon : confirmation avec ce qui sera perdu (croix et retour du téléphone)
+- [x] Résultats : score, chrono, meilleur combo, détail de l'XP, notes à revoir (une fois chacune, la note seule sur sa portée)
+- [x] Écran « Niveau supérieur », avec les compétences maîtrisées et débloquées par la session
 
 **Terminé quand** : une erreur affiche son explication, et la note ratée apparaît dans « À revoir » des résultats.
+
+Tranché :
+
+- **Altérations en toutes lettres** (« fa dièse », « si bémol ») : les trois polices de l'interface n'ont pas ♯ ni ♭. Ceux de Bravura sont calés sur la portée, pas sur une ligne de texte.
+- **Mode leçon : « Continuer » obligatoire, juste ou faux.** Un feedback inséré dans le bas d'écran l'agrandissait et décalait la portée à chaque réponse. Le panneau monte par-dessus les réponses (200 ms), à hauteur fixe (au moins `Sizes.answerDock`) : le bouton ne bouge pas, quelle que soit l'explication. Il ne répond qu'après 300 ms : le panneau arrive sous le doigt, un double appui ne saute pas la correction.
+- **Le rythme rapide, c'est l'arcade** (étape 11) : pas de panneau ni d'explication. La lecture libre (20 notes au hasard) garde le panneau en attendant, puis sera remplacée par l'arcade.
+- Touches verte et rouge cachées par le panneau : le texte dit la bonne réponse et celle donnée, la cible est colorée sur la portée. Un signe se voit sur la portée, pas dans le panneau (seul, un staccato n'est qu'un point).
+- **Les réponses de note portent l'altération lue** : dans la leçon sur l'armure, un fa en ré majeur se répond fa dièse (avant : fa). Les leçons sans altération ne changent pas : touches noires inactives.
+- Seules les notes d'une touche du clavier existent : le générateur ne tire plus de mi dièse ni de do bémol, le validateur les refuse dans une leçon.
+- Le palier se montre après les résultats : niveau gagné, ou compétence maîtrisée. Les compétences débloquées s'y ajoutent.
+- Réponses gardées en base sous le même nom qu'avant pour les notes naturelles (`c`, `d`...) : les sessions de l'étape 7 restent lisibles. Altérées : `fSharp`, `gFlat`.
+
+À vérifier :
+
+- Sur un vrai téléphone : taille de la bulle d'orthographe sur petit écran, explications de 4 lignes dans le panneau (vérifié à 360 × 740 en test).
 
 ## Étape 9 : démarrage et réglages
 
@@ -224,6 +240,8 @@ Tranché :
 
 ## Étape 11 : arcade
 
+- [ ] Correction rapide, pour enchaîner : couleur sur la cible (et son ou vibration), sans panneau ni explication. Les erreurs vont à la révision (étape 10)
+- [ ] Remplace la lecture libre (points de départ du Parcours)
 - [ ] Générateur limité aux notes déjà apprises, choix de la clé (sol, fa, grande portée)
 - [ ] Chrono : 60 s, +50 par note × multiplicateur de combo
 - [ ] Sans fin : les notes accélèrent, une erreur et c'est fini

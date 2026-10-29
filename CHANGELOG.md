@@ -17,6 +17,12 @@ Le workflow de release reprend la section de la version comme notes de release :
 - Parcours : compétences par branche, avec leur maîtrise. Une compétence se débloque quand ses prérequis sont maîtrisés (80 %).
 - Carte « Reprendre » : une leçon interrompue reprend à sa page de théorie, même après redémarrage.
 - Écran compétence : théorie, exercice (meilleur score) et arcade (bientôt).
+- Correction expliquée après chaque réponse : place de la note sur la portée, origine de l'altération, figures d'une durée, sens d'un signe. Les leçons peuvent écrire leurs propres explications.
+- Altérations au clavier : touche noire, puis fa dièse ou sol bémol.
+- Combo affiché pendant l'exercice, et perdu à la première erreur.
+- Résultats détaillés : XP par bonnes réponses et bonus de combo, notes à revoir.
+- Écran « Niveau supérieur » et compétences débloquées.
+- Confirmation avant de quitter un exercice commencé.
 
 ### Modifié
 
@@ -24,6 +30,8 @@ Le workflow de release reprend la section de la version comme notes de release :
 - Durées en 8 tuiles, signes en cartes. Le signe s'affiche sur les cartes après la réponse.
 - Les points de départ passent en bas du Parcours, sous « Lecture libre ».
 - Les leçons se débloquent dans l'ordre de l'arbre de compétences.
+- Après chaque réponse, juste ou fausse, un panneau de correction monte sur les réponses et attend « Continuer ».
+- Avec une armure, la réponse porte l'altération : en sol majeur, un fa se répond fa dièse.
 
 ## [0.0.1] - 2026-10-28 (bêta 1)
 
