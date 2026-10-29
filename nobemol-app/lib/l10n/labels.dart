@@ -64,6 +64,16 @@ extension Labels on AppLocalizations {
     Marking.cantabile => markingCantabile,
   };
 
+  /// Titre d'une branche de l'arbre de compétences (début de l'identifiant
+  /// des compétences). Une branche sans libellé garde son identifiant.
+  String branchTitle(String branch) => switch (branch) {
+    'note-reading' => branchNoteReading,
+    'rhythm' => branchRhythm,
+    'terms' => branchTerms,
+    'symbols' => branchSymbols,
+    _ => branch,
+  };
+
   String levelTitle(StartLevel level) => switch (level) {
     StartLevel.beginner => levelBeginnerTitle,
     StartLevel.knowsTreble => levelKnowsTrebleTitle,

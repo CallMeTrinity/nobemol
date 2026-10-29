@@ -99,6 +99,21 @@ exercise:
     );
   });
 
+  test('prérequis sans leçon pour sa maîtrise : la suite resterait '
+      'verrouillée', () {
+    expect(
+      () => parseContent(
+        skills: skills,
+        lessons: {'assets/lessons/c.yaml': lesson('c', skill: 'a.next')},
+      ),
+      throwsA(
+        isA<ContentErrors>().having((e) => e.messages, 'messages', [
+          allOf(startsWith('assets/skills.yaml: '), contains('« a.base »')),
+        ]),
+      ),
+    );
+  });
+
   test('le contenu embarqué est valide', () {
     final lessons = {
       for (final file in Directory(lessonsDir).listSync().whereType<File>())

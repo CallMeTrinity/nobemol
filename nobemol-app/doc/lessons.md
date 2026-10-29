@@ -188,3 +188,14 @@ Un terme se reconnaît à son texte, au-dessus (`^`) comme au-dessous (`_`) de l
 L'appli range les leçons d'après `assets/skills.yaml` : d'abord par la compétence la plus avancée de la leçon (position dans le fichier), puis par niveau, puis par `id`.
 
 Dans `assets/skills.yaml`, un prérequis (`requires`) est toujours déclaré plus haut que la compétence qui en dépend. L'ordre du fichier est donc un ordre d'apprentissage, et il ne peut pas y avoir de cycle.
+
+## Maîtrise et déblocage
+
+Le Parcours range les compétences par **branche**, le début de leur `id` (`note-reading`, `rhythm`, `terms`, `symbols`). Une nouvelle branche demande son titre dans `lib/l10n/` (`branchTitle`). Une compétence sans leçon n'apparaît pas.
+
+- **Maîtrise** d'une compétence : la moyenne des meilleurs scores de ses leçons, une leçon jamais jouée comptant 0. Maîtrisée à **80 %**.
+- Une compétence se **débloque** quand tous ses `requires` sont maîtrisés. Une leçon se joue quand toutes ses compétences sont débloquées.
+- Seules **comptent pour la maîtrise** les leçons qui se jouent dès que la compétence est débloquée : celles dont toutes les `skills` sont la compétence ou ses prérequis (directs ou non). Une leçon qui croise deux branches (`skills: [note-reading.grand, note-reading.phrases]`) s'affiche dans les deux, mais ne compte pour aucune. Sinon, le rythme attendrait la grande portée.
+- Le validateur refuse un prérequis sans aucune leçon qui compte pour sa maîtrise : la compétence qui en dépend resterait verrouillée.
+
+Ajouter une leçon à une compétence baisse sa maîtrise tant que la leçon n'est pas jouée. Une compétence déjà maîtrisée **le reste** (gardé en base) : rien ne se reverrouille chez l'élève.

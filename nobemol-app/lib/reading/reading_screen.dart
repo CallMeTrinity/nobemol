@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:notation/notation.dart';
 
+import 'package:nobemol/clock.dart';
 import 'package:nobemol/l10n/app_localizations.dart';
 import 'package:nobemol/l10n/labels.dart';
+import 'package:nobemol/progress/progress_provider.dart';
 import 'package:nobemol/reading/beats.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_reading.dart';
@@ -16,24 +18,51 @@ import 'package:nobemol/ui/depth.dart';
 import 'package:nobemol/ui/fit_words.dart';
 import 'package:nobemol/ui/glyph_view.dart';
 import 'package:nobemol/ui/note_keyboard.dart';
+import 'package:nobemol/ui/progress_bar.dart';
 
 /// Écran de lecture : une note (seule ou ciblée dans une phrase), et les
 /// réponses possibles en bas : le clavier pour un nom de note, des tuiles
 /// pour une durée, des cartes pour le sens d'un signe.
+///
+/// La session est enregistrée à la dernière réponse. Une session quittée
+/// avant n'est pas gardée.
 class ReadingScreen extends ConsumerWidget {
-  const ReadingScreen({super.key, required this.exercise});
+  const ReadingScreen({super.key, required this.exercise, this.lessonId});
 
   final ReadingExercise exercise;
+
+  /// Leçon de l'exercice, `null` en lecture libre.
+  final String? lessonId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionProvider(exercise));
+    ref.listen(sessionProvider(exercise), (previous, next) {
+      if (previous?.finishedAt != null) return;
+      if (next.finishedAt case final finishedAt?) {
+        unawaited(
+          ref
+              .read(progressProvider.notifier)
+              .recordSession(
+                lessonId: lessonId,
+                startedAt: next.startedAt,
+                finishedAt: finishedAt,
+                answers: next.answers,
+                bestCombo: next.bestCombo,
+              ),
+        );
+      }
+    });
 
     return Scaffold(
       body: SafeArea(
         bottom: false,
         child: session.phase == SessionPhase.finished
-            ? _Results(exercise: exercise, session: session)
+            ? _Results(
+                exercise: exercise,
+                session: session,
+                fromLesson: lessonId != null,
+              )
             : _Exercise(exercise: exercise, session: session),
       ),
     );
@@ -170,12 +199,12 @@ class _TopBar extends StatelessWidget {
             child: IconButton(
               key: const ValueKey('close'),
               tooltip: AppLocalizations.of(context).close,
-              onPressed: () => context.go('/'),
+              onPressed: () => context.pop(),
               icon: Icon(Icons.close_rounded, color: c.ink),
             ),
           ),
           const SizedBox(width: Space.s),
-          Expanded(child: _ProgressBar(value: progress)),
+          Expanded(child: ProgressBar(value: progress)),
           const SizedBox(width: Space.s),
           Container(
             height: 32,
@@ -191,30 +220,6 @@ class _TopBar extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ProgressBar extends StatelessWidget {
-  const _ProgressBar({required this.value});
-
-  final double value;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    const radius = BorderRadius.all(Radius.circular(5));
-    return Container(
-      height: 10,
-      decoration: BoxDecoration(color: c.line, borderRadius: radius),
-      alignment: Alignment.centerLeft,
-      child: FractionallySizedBox(
-        widthFactor: value.clamp(0, 1),
-        child: DecoratedBox(
-          decoration: BoxDecoration(color: c.success, borderRadius: radius),
-          child: const SizedBox.expand(),
-        ),
       ),
     );
   }
@@ -498,10 +503,15 @@ class _HairpinPainter extends CustomPainter {
 }
 
 class _Results extends ConsumerWidget {
-  const _Results({required this.exercise, required this.session});
+  const _Results({
+    required this.exercise,
+    required this.session,
+    required this.fromLesson,
+  });
 
   final ReadingExercise exercise;
   final SessionState session;
+  final bool fromLesson;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -532,6 +542,12 @@ class _Results extends ConsumerWidget {
             textAlign: TextAlign.center,
             style: AppText.bodyLarge.copyWith(color: c.inkMuted),
           ),
+          const SizedBox(height: Space.s),
+          Text(
+            l10n.resultXp(session.xp),
+            textAlign: TextAlign.center,
+            style: AppText.titleCard.copyWith(color: c.accentDeep),
+          ),
           const Spacer(),
           DepthButton(
             label: l10n.resultRestart,
@@ -541,8 +557,8 @@ class _Results extends ConsumerWidget {
           ),
           const SizedBox(height: Space.s),
           DepthButton(
-            label: l10n.resultChangeLevel,
-            onPressed: () => context.go('/'),
+            label: fromLesson ? l10n.back : l10n.resultChangeLevel,
+            onPressed: () => context.pop(),
             variant: ButtonVariant.outline,
             large: true,
             expand: true,

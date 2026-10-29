@@ -19,7 +19,7 @@ Les étapes 6 à 12 viennent du design « Touches » (Claude Design, tour 2) : t
 | 4 | Silences, points, ligatures, liaisons de prolongation | Exercices de rythme | Bêta 0.0.1 |
 | 5 | Décorations : nuances, articulations, termes | Apprentissage des symboles | Bêta 0.0.1 |
 | 6 | Halo de cible, noms sous les notes | Design system, clavier, navigation à 4 onglets | Fait |
-| 7 | | Progression persistée : XP, niveaux, parcours | |
+| 7 | | Progression persistée : XP, niveaux, parcours | Fait |
 | 8 | | Boucle d'exercice : feedback, combo, résultats | |
 | 9 | | Démarrage et réglages | |
 | 10 | | Révision espacée | |
@@ -167,14 +167,28 @@ Tranché :
 
 Prérequis de toutes les étapes suivantes. Ouvre la base Drift prévue dans [IDEA.md](IDEA.md).
 
-- [ ] Drift : schéma v1 (réponses, sessions, maîtrise par compétence), **migrations testées dès la v1** (la bêta est installée, les données doivent survivre aux mises à jour)
-- [ ] XP : 10 par bonne réponse, bonus de combo. Niveaux par paliers d'XP, objectif du jour
-- [ ] Maîtrise par compétence (%), états « à faire », « en cours », « maîtrisé »
-- [ ] Déblocage par prérequis de l'arbre (`skills.yaml`) : « se débloque après … »
-- [ ] Parcours : niveau et XP, objectif du jour, carte « Reprendre » (leçon en cours, page de théorie), tuiles par branche
-- [ ] Écran compétence : théorie (n pages, progression), exercice, arcade de la compétence (verrouillée avant l'exercice)
+- [x] Drift : schéma v1 (sessions, réponses, théorie, compétences maîtrisées), **migrations testées dès la v1** : schéma figé dans `drift_schemas/`, tests dans `test/drift/` ([doc/database.md](nobemol-app/doc/database.md))
+- [x] XP : 10 par bonne réponse, +5 à partir de la 5e d'affilée. Niveaux par paliers (100 × n × (n − 1) XP), objectif du jour (100 XP fixes jusqu'à l'étape 9)
+- [x] Maîtrise par compétence (%), états « à faire », « en cours », « maîtrisé » (80 %)
+- [x] Déblocage par prérequis de l'arbre (`skills.yaml`) : « se débloque après … »
+- [x] Parcours : niveau et XP, objectif du jour, carte « Reprendre » (leçon en cours, page de théorie), tuiles par branche
+- [x] Écran compétence : théorie (n pages, progression), exercice (meilleur score), arcade (verrouillée avant l'exercice, « Bientôt » après)
 
 **Terminé quand** : une leçon interrompue reprend à la bonne page après redémarrage de l'appli, et l'XP survit à une mise à jour de l'APK.
+
+Tranché :
+
+- **Maîtrise** = moyenne des meilleurs scores des leçons de la compétence (une leçon non jouée compte 0). Calculée, pas stockée : elle suit le contenu sans migration. Seul le fait d'avoir maîtrisé est stocké, pour qu'une nouvelle leçon ne reverrouille rien chez l'élève.
+- Une leçon ne compte pour la maîtrise que si elle se joue **dès que la compétence est débloquée** (ses compétences sont celle-ci ou ses prérequis). Sinon `grand-staff-phrase` (grande portée + phrases) bloquait tout le rythme derrière la grande portée. Vérifié par le validateur.
+- Une session **quittée avant la fin n'est pas gardée** (ni XP ni réponses) : cohérent avec la confirmation « ce qui sera perdu » de l'étape 8.
+- Les points de départ restent en bas du Parcours (« Lecture libre ») jusqu'au démarrage de l'étape 9. Leurs sessions rapportent de l'XP, sans compter pour une compétence.
+- Cible web : la base tourne dans le navigateur (`web/sqlite3.wasm`, `web/drift_worker.js`, 1,1 Mo, absents de l'APK).
+
+À vérifier :
+
+- Sur un vrai téléphone : `0.0.1` puis cette version **par-dessus**. La base se crée, puis une session jouée, une mise à jour de plus (`0.0.3`) : XP et page de théorie toujours là.
+- Équilibre XP : une session parfaite de 20 notes rapporte 280 XP, donc l'objectif de 100 XP tombe en une session. À revoir avec l'étape 9 (20 à 150 XP dans le design).
+- Le design « Touches » n'a pas pu être relu pendant l'étape (pas d'accès au projet Claude Design) : Parcours et écran compétence sont construits avec les composants de l'étape 6, à comparer aux maquettes.
 
 ## Étape 8 : boucle d'exercice
 

@@ -1,25 +1,60 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:notation/notation.dart';
 
 import 'package:nobemol/l10n/app_localizations.dart';
 import 'package:nobemol/l10n/labels.dart';
 import 'package:nobemol/lessons/lesson.dart';
+import 'package:nobemol/progress/progress_provider.dart';
 import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/depth.dart';
 
 /// Pages de théorie d'une leçon, puis accès à l'exercice.
-class LessonScreen extends StatefulWidget {
+///
+/// Une théorie interrompue reprend à sa dernière page. Une théorie déjà
+/// lue reprend au début.
+class LessonScreen extends ConsumerStatefulWidget {
   const LessonScreen({super.key, required this.lesson});
 
   final Lesson lesson;
 
   @override
-  State<LessonScreen> createState() => _LessonScreenState();
+  ConsumerState<LessonScreen> createState() => _LessonScreenState();
 }
 
-class _LessonScreenState extends State<LessonScreen> {
-  var _page = 0;
+class _LessonScreenState extends ConsumerState<LessonScreen> {
+  late int _page;
+
+  @override
+  void initState() {
+    super.initState();
+    final lesson = widget.lesson;
+    final theory = ref.read(progressProvider).theory[lesson.id];
+    _page = theory == null || theory.read
+        ? 0
+        : min(theory.page, lesson.theory.length - 1);
+    _save();
+  }
+
+  void _turn(int page) {
+    setState(() => _page = page);
+    _save();
+  }
+
+  void _save({bool finished = false}) => unawaited(
+    ref
+        .read(progressProvider.notifier)
+        .openPage(widget.lesson.id, _page, finished: finished),
+  );
+
+  void _practice() {
+    _save(finished: true);
+    context.pushReplacement('/lecon/${widget.lesson.id}/exercice');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,16 +110,14 @@ class _LessonScreenState extends State<LessonScreen> {
                       label: l10n.lessonPrevious,
                       variant: ButtonVariant.text,
                       large: true,
-                      onPressed: () => setState(() => _page--),
+                      onPressed: () => _turn(_page - 1),
                     ),
                   const Spacer(),
                   DepthButton(
                     label: last ? l10n.lessonPractice : l10n.lessonNext,
                     variant: last ? ButtonVariant.primary : ButtonVariant.ink,
                     large: true,
-                    onPressed: last
-                        ? () => context.go('/lecon/${lesson.id}/exercice')
-                        : () => setState(() => _page++),
+                    onPressed: last ? _practice : () => _turn(_page + 1),
                   ),
                 ],
               ),
@@ -129,7 +162,7 @@ class _Header extends StatelessWidget {
                     child: IconButton(
                       key: const ValueKey('close'),
                       tooltip: l10n.close,
-                      onPressed: () => context.go('/'),
+                      onPressed: () => context.pop(),
                       icon: Icon(Icons.close_rounded, color: c.ink),
                     ),
                   ),
