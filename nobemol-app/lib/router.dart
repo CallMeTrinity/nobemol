@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:nobemol/home/home_screen.dart';
+import 'package:nobemol/home/skill_screen.dart';
 import 'package:nobemol/l10n/app_localizations.dart';
 import 'package:nobemol/lessons/content.dart';
 import 'package:nobemol/lessons/content_provider.dart';
@@ -28,6 +29,16 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/',
                 builder: (context, state) => const HomeScreen(),
                 routes: [
+                  // Dans l'onglet : la barre reste visible.
+                  GoRoute(
+                    path: 'competence/:id',
+                    redirect: (context, state) =>
+                        _hasLessons(content, state.pathParameters['id']!)
+                        ? null
+                        : '/',
+                    builder: (context, state) =>
+                        SkillScreen(skillId: state.pathParameters['id']!),
+                  ),
                   GoRoute(
                     path: 'lecture/:level',
                     parentNavigatorKey: root,
@@ -47,9 +58,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                       GoRoute(
                         path: 'exercice',
                         parentNavigatorKey: root,
-                        builder: (context, state) => ReadingScreen(
-                          exercise: _lesson(content, state)!.exercise,
-                        ),
+                        builder: (context, state) {
+                          final lesson = _lesson(content, state)!;
+                          return ReadingScreen(
+                            exercise: lesson.exercise,
+                            lessonId: lesson.id,
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -86,6 +101,10 @@ StatefulShellBranch _soon(
 
 StartLevel? _level(GoRouterState state) =>
     StartLevel.values.asNameMap()[state.pathParameters['level']];
+
+/// Vrai si la compétence [id] existe et a au moins une leçon.
+bool _hasLessons(Content content, String id) =>
+    content.lessons.any((lesson) => lesson.skills.contains(id));
 
 Lesson? _lesson(Content content, GoRouterState state) =>
     content.lesson(state.pathParameters['id']!);

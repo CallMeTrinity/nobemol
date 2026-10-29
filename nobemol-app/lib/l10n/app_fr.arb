@@ -10,7 +10,89 @@
   "arcadeSoon": "Des parties contre la montre, avec les notes déjà apprises.",
   "profileSoon": "Ton niveau, tes statistiques et tes succès.",
   "close": "Fermer",
-  "homeQuestion": "Par où commencer ?",
+  "back": "Retour",
+  "courseLevel": "Niveau {level}",
+  "@courseLevel": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
+  "courseLevelXp": "{xp} / {span} XP",
+  "@courseLevelXp": {
+    "placeholders": {
+      "xp": { "type": "int" },
+      "span": { "type": "int" }
+    }
+  },
+  "dailyGoal": "Objectif du jour",
+  "dailyGoalXp": "{xp} / {goal} XP",
+  "@dailyGoalXp": {
+    "placeholders": {
+      "xp": { "type": "int" },
+      "goal": { "type": "int" }
+    }
+  },
+  "dailyGoalDone": "Atteint",
+  "resume": "Reprendre",
+  "resumeStart": "Commencer",
+  "resumePage": "Théorie · page {page} sur {count}",
+  "@resumePage": {
+    "placeholders": {
+      "page": { "type": "int" },
+      "count": { "type": "int" }
+    }
+  },
+  "resumeExercise": "Exercice",
+  "branchNoteReading": "Lecture de notes",
+  "branchRhythm": "Rythme",
+  "branchTerms": "Nuances et termes",
+  "branchSymbols": "Symboles",
+  "skillTodo": "À faire",
+  "skillStarted": "En cours · {percent} %",
+  "@skillStarted": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
+  "skillMastered": "Maîtrisé",
+  "skillLocked": "Se débloque après {skills}",
+  "@skillLocked": {
+    "placeholders": {
+      "skills": { "type": "String" }
+    }
+  },
+  "skillMastery": "Maîtrise : {percent} %",
+  "@skillMastery": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
+  "skillTheory": "Théorie",
+  "skillTheoryPages": "{count, plural, =1{1 page} other{{count} pages}}",
+  "@skillTheoryPages": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "skillTheoryProgress": "Page {page} sur {count}",
+  "@skillTheoryProgress": {
+    "placeholders": {
+      "page": { "type": "int" },
+      "count": { "type": "int" }
+    }
+  },
+  "skillTheoryRead": "Lue",
+  "skillExercise": "Exercice",
+  "skillExerciseTodo": "Pas encore fait",
+  "skillExerciseBest": "Meilleur score : {percent} %",
+  "@skillExerciseBest": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
+  "skillArcade": "Arcade",
+  "skillArcadeLocked": "Après l'exercice",
+  "freeReading": "Lecture libre",
   "levelBeginnerTitle": "Je débute",
   "levelBeginnerDescription": "Clé de sol, notes sur la portée",
   "levelKnowsTrebleTitle": "Je connais la clé de sol",
@@ -19,7 +101,6 @@
   "levelReadsBothDescription": "Grande portée, une ligne supplémentaire",
   "levelFluentTitle": "Je lis couramment",
   "levelFluentDescription": "Grande portée, deux lignes supplémentaires, altérations",
-  "homeLessons": "Leçons",
   "lessonLevel": "Niveau {level}",
   "@lessonLevel": {
     "placeholders": {
@@ -55,6 +136,12 @@
   "@resultTime": {
     "placeholders": {
       "time": { "type": "String" }
+    }
+  },
+  "resultXp": "+{xp} XP",
+  "@resultXp": {
+    "placeholders": {
+      "xp": { "type": "int" }
     }
   },
   "resultRestart": "Recommencer",
