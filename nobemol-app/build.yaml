@@ -1,0 +1,13 @@
+# Génération de la base Drift (lib/progress/database.dart). Voir
+# doc/database.md.
+targets:
+  $default:
+    builders:
+      drift_dev:
+        options:
+          # Dates en texte ISO 8601 : lisibles, et les millisecondes restent.
+          store_date_time_values_as_text: true
+          databases:
+            nobemol: lib/progress/database.dart
+          schema_dir: drift_schemas/
+          test_dir: test/drift/
