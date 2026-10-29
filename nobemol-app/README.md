@@ -11,13 +11,16 @@ nobemol-app/
 │   ├── skills.yaml       arbre de compétences
 │   └── lessons/          une leçon par fichier YAML (voir doc/lessons.md)
 ├── doc/lessons.md        format des leçons
+├── doc/database.md       base de la progression, migrations
+├── drift_schemas/        schéma figé de chaque version de la base
 ├── fonts/                polices de l'interface + licences OFL
 ├── lib/
 │   ├── l10n/             textes (app_fr.arb), AppLocalizations généré par pub get
 │   ├── theme/            tokens du design « Touches » et thème clair / sombre
 │   ├── ui/               composants : boutons à ombre pleine, tuiles, clavier
 │   ├── shell/            barre à 4 onglets, onglets à venir
-│   ├── home/             Parcours : point de départ, liste des leçons
+│   ├── home/             Parcours (niveau, reprise, compétences) et écran compétence
+│   ├── progress/         base Drift, XP et niveaux, maîtrise et déblocage
 │   ├── lessons/          lecture du contenu (Dart pur) et écran de théorie
 │   └── reading/          lecture de notes : générateur, session, écran
 ├── tool/validate_content.dart  validateur du contenu, lancé en CI
@@ -48,6 +51,7 @@ flutter test              # tests de l'appli
 flutter run -d chrome     # itération rapide sur le moteur
 flutter run               # appareil Android ou émulateur
 dart run tool/validate_content.dart  # après modification d'une leçon
+dart run build_runner build          # après modification de la base (doc/database.md)
 ```
 
 Le validateur et `lib/lessons/` (hors écrans) n'importent pas Flutter : ils passent par `package:notation/core.dart`, pas `notation.dart`. Sinon `dart run` échoue (`dart:ui` absent).

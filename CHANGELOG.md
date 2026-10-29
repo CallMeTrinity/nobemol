@@ -13,11 +13,17 @@ Le workflow de release reprend la section de la version comme notes de release :
 - Navigation à quatre onglets : Parcours, Réviser, Arcade, Profil. Les trois derniers arrivent bientôt.
 - Halo coloré derrière la note ou le signe à trouver.
 - Noms des notes sous la portée dans certaines pages de théorie.
+- Progression gardée sur le téléphone : XP (10 par bonne réponse, plus avec un combo), niveaux, objectif du jour.
+- Parcours : compétences par branche, avec leur maîtrise. Une compétence se débloque quand ses prérequis sont maîtrisés (80 %).
+- Carte « Reprendre » : une leçon interrompue reprend à sa page de théorie, même après redémarrage.
+- Écran compétence : théorie, exercice (meilleur score) et arcade (bientôt).
 
 ### Modifié
 
 - Théorie : l'idée de la page en titre, la suite en dessous.
 - Durées en 8 tuiles, signes en cartes. Le signe s'affiche sur les cartes après la réponse.
+- Les points de départ passent en bas du Parcours, sous « Lecture libre ».
+- Les leçons se débloquent dans l'ordre de l'arbre de compétences.
 
 ## [0.0.1] - 2026-10-28 (bêta 1)
 
