@@ -4,6 +4,7 @@ import 'package:notation/core.dart';
 
 import 'package:nobemol/reading/beats.dart';
 import 'package:nobemol/reading/markings.dart';
+import 'package:nobemol/reading/note_name.dart';
 
 /// Nombre de notes d'une session de lecture paramétrique.
 const sessionLength = 20;
@@ -58,7 +59,8 @@ class NoteReadingParams extends ReadingExercise {
   int get length => sessionLength;
 
   @override
-  List<Enum> get choices => DiatonicStep.values;
+  List<NoteName> get choices =>
+      accidentals ? NoteName.values : NoteName.naturals;
 
   /// Réserve la place de la note la plus haute et la plus basse, altération
   /// comprise : la portée ne bouge pas d'une question à l'autre.
@@ -87,20 +89,30 @@ class NoteReadingParams extends ReadingExercise {
 ///
 /// Clé de la session comparée par identité : la leçon est chargée une fois.
 class IdentifyNoteExercise extends ReadingExercise {
-  const IdentifyNoteExercise({required this.system, required this.targets});
+  const IdentifyNoteExercise({
+    required this.system,
+    required this.targets,
+    this.explanations = const {},
+  });
 
   /// La phrase, affichée telle quelle à chaque question.
   final System system;
 
-  /// Notes à nommer, dans l'ordre. Chacune existe dans [system] : c'est
-  /// vérifié au chargement de la leçon.
+  /// Notes à nommer, dans l'ordre. Chacune existe dans [system] et a un nom
+  /// au clavier : c'est vérifié au chargement de la leçon.
   final List<EventRef> targets;
+
+  /// Explications écrites par l'auteur, par cible. Sans elle, l'appli en
+  /// génère une.
+  final Map<EventRef, String> explanations;
 
   @override
   int get length => targets.length;
 
+  /// Touches noires ouvertes dès que la phrase a une altération.
   @override
-  List<Enum> get choices => DiatonicStep.values;
+  List<NoteName> get choices =>
+      hasAccidentals(system) ? NoteName.values : NoteName.naturals;
 
   @override
   LayoutOptions get layoutOptions => const LayoutOptions();
@@ -114,7 +126,11 @@ class IdentifyNoteExercise extends ReadingExercise {
 ///
 /// Clé de la session comparée par identité : la leçon est chargée une fois.
 class IdentifyDurationExercise extends ReadingExercise {
-  const IdentifyDurationExercise({required this.system, required this.targets});
+  const IdentifyDurationExercise({
+    required this.system,
+    required this.targets,
+    this.explanations = const {},
+  });
 
   /// La phrase, en x/4 : la noire vaut un temps.
   final System system;
@@ -123,6 +139,9 @@ class IdentifyDurationExercise extends ReadingExercise {
   /// chacun existe, commence sa liaison et dure un nombre de temps de
   /// [Beats].
   final List<EventRef> targets;
+
+  /// Explications écrites par l'auteur, par cible.
+  final Map<EventRef, String> explanations;
 
   @override
   int get length => targets.length;
@@ -146,6 +165,7 @@ class IdentifyMarkingExercise extends ReadingExercise {
     required this.system,
     required this.targets,
     required this.choices,
+    this.explanations = const {},
   });
 
   /// La phrase, affichée telle quelle à chaque question.
@@ -155,6 +175,9 @@ class IdentifyMarkingExercise extends ReadingExercise {
   /// chargement de la leçon : chacun porte un seul signe, dont le sens est
   /// dans [choices].
   final List<EventRef> targets;
+
+  /// Explications écrites par l'auteur, par cible.
+  final Map<EventRef, String> explanations;
 
   /// Réponses proposées, choisies par l'auteur de la leçon, dans l'ordre de
   /// [Marking].
@@ -174,10 +197,14 @@ class IdentifyMarkingExercise extends ReadingExercise {
 /// Une question : ce qui s'affiche, et la bonne réponse parmi les choix de
 /// l'exercice.
 sealed class Question {
-  const Question({required this.system});
+  const Question({required this.system, this.explanation});
 
   /// Ce qui s'affiche.
   final System system;
+
+  /// Explication écrite par l'auteur de la leçon, montrée à la correction.
+  /// `null` : l'appli la génère.
+  final String? explanation;
 
   /// Événements à colorer dans [system], vide si rien n'est ciblé.
   List<EventRef> get targets;
@@ -195,9 +222,11 @@ class NoteQuestion extends Question {
     required super.system,
     required this.pitch,
     required this.target,
+    required this.answer,
+    super.explanation,
   });
 
-  /// La note à trouver.
+  /// La note à trouver, telle qu'écrite.
   final Pitch pitch;
 
   /// La note à colorer dans [system], même seule : la cible se lit d'un
@@ -207,9 +236,9 @@ class NoteQuestion extends Question {
   @override
   List<EventRef> get targets => [target];
 
-  /// Le nom de la note, altération ignorée.
+  /// Le nom de la note, avec l'altération qu'on lit (armure comprise).
   @override
-  DiatonicStep get answer => pitch.step;
+  final NoteName answer;
 }
 
 /// Une durée à donner en temps.
@@ -218,6 +247,7 @@ class DurationQuestion extends Question {
     required super.system,
     required this.targets,
     required this.answer,
+    super.explanation,
   });
 
   /// La note ou le silence visé, et les notes qui lui sont liées.
@@ -234,6 +264,7 @@ class MarkingQuestion extends Question {
     required super.system,
     required this.target,
     required this.answer,
+    super.explanation,
   });
 
   /// L'événement qui porte le signe.
@@ -287,7 +318,7 @@ class NoteGenerator implements QuestionSource {
     final pitch = Pitch(
       natural.step,
       natural.octave,
-      accidental: _accidental(),
+      accidental: _accidental(natural.step),
     );
     final measures = [
       Measure([Note(pitch)]),
@@ -304,6 +335,7 @@ class NoteGenerator implements QuestionSource {
     return NoteQuestion(
       system: system,
       pitch: pitch,
+      answer: NoteName.of(pitch.step, pitch.accidental)!,
       // Sur la grande portée, la clé de fa est la portée du bas.
       target: EventRef(
         staff: grand && clef == Clef.bass ? 1 : 0,
@@ -313,10 +345,13 @@ class NoteGenerator implements QuestionSource {
     );
   }
 
-  /// Une note sur trois porte un dièse ou un bémol.
-  Accidental? _accidental() {
+  /// Une note sur trois porte un dièse ou un bémol, sur une touche noire :
+  /// pas de mi dièse ni de do bémol.
+  Accidental? _accidental(DiatonicStep step) {
     if (!params.accidentals || random.nextInt(3) != 0) return null;
-    return random.nextBool() ? Accidental.sharp : Accidental.flat;
+    final drawn = random.nextBool() ? Accidental.sharp : Accidental.flat;
+    if (NoteName.of(step, drawn) != null) return drawn;
+    return drawn == Accidental.sharp ? Accidental.flat : Accidental.sharp;
   }
 }
 
@@ -331,11 +366,14 @@ class _TargetQuestions implements QuestionSource {
   NoteQuestion next({Question? previous}) {
     final target = exercise.targets[_index++];
     // Le chargement de la leçon a vérifié que chaque cible est une note.
-    final note = exercise.system.event(target)! as Note;
+    final system = exercise.system;
+    final note = system.event(target)! as Note;
     return NoteQuestion(
-      system: exercise.system,
+      system: system,
       pitch: note.pitch,
       target: target,
+      answer: noteNameAt(system, target)!,
+      explanation: exercise.explanations[target],
     );
   }
 }
@@ -350,11 +388,13 @@ class _DurationQuestions implements QuestionSource {
   @override
   DurationQuestion next({Question? previous}) {
     final system = exercise.system;
-    final targets = system.tieChain(exercise.targets[_index++]);
+    final target = exercise.targets[_index++];
+    final targets = system.tieChain(target);
     return DurationQuestion(
       system: system,
       targets: targets,
       answer: Beats.of(beatsOf(system, targets))!,
+      explanation: exercise.explanations[target],
     );
   }
 }
@@ -376,6 +416,7 @@ class _MarkingQuestions implements QuestionSource {
       system: system,
       target: target,
       answer: markingOf(sign)!,
+      explanation: exercise.explanations[target],
     );
   }
 }

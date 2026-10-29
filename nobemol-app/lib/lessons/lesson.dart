@@ -4,6 +4,7 @@ import 'package:yaml/yaml.dart';
 import 'package:nobemol/lessons/yaml_fields.dart';
 import 'package:nobemol/reading/beats.dart';
 import 'package:nobemol/reading/markings.dart';
+import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
 
 /// Page de théorie : un texte, et de la musique si besoin.
@@ -55,6 +56,10 @@ class Lesson {
   final List<TheoryPage> theory;
   final ReadingExercise exercise;
 }
+
+/// Longueur maximale d'une explication écrite par l'auteur : 4 lignes du
+/// panneau de correction, sur un téléphone de 360 px.
+const maxExplanation = 160;
 
 final _lessonId = RegExp(r'^[a-z0-9]+(-[a-z0-9]+)*$');
 
@@ -227,14 +232,20 @@ NoteReadingParams _noteReading(YamlFields fields) {
 
 IdentifyNoteExercise _identifyNote(YamlFields fields, String source) {
   final system = _abc(fields, source);
+  final (targets, explanations) = _targets(fields, system, (target, path) {
+    if (system.event(target) is Rest) {
+      return '$path : un silence n’a pas de nom de note';
+    }
+    if (noteNameAt(system, target) == null) {
+      return '$path : pas de touche pour cette note (mi dièse, do bémol, '
+          'double altération)';
+    }
+    return null;
+  });
   return IdentifyNoteExercise(
     system: system,
-    targets: _targets(fields, system, (target, path) {
-      if (system.event(target) is Rest) {
-        return '$path : un silence n’a pas de nom de note';
-      }
-      return null;
-    }),
+    targets: targets,
+    explanations: explanations,
   );
 }
 
@@ -249,48 +260,52 @@ IdentifyDurationExercise _identifyDuration(YamlFields fields, String source) {
       'les réponses comptent en noires',
     );
   }
+  final (targets, explanations) = _targets(fields, system, (target, path) {
+    final chain = system.tieChain(target);
+    if (chain.first != target) {
+      return '$path : note d’arrivée d’une liaison, '
+          'viser la première note (mesure ${chain.first.measure + 1}, '
+          'événement ${chain.first.event + 1})';
+    }
+    final beats = beatsOf(system, chain);
+    if (Beats.of(beats) == null) {
+      return '$path : $beats temps, pas de bouton pour cette durée '
+          '(de ¼ à 4 temps)';
+    }
+    return null;
+  });
   return IdentifyDurationExercise(
     system: system,
-    targets: _targets(fields, system, (target, path) {
-      final chain = system.tieChain(target);
-      if (chain.first != target) {
-        return '$path : note d’arrivée d’une liaison, '
-            'viser la première note (mesure ${chain.first.measure + 1}, '
-            'événement ${chain.first.event + 1})';
-      }
-      final beats = beatsOf(system, chain);
-      if (Beats.of(beats) == null) {
-        return '$path : $beats temps, pas de bouton pour cette durée '
-            '(de ¼ à 4 temps)';
-      }
-      return null;
-    }),
+    targets: targets,
+    explanations: explanations,
   );
 }
 
 IdentifyMarkingExercise _identifyMarking(YamlFields fields, String source) {
   final system = _abc(fields, source);
   final choices = _choices(fields);
+  final (targets, explanations) = _targets(fields, system, (target, path) {
+    final signs = signsOf(system.event(target)!).toList();
+    if (signs.isEmpty) return '$path : aucun signe sur cet événement';
+    if (signs.length > 1) {
+      return '$path : ${signs.length} signes sur cet événement, '
+          'la question serait ambiguë';
+    }
+    final marking = markingOf(signs.single);
+    if (marking == null) {
+      final text = (signs.single as Annotation).text;
+      return '$path : terme « $text » inconnu (${terms.keys.join(', ')})';
+    }
+    if (!choices.contains(marking)) {
+      return '$path : réponse « ${marking.id} » absente de exercise.choices';
+    }
+    return null;
+  });
   return IdentifyMarkingExercise(
     system: system,
     choices: choices,
-    targets: _targets(fields, system, (target, path) {
-      final signs = signsOf(system.event(target)!).toList();
-      if (signs.isEmpty) return '$path : aucun signe sur cet événement';
-      if (signs.length > 1) {
-        return '$path : ${signs.length} signes sur cet événement, '
-            'la question serait ambiguë';
-      }
-      final marking = markingOf(signs.single);
-      if (marking == null) {
-        final text = (signs.single as Annotation).text;
-        return '$path : terme « $text » inconnu (${terms.keys.join(', ')})';
-      }
-      if (!choices.contains(marking)) {
-        return '$path : réponse « ${marking.id} » absente de exercise.choices';
-      }
-      return null;
-    }),
+    targets: targets,
+    explanations: explanations,
   );
 }
 
@@ -319,17 +334,19 @@ List<Marking> _choices(YamlFields fields) {
   return choices..sort((a, b) => a.index.compareTo(b.index));
 }
 
-/// Lit les cibles d'un exercice, sans doublon. [check] renvoie un message
-/// d'erreur si une cible ne convient pas à l'exercice.
-List<EventRef> _targets(
+/// Lit les cibles d'un exercice, sans doublon, et leurs explications
+/// (`explain`, facultative). [check] renvoie un message d'erreur si une
+/// cible ne convient pas à l'exercice.
+(List<EventRef>, Map<EventRef, String>) _targets(
   YamlFields fields,
   System system,
   String? Function(EventRef target, String path) check,
 ) {
   final targets = <EventRef>[];
+  final explanations = <EventRef, String>{};
   for (final (index, node) in fields.list('targets').nodes.indexed) {
     final path = 'exercise.targets[${index + 1}]';
-    final target = _target(node, path, system);
+    final (target, explain) = _target(node, path, system);
     if (targets.contains(target)) {
       throw fields.error(node, '$path : en double');
     }
@@ -337,19 +354,30 @@ List<EventRef> _targets(
       throw fields.error(node, message);
     }
     targets.add(target);
+    if (explain != null) explanations[target] = explain;
   }
-  return targets;
+  return (targets, explanations);
 }
 
 /// Lit une cible `{ staff, measure, event }`, écrite en base 1 (« mesure 1,
 /// 2e note ») et convertie ici en index du code, une fois pour toutes.
-EventRef _target(YamlNode node, String path, System system) {
+(EventRef, String?) _target(YamlNode node, String path, System system) {
   final fields = YamlFields.read(
     node,
     path: path,
     required: {'measure', 'event'},
-    optional: {'staff'},
+    optional: {'staff', 'explain'},
   );
+  final explain = fields.node('explain') == null
+      ? null
+      : fields.string('explain').trim();
+  if (explain != null && explain.length > maxExplanation) {
+    throw fields.error(
+      fields.node('explain')!,
+      '$path.explain : ${explain.length} caractères, $maxExplanation au '
+      'plus pour tenir dans le panneau de correction',
+    );
+  }
   final staves = system.staves.toList();
   final ids = staves.map((staff) => staff.id).nonNulls.join(', ');
 
@@ -379,5 +407,5 @@ EventRef _target(YamlNode node, String path, System system) {
   final measure = fields.integer('measure', min: 1, max: measures.length) - 1;
   final events = measures[measure].events;
   final event = fields.integer('event', min: 1, max: events.length) - 1;
-  return EventRef(staff: staffIndex, measure: measure, event: event);
+  return (EventRef(staff: staffIndex, measure: measure, event: event), explain);
 }

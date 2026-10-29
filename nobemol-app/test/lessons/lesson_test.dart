@@ -7,6 +7,7 @@ import 'package:nobemol/lessons/lesson.dart';
 import 'package:nobemol/lessons/yaml_fields.dart';
 import 'package:nobemol/reading/beats.dart';
 import 'package:nobemol/reading/markings.dart';
+import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
 
 void main() {
@@ -349,6 +350,83 @@ exercise:
 '''),
         error(15, 7, 'silence'),
       );
+    });
+
+    String note(String abc, String target) =>
+        '''
+id: test-lesson
+title: Test
+skills: [note-reading.treble]
+level: 1
+theory:
+  - text: Texte.
+exercise:
+  type: identify-note
+  abc: |
+    X:1
+    L:1/4
+    $abc
+  targets:
+    - $target
+''';
+
+    test('mi dièse : pas de touche au clavier', () {
+      expect(
+        () => parse(note('K:C\n    ^E F', '{ measure: 1, event: 1 }')),
+        error(15, 7, 'pas de touche'),
+      );
+    });
+
+    test('la réponse suit l’armure', () {
+      final exercise =
+          parse(note('K:D\n    F', '{ measure: 1, event: 1 }')).exercise
+              as IdentifyNoteExercise;
+      expect(exercise.questions(Random(1)).next().answer, NoteName.fSharp);
+      expect(exercise.choices, NoteName.values);
+    });
+  });
+
+  group('explications de l’auteur', () {
+    String withExplain(String explain) =>
+        '''
+id: test-lesson
+title: Test
+skills: [note-reading.treble]
+level: 1
+theory:
+  - text: Texte.
+exercise:
+  type: identify-note
+  abc: |
+    X:1
+    L:1/4
+    K:C
+    G A
+  targets:
+    - { measure: 1, event: 1, explain: $explain }
+    - { measure: 1, event: 2 }
+''';
+
+    test('facultatives, par cible', () {
+      final exercise =
+          parse(withExplain('"Le sol de la clé."')).exercise
+              as IdentifyNoteExercise;
+      final questions = exercise.questions(Random(1));
+      final first = questions.next();
+      expect(first.explanation, 'Le sol de la clé.');
+      expect(questions.next(previous: first).explanation, isNull);
+      expect(exercise.choices, NoteName.naturals);
+    });
+
+    test('trop longue pour le panneau : refusée', () {
+      expect(
+        () => parse(withExplain('"${'a' * (maxExplanation + 1)}"')),
+        error(15, 40, '161 caractères'),
+      );
+    });
+
+    test('vide refusée', () {
+      expect(() => parse(withExplain('" "')), error(15, 40, 'texte attendu'));
     });
   });
 

@@ -7,6 +7,8 @@ import 'package:nobemol/lessons/content_provider.dart';
 import 'package:nobemol/progress/course.dart';
 import 'package:nobemol/progress/database.dart';
 import 'package:nobemol/progress/progress.dart';
+import 'package:nobemol/progress/xp.dart';
+import 'package:nobemol/lessons/skill_tree.dart';
 
 /// Base du téléphone. Sur le web (cible de dev), dans le navigateur :
 /// `web/sqlite3.wasm` et `web/drift_worker.js` viennent de la release de
@@ -111,6 +113,32 @@ class ProgressStore {
       );
 }
 
+/// Ce qu'une session a changé : de l'XP, peut-être un niveau, des
+/// compétences maîtrisées et d'autres débloquées.
+class SessionOutcome {
+  const SessionOutcome({
+    required this.xpBefore,
+    required this.xpAfter,
+    this.mastered = const [],
+    this.unlocked = const [],
+  });
+
+  final int xpBefore;
+  final int xpAfter;
+
+  /// Compétences maîtrisées par cette session.
+  final List<Skill> mastered;
+
+  /// Compétences débloquées par cette session, qui ont des leçons.
+  final List<Skill> unlocked;
+
+  Level get level => Level.of(xpAfter);
+  bool get levelUp => level.number > Level.of(xpBefore).number;
+
+  /// Un palier à fêter : un niveau, ou une compétence.
+  bool get milestone => levelUp || mastered.isNotEmpty;
+}
+
 /// Progression, lue au démarrage (voir main.dart) puis relue après chaque
 /// écriture.
 final progressProvider = NotifierProvider<ProgressNotifier, Progress>(
@@ -126,13 +154,17 @@ class ProgressNotifier extends Notifier<Progress> {
   @override
   Progress build() => _initial;
 
-  Future<void> recordSession({
+  /// Enregistre une session terminée, et dit ce qu'elle a changé.
+  Future<SessionOutcome> recordSession({
     required String? lessonId,
     required DateTime startedAt,
     required DateTime finishedAt,
     required List<AnswerRecord> answers,
     required int bestCombo,
   }) async {
+    final content = ref.read(contentProvider);
+    final before = Course(content, state);
+    final xpBefore = state.xp;
     await _store.recordSession(
       lessonId: lessonId,
       startedAt: startedAt,
@@ -140,14 +172,27 @@ class ProgressNotifier extends Notifier<Progress> {
       answers: answers,
       bestCombo: bestCombo,
     );
-    final progress = await _store.load();
-    final mastered = Course(ref.read(contentProvider), progress).newlyMastered;
-    if (mastered.isEmpty) {
-      state = progress;
-      return;
+    var progress = await _store.load();
+    final mastered = Course(content, progress).newlyMastered.toList();
+    if (mastered.isNotEmpty) {
+      await _store.saveMastered(mastered, finishedAt);
+      progress = await _store.load();
     }
-    await _store.saveMastered(mastered, finishedAt);
-    state = await _store.load();
+    state = progress;
+
+    final after = Course(content, progress);
+    return SessionOutcome(
+      xpBefore: xpBefore,
+      xpAfter: progress.xp,
+      mastered: [for (final id in mastered) after.skill(id)!.skill],
+      unlocked: [
+        for (final skills in after.branches.values)
+          for (final skill in skills)
+            if (skill.state != SkillState.locked &&
+                before.skill(skill.skill.id)!.state == SkillState.locked)
+              skill.skill,
+      ],
+    );
   }
 
   /// Note la page de théorie ouverte. [finished] : la dernière page est
