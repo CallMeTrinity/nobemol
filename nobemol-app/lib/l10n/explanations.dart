@@ -6,32 +6,36 @@ import 'package:nobemol/reading/beats.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
+import 'package:nobemol/settings/settings.dart';
 
 /// Textes de la correction : le titre (« Juste, c'est un ré »), et
 /// l'explication, écrite par l'auteur ou générée.
 extension Explanations on AppLocalizations {
   /// Titre de la correction de [question], juste ou faux.
-  String feedbackTitle(Question question, {required bool right}) =>
-      switch (question) {
-        NoteQuestion(:final answer) =>
-          right
-              ? feedbackRightNote(noteFullName(answer))
-              : feedbackWrongNote(noteFullName(answer)),
-        DurationQuestion(:final answer) =>
-          right
-              ? feedbackRightDuration(beatsLabel(answer))
-              : feedbackWrongDuration(beatsLabel(answer)),
-        MarkingQuestion(:final answer) =>
-          right
-              ? feedbackRightMarking(markingLabel(answer))
-              : feedbackWrongMarking(markingLabel(answer)),
-      };
+  String feedbackTitle(
+    Question question, {
+    required bool right,
+    required NoteNaming naming,
+  }) => switch (question) {
+    NoteQuestion(:final answer) =>
+      right
+          ? feedbackRightNote(noteFullName(answer, naming: naming))
+          : feedbackWrongNote(noteFullName(answer, naming: naming)),
+    DurationQuestion(:final answer) =>
+      right
+          ? feedbackRightDuration(beatsLabel(answer))
+          : feedbackWrongDuration(beatsLabel(answer)),
+    MarkingQuestion(:final answer) =>
+      right
+          ? feedbackRightMarking(markingLabel(answer))
+          : feedbackWrongMarking(markingLabel(answer)),
+  };
 
   /// Explication de [question] : celle de l'auteur, sinon générée.
-  String explain(Question question) =>
+  String explain(Question question, {required NoteNaming naming}) =>
       question.explanation ??
       switch (question) {
-        NoteQuestion() => _explainNote(question),
+        NoteQuestion() => _explainNote(question, naming),
         DurationQuestion(:final system, :final targets) => _explainDuration(
           system,
           targets,
@@ -47,14 +51,14 @@ extension Explanations on AppLocalizations {
   };
 
   /// Place de la note sur la portée, puis d'où vient son altération.
-  String _explainNote(NoteQuestion question) {
+  String _explainNote(NoteQuestion question, NoteNaming naming) {
     final system = question.system;
     final target = question.target;
     final clef = system.staves.elementAt(target.staff).clef;
     final pitch = (system.event(target)! as Note).pitch;
     final position = clef.staffPosition(pitch);
     final c = clefName(clef);
-    final step = noteName(pitch.step);
+    final step = noteName(pitch.step, naming: naming);
 
     final place = switch (position) {
       >= 0 && <= 8 when position.isEven => explainLine(
@@ -77,7 +81,7 @@ extension Explanations on AppLocalizations {
 
     final sounding = soundingAccidental(system, target);
     if (sounding == null) return place;
-    final name = noteFullName(question.answer);
+    final name = noteFullName(question.answer, naming: naming);
     final sign = switch (sounding.accidental) {
       Accidental.sharp => 'sharp',
       Accidental.flat => 'flat',

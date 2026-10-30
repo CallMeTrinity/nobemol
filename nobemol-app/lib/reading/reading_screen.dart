@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:notation/notation.dart';
@@ -17,6 +18,7 @@ import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/reading/session.dart';
+import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/depth.dart';
 import 'package:nobemol/ui/fit_words.dart';
@@ -84,6 +86,16 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   Widget build(BuildContext context) {
     final session = ref.watch(sessionProvider(_exercise));
     ref.listen(sessionProvider(_exercise), (previous, next) {
+      if (previous?.phase == SessionPhase.asking &&
+          next.phase == SessionPhase.feedback &&
+          ref.read(settingsProvider).haptics) {
+        // Courte si c'est juste, plus longue si c'est faux.
+        unawaited(
+          next.answers.last.correct
+              ? HapticFeedback.lightImpact()
+              : HapticFeedback.vibrate(),
+        );
+      }
       if (previous?.finishedAt != null) return;
       if (next.finishedAt case final finishedAt?) {
         setState(() {
@@ -144,6 +156,7 @@ class _Exercise extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final c = context.colors;
+    final settings = ref.watch(settingsProvider);
     final notifier = ref.read(sessionProvider(exercise).notifier);
     final (target, halo) = _targetColors(session, c);
     final question = session.question;
@@ -225,6 +238,8 @@ class _Exercise extends ConsumerWidget {
               child: _Answers(
                 exercise: exercise,
                 session: session,
+                naming: settings.naming,
+                keyLabels: settings.keyLabels,
                 onAnswer: notifier.answer,
               ),
             ),
@@ -234,6 +249,7 @@ class _Exercise extends ConsumerWidget {
                   // Un panneau neuf par réponse : il remonte à chaque fois.
                   key: ValueKey(session.answered),
                   session: session,
+                  naming: settings.naming,
                   onContinue: notifier.next,
                 ),
               ),
@@ -389,11 +405,17 @@ class _Answers extends StatelessWidget {
   const _Answers({
     required this.exercise,
     required this.session,
+    required this.naming,
+    required this.keyLabels,
     required this.onAnswer,
   });
 
   final ReadingExercise exercise;
   final SessionState session;
+  final NoteNaming naming;
+
+  /// Noms sur les touches blanches.
+  final bool keyLabels;
   final ValueChanged<Enum> onAnswer;
 
   AnswerTone _tone(Enum choice) {
@@ -410,7 +432,8 @@ class _Answers extends StatelessWidget {
 
     return switch (exercise) {
       NoteReadingParams() || IdentifyNoteExercise() => NoteKeyboard(
-        label: l10n.noteFullName,
+        label: (name) => l10n.noteFullName(name, naming: naming),
+        whiteLabels: keyLabels,
         onKey: onAnswer,
         accidentals: _accidentals(exercise),
         tones: {
@@ -533,10 +556,12 @@ class _FeedbackSheet extends StatefulWidget {
   const _FeedbackSheet({
     super.key,
     required this.session,
+    required this.naming,
     required this.onContinue,
   });
 
   final SessionState session;
+  final NoteNaming naming;
   final VoidCallback onContinue;
 
   @override
@@ -568,6 +593,7 @@ class _FeedbackSheetState extends State<_FeedbackSheet>
     final l10n = AppLocalizations.of(context);
     final c = context.colors;
     final session = widget.session;
+    final naming = widget.naming;
     final question = session.question;
     final choice = session.choice!;
     final right = choice == question.answer;
@@ -621,7 +647,11 @@ class _FeedbackSheetState extends State<_FeedbackSheet>
                       const SizedBox(width: Space.s),
                       Expanded(
                         child: Text(
-                          l10n.feedbackTitle(question, right: right),
+                          l10n.feedbackTitle(
+                            question,
+                            right: right,
+                            naming: naming,
+                          ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: AppText.titleCard.copyWith(color: tone),
@@ -641,7 +671,9 @@ class _FeedbackSheetState extends State<_FeedbackSheet>
                   if (!right) ...[
                     const SizedBox(height: Space.xs),
                     Text(
-                      l10n.feedbackGiven(l10n.answerLabel(choice)),
+                      l10n.feedbackGiven(
+                        l10n.answerLabel(choice, naming: naming),
+                      ),
                       style: AppText.body.copyWith(fontSize: 14, color: c.ink),
                     ),
                   ],
@@ -650,7 +682,7 @@ class _FeedbackSheetState extends State<_FeedbackSheet>
                   // la portée.
                   Expanded(
                     child: Text(
-                      l10n.explain(question),
+                      l10n.explain(question, naming: naming),
                       maxLines: 4,
                       overflow: TextOverflow.ellipsis,
                       style: AppText.body.copyWith(
@@ -679,7 +711,7 @@ class _FeedbackSheetState extends State<_FeedbackSheet>
 }
 
 /// Fin de session : score, chrono, détail de l'XP, et ce qui est à revoir.
-class _Results extends StatelessWidget {
+class _Results extends ConsumerWidget {
   const _Results({
     required this.exercise,
     required this.session,
@@ -693,9 +725,10 @@ class _Results extends StatelessWidget {
   final VoidCallback onContinue;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final c = context.colors;
+    final naming = ref.watch(settingsProvider.select((s) => s.naming));
     final elapsed = session.finishedAt!.difference(session.startedAt);
     final base = session.correct * xpPerAnswer;
     final bonus = session.xp - base;
@@ -800,7 +833,11 @@ class _Results extends StatelessWidget {
                   runSpacing: Space.s,
                   children: [
                     for (final (question, given) in misses)
-                      _ReviewTile(question: question, given: given),
+                      _ReviewTile(
+                        question: question,
+                        given: given,
+                        naming: naming,
+                      ),
                   ],
                 ),
             ],
@@ -867,10 +904,15 @@ Object _reviewKey(Question question) => switch (question) {
 /// Une question à revoir : la note seule sur sa portée quand elle est
 /// seule, la bonne réponse, et celle donnée.
 class _ReviewTile extends StatelessWidget {
-  const _ReviewTile({required this.question, required this.given});
+  const _ReviewTile({
+    required this.question,
+    required this.given,
+    required this.naming,
+  });
 
   final Question question;
   final Enum given;
+  final NoteNaming naming;
 
   @override
   Widget build(BuildContext context) {
@@ -900,11 +942,11 @@ class _ReviewTile extends StatelessWidget {
               highlights: {question.target: c.danger},
             ),
           Text(
-            l10n.answerLabel(question.answer),
+            l10n.answerLabel(question.answer, naming: naming),
             style: AppText.titleCard.copyWith(fontSize: 15, color: c.ink),
           ),
           Text(
-            l10n.resultReviewGiven(l10n.answerLabel(given)),
+            l10n.resultReviewGiven(l10n.answerLabel(given, naming: naming)),
             style: AppText.body.copyWith(fontSize: 12, color: c.inkMuted),
           ),
         ],

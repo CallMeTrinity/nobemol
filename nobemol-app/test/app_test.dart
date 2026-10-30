@@ -9,6 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:notation/notation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:nobemol/clock.dart';
 import 'package:nobemol/home/home_screen.dart';
@@ -20,8 +22,11 @@ import 'package:nobemol/lessons/content.dart';
 import 'package:nobemol/lessons/content_provider.dart';
 import 'package:nobemol/lessons/lesson_screen.dart';
 import 'package:nobemol/main.dart';
+import 'package:nobemol/onboarding/onboarding_screen.dart';
+import 'package:nobemol/progress/course.dart';
 import 'package:nobemol/progress/database.dart';
 import 'package:nobemol/progress/progress_provider.dart';
+import 'package:nobemol/progress/xp.dart';
 import 'package:nobemol/reading/beats.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
@@ -29,6 +34,8 @@ import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/reading/reading_screen.dart';
 import 'package:nobemol/reading/session.dart';
 import 'package:nobemol/reading/start_level.dart';
+import 'package:nobemol/settings/settings.dart';
+import 'package:nobemol/settings/settings_screen.dart';
 import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/glyph_view.dart';
 
@@ -36,6 +43,7 @@ void main() {
   late DateTime now;
   late Content content;
   late NobemolDatabase db;
+  late SharedPreferences prefs;
 
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
@@ -46,17 +54,23 @@ void main() {
     content = await loadContent(rootBundle);
   });
 
-  // Base en mémoire, neuve à chaque test.
-  setUp(() {
+  // Base en mémoire, neuve à chaque test. Réglages neufs aussi, démarrage
+  // déjà passé : il a ses propres tests.
+  setUp(() async {
     now = DateTime(2026);
     db = NobemolDatabase(NativeDatabase.memory());
+    SharedPreferences.setMockInitialValues({'onboarded': true});
+    prefs = await SharedPreferences.getInstance();
   });
   tearDown(() => db.close());
 
-  /// Lance l'appli sur la base [db], comme au démarrage du téléphone.
+  /// Lance l'appli sur la base [db] et les réglages [prefs], comme au
+  /// démarrage du téléphone.
   Future<void> launch(WidgetTester tester) async {
     final store = ProgressStore(db);
     final progress = await store.load();
+    final settingsStore = SettingsStore(prefs);
+    final settings = settingsStore.load();
     // Une autre appli : rien ne reste du lancement précédent.
     await tester.pumpWidget(const SizedBox());
     await tester.pumpWidget(
@@ -65,6 +79,9 @@ void main() {
           contentProvider.overrideWithValue(content),
           progressProvider.overrideWith(
             () => ProgressNotifier(store, progress),
+          ),
+          settingsProvider.overrideWith(
+            () => SettingsNotifier(settingsStore, settings),
           ),
           randomProvider.overrideWithValue(Random(1)),
           clockProvider.overrideWithValue(() => now),
@@ -500,7 +517,8 @@ void main() {
     await launch(tester);
     expect(find.text('Niveau 2'), findsOneWidget);
     expect(find.text('80 / 400 XP'), findsOneWidget);
-    expect(find.text('ATTEINT'), findsOneWidget);
+    // Objectif par défaut : 5 min, 300 XP.
+    expect(find.text('280 / 300 XP'), findsOneWidget);
   });
 
   testWidgets('une session quittée avant la fin n’est pas gardée', (
@@ -648,14 +666,21 @@ void main() {
       SessionPhase.feedback,
     );
     expect(
-      find.text("C'est un ${l10n.noteFullName(expected)}"),
+      find.text(
+        "C'est un ${l10n.noteFullName(expected, naming: NoteNaming.solfege)}",
+      ),
       findsOneWidget,
     );
     expect(
-      find.text('Tu as répondu : ${l10n.noteFullName(given)}.'),
+      find.text(
+        'Tu as répondu : ${l10n.noteFullName(given, naming: NoteNaming.solfege)}.',
+      ),
       findsOneWidget,
     );
-    expect(find.textContaining(l10n.explain(question)), findsOneWidget);
+    expect(
+      find.textContaining(l10n.explain(question, naming: NoteNaming.solfege)),
+      findsOneWidget,
+    );
     await next(tester);
 
     for (var i = 1; i < sessionLength; i++) {
@@ -663,12 +688,15 @@ void main() {
     }
     await tester.pumpAndSettle();
     await tester.dragUntilVisible(
-      find.text('pas ${l10n.noteFullName(given)}'),
+      find.text('pas ${l10n.noteFullName(given, naming: NoteNaming.solfege)}'),
       find.byType(ListView),
       const Offset(0, -200),
     );
     expect(find.text('À revoir'), findsOneWidget);
-    expect(find.text('pas ${l10n.noteFullName(given)}'), findsOneWidget);
+    expect(
+      find.text('pas ${l10n.noteFullName(given, naming: NoteNaming.solfege)}'),
+      findsOneWidget,
+    );
     // 19 justes : 4 × 10, puis 15 × 15 avec le combo.
     expect(find.text('19 bonnes réponses × 10'), findsOneWidget);
     expect(find.text('+190 XP'), findsOneWidget);
@@ -726,5 +754,230 @@ void main() {
       container.read(sessionProvider(exercise)).question.answer,
       NoteName.a,
     );
+  });
+
+  group('démarrage', () {
+    testWidgets('le premier lancement passe par les 3 écrans, une seule fois', (
+      tester,
+    ) async {
+      await prefs.clear();
+      await launch(tester);
+      expect(find.byType(OnboardingScreen), findsOneWidget);
+      expect(find.text('Lire les notes sans y penser'), findsOneWidget);
+      final action = find.byKey(const ValueKey('onboarding-action'));
+
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+      expect(find.text('Où en es-tu ?'), findsOneWidget);
+      // Rien de choisi : on ne passe pas.
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+      expect(find.text('Où en es-tu ?'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('start-readsBoth')));
+      await tester.pump();
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Combien de temps par jour ?'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('goal-ten')));
+      await tester.pump();
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.text('0 / 600 XP'), findsOneWidget);
+      // « Je lis les deux clés » : la clé de fa est ouverte, et le parcours
+      // propose de commencer après la grande portée.
+      expect(find.textContaining('Se débloque'), findsWidgets);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(HomeScreen)),
+      );
+      final course = container.read(courseProvider);
+      expect(course.skill('note-reading.bass')!.state, SkillState.todo);
+      expect(course.skill('note-reading.phrases')!.state, SkillState.todo);
+      expect(
+        course.resume!.lesson.skills,
+        isNot(contains('note-reading.treble')),
+      );
+
+      // Relance : directement le Parcours.
+      await launch(tester);
+      expect(find.byType(OnboardingScreen), findsNothing);
+      expect(find.byType(HomeScreen), findsOneWidget);
+    });
+
+    testWidgets('retour du téléphone : l’écran d’avant', (tester) async {
+      await prefs.clear();
+      await launch(tester);
+      await tester.tap(find.byKey(const ValueKey('onboarding-action')));
+      await tester.pumpAndSettle();
+      expect(find.text('Où en es-tu ?'), findsOneWidget);
+
+      final navigator = tester.state<NavigatorState>(
+        find.byType(Navigator).first,
+      );
+      await navigator.maybePop();
+      await tester.pumpAndSettle();
+      expect(find.text('Lire les notes sans y penser'), findsOneWidget);
+    });
+  });
+
+  group('réglages', () {
+    /// Ouvre les réglages depuis l'onglet Profil.
+    Future<void> openSettings(WidgetTester tester) async {
+      PackageInfo.setMockInitialValues(
+        appName: 'Nobémol',
+        packageName: 'fr.antoninpamart.nobemol',
+        version: '0.0.1',
+        buildNumber: '1',
+        buildSignature: '',
+      );
+      await launch(tester);
+      await tester.tap(find.byKey(const ValueKey('tab-3')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('open-settings')));
+      await tester.pumpAndSettle();
+      expect(find.byType(SettingsScreen), findsOneWidget);
+    }
+
+    Future<void> tapSetting(WidgetTester tester, String key) async {
+      final finder = find.byKey(ValueKey(key)).hitTestable();
+      if (finder.evaluate().isEmpty) {
+        await tester.dragUntilVisible(
+          finder,
+          find.byType(ListView).last,
+          const Offset(0, -200),
+        );
+      }
+      await tester.tap(finder);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('gardés, et appliqués partout', (tester) async {
+      await openSettings(tester);
+      await tapSetting(tester, 'naming-letters');
+      await tapSetting(tester, 'goal-twenty');
+      await tapSetting(tester, 'theme-dark');
+      await tapSetting(tester, 'haptics');
+      expect(find.text('0.0.1 (1)'), findsOneWidget);
+
+      final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+      expect(app.themeMode, ThemeMode.dark);
+
+      // Relus au lancement suivant.
+      final settings = SettingsStore(prefs).load();
+      expect(settings.naming, NoteNaming.letters);
+      expect(settings.goal, DailyGoal.twenty);
+      expect(settings.theme, ThemeMode.dark);
+      expect(settings.haptics, isFalse);
+      await launch(tester);
+      expect(find.text('0 / 1200 XP'), findsOneWidget);
+    });
+
+    testWidgets('point de départ : change le parcours, réversible', (
+      tester,
+    ) async {
+      await openSettings(tester);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(SettingsScreen)),
+      );
+      SkillState bass() =>
+          container.read(courseProvider).skill('note-reading.bass')!.state;
+      expect(bass(), SkillState.locked);
+      await tapSetting(tester, 'start-knowsTreble');
+      expect(bass(), SkillState.todo);
+      await tapSetting(tester, 'start-beginner');
+      expect(bass(), SkillState.locked);
+    });
+
+    testWidgets('licences des polices', (tester) async {
+      await openSettings(tester);
+      await tapSetting(tester, 'licenses');
+      expect(find.byType(LicensePage), findsOneWidget);
+    });
+  });
+
+  group('noms C-D-E', () {
+    setUp(() => prefs.setString('naming', NoteNaming.letters.name));
+
+    testWidgets('touches, correction et explication', (tester) async {
+      final container = await startSession(tester, 'Je débute');
+      final params = StartLevel.beginner.params;
+      for (final letter in ['C', 'D', 'E', 'F', 'G', 'A', 'B']) {
+        expect(find.text(letter), findsOneWidget);
+      }
+      expect(find.text('do'), findsNothing);
+
+      final question =
+          container.read(sessionProvider(params)).question as NoteQuestion;
+      final expected = question.answer;
+      final given = NoteName.naturals[(expected.step.index + 1) % 7];
+      await give(tester, given);
+      await tester.pump(const Duration(seconds: 1));
+      final letter = expected.step.name.toUpperCase();
+      expect(find.text("C'est un $letter"), findsOneWidget);
+      expect(
+        find.text('Tu as répondu : ${given.step.name.toUpperCase()}.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('est un $letter.'), findsOneWidget);
+    });
+
+    testWidgets('noms sous la portée de la théorie', (tester) async {
+      await openLesson(tester, 'treble-clef');
+      for (var i = 0; i < 2; i++) {
+        await tester.tap(find.text('Suivant'));
+        await tester.pumpAndSettle();
+      }
+      final view = tester.widget<NotationView>(find.byType(NotationView));
+      expect(view.labels.values, ['F', 'G', 'A']);
+    });
+  });
+
+  testWidgets('noms sous les touches désactivés : touches muettes', (
+    tester,
+  ) async {
+    await prefs.setBool('keyLabels', false);
+    await startSession(tester, 'Je débute');
+    expect(find.text('do'), findsNothing);
+    expect(find.bySemanticsLabel('do'), findsOneWidget);
+  });
+
+  group('vibrations', () {
+    late List<MethodCall> calls;
+
+    Future<void> play(WidgetTester tester) async {
+      calls = [];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'HapticFeedback.vibrate') calls.add(call);
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      final container = await startSession(tester, 'Je débute');
+      await answer(tester, container, StartLevel.beginner, right: true);
+      await answer(tester, container, StartLevel.beginner, right: false);
+    }
+
+    testWidgets('courte si c’est juste, longue si c’est faux', (tester) async {
+      await play(tester);
+      expect(calls.map((call) => call.arguments), [
+        'HapticFeedbackType.lightImpact',
+        null,
+      ]);
+    });
+
+    testWidgets('désactivées dans les réglages : aucune', (tester) async {
+      await prefs.setBool('haptics', false);
+      await play(tester);
+      expect(calls, isEmpty);
+    });
   });
 }

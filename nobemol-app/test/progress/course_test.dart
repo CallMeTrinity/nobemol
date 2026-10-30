@@ -227,6 +227,32 @@ exercise:
     });
   });
 
+  group('point de départ', () {
+    test('une compétence acquise débloque la suite sans être maîtrisée', () {
+      final course = Course(content, Progress(), acquired: {'a.base'});
+      expect(course.skill('a.base')!.state, SkillState.todo);
+      expect(course.skill('a.next')!.state, SkillState.todo);
+      expect(course.skill('a.next')!.missing, isEmpty);
+      expect(course.isUnlocked(content.lesson('both')!), isTrue);
+      expect(course.newlyMastered, isEmpty);
+    });
+
+    test('« Commencer » saute les leçons des compétences acquises', () {
+      final resume = Course(content, Progress(), acquired: {'a.base'}).resume!;
+      expect(resume.lesson.id, 'next');
+      expect(resume.started, isFalse);
+    });
+
+    test('tout le reste fait : on revient aux compétences acquises', () {
+      final resume = Course(
+        content,
+        Progress(sessions: [played('next', 5), played('both', 5)]),
+        acquired: {'a.base'},
+      ).resume!;
+      expect(resume.lesson.id, 'base-1');
+    });
+  });
+
   test('XP du jour : sessions du même jour local', () {
     final progress = Progress(
       sessions: [

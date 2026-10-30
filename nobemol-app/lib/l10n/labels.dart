@@ -1,15 +1,25 @@
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:notation/notation.dart';
 
 import 'package:nobemol/l10n/app_localizations.dart';
+import 'package:nobemol/progress/xp.dart';
 import 'package:nobemol/reading/beats.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/start_level.dart';
+import 'package:nobemol/settings/settings.dart';
 
 /// Libellés des types du modèle et de l'appli.
 extension Labels on AppLocalizations {
-  /// Nom de note affiché : le modèle est en lettres, l'affichage en do-ré-mi.
-  String noteName(DiatonicStep step) => switch (step) {
+  /// Nom de note affiché : le modèle est en lettres, l'affichage en do-ré-mi
+  /// ou en lettres capitales selon le réglage.
+  String noteName(DiatonicStep step, {required NoteNaming naming}) =>
+      switch (naming) {
+        NoteNaming.letters => step.name.toUpperCase(),
+        NoteNaming.solfege => _solfege(step),
+      };
+
+  String _solfege(DiatonicStep step) => switch (step) {
     DiatonicStep.c => noteC,
     DiatonicStep.d => noteD,
     DiatonicStep.e => noteE,
@@ -21,21 +31,25 @@ extension Labels on AppLocalizations {
 
   /// Nom de note avec son altération, en toutes lettres : « fa dièse ».
   /// Les polices de l'interface n'ont pas les signes ♯ et ♭.
-  String noteFullName(NoteName name) => switch (name.accidental) {
-    Accidental.sharp => noteSharp(noteName(name.step)),
-    Accidental.flat => noteFlat(noteName(name.step)),
-    _ => noteName(name.step),
-  };
+  String noteFullName(NoteName name, {required NoteNaming naming}) {
+    final step = noteName(name.step, naming: naming);
+    return switch (name.accidental) {
+      Accidental.sharp => noteSharp(step),
+      Accidental.flat => noteFlat(step),
+      _ => step,
+    };
+  }
 
   /// Libellé d'une réponse : un nom de note, une durée ou le sens d'un
   /// signe.
-  String answerLabel(Enum answer) => switch (answer) {
-    DiatonicStep() => noteName(answer),
-    NoteName() => noteFullName(answer),
-    Beats() => beatsLabel(answer),
-    Marking() => markingLabel(answer),
-    _ => throw ArgumentError.value(answer, 'answer', 'réponse inconnue'),
-  };
+  String answerLabel(Enum answer, {required NoteNaming naming}) =>
+      switch (answer) {
+        DiatonicStep() => noteName(answer, naming: naming),
+        NoteName() => noteFullName(answer, naming: naming),
+        Beats() => beatsLabel(answer),
+        Marking() => markingLabel(answer),
+        _ => throw ArgumentError.value(answer, 'answer', 'réponse inconnue'),
+      };
 
   /// Durée en temps. Des nombres : rien à traduire.
   String beatsLabel(Beats beats) => switch (beats) {
@@ -96,5 +110,23 @@ extension Labels on AppLocalizations {
     StartLevel.knowsTreble => levelKnowsTrebleDescription,
     StartLevel.readsBoth => levelReadsBothDescription,
     StartLevel.fluent => levelFluentDescription,
+  };
+
+  String goalTitle(DailyGoal goal) => switch (goal) {
+    DailyGoal.five => goalFive,
+    DailyGoal.ten => goalTen,
+    DailyGoal.fifteen => goalFifteen,
+    DailyGoal.twenty => goalTwenty,
+  };
+
+  String namingLabel(NoteNaming naming) => switch (naming) {
+    NoteNaming.solfege => namingSolfege,
+    NoteNaming.letters => namingLetters,
+  };
+
+  String themeLabel(ThemeMode theme) => switch (theme) {
+    ThemeMode.system => themeSystem,
+    ThemeMode.light => themeLight,
+    ThemeMode.dark => themeDark,
   };
 }

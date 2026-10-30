@@ -9,6 +9,7 @@ import 'package:nobemol/progress/database.dart';
 import 'package:nobemol/progress/progress.dart';
 import 'package:nobemol/progress/xp.dart';
 import 'package:nobemol/lessons/skill_tree.dart';
+import 'package:nobemol/settings/settings.dart';
 
 /// Base du téléphone. Sur le web (cible de dev), dans le navigateur :
 /// `web/sqlite3.wasm` et `web/drift_worker.js` viennent de la release de
@@ -163,7 +164,8 @@ class ProgressNotifier extends Notifier<Progress> {
     required int bestCombo,
   }) async {
     final content = ref.read(contentProvider);
-    final before = Course(content, state);
+    final acquired = ref.read(settingsProvider).start.acquired;
+    final before = Course(content, state, acquired: acquired);
     final xpBefore = state.xp;
     await _store.recordSession(
       lessonId: lessonId,
@@ -173,14 +175,18 @@ class ProgressNotifier extends Notifier<Progress> {
       bestCombo: bestCombo,
     );
     var progress = await _store.load();
-    final mastered = Course(content, progress).newlyMastered.toList();
+    final mastered = Course(
+      content,
+      progress,
+      acquired: acquired,
+    ).newlyMastered.toList();
     if (mastered.isNotEmpty) {
       await _store.saveMastered(mastered, finishedAt);
       progress = await _store.load();
     }
     state = progress;
 
-    final after = Course(content, progress);
+    final after = Course(content, progress, acquired: acquired);
     return SessionOutcome(
       xpBefore: xpBefore,
       xpAfter: progress.xp,
@@ -216,5 +222,9 @@ class ProgressNotifier extends Notifier<Progress> {
 
 /// Le parcours, recalculé à chaque changement de progression.
 final courseProvider = Provider<Course>(
-  (ref) => Course(ref.watch(contentProvider), ref.watch(progressProvider)),
+  (ref) => Course(
+    ref.watch(contentProvider),
+    ref.watch(progressProvider),
+    acquired: ref.watch(settingsProvider.select((s) => s.start.acquired)),
+  ),
 );

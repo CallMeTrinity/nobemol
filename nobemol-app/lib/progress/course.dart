@@ -62,8 +62,16 @@ class Resume {
 
 /// Le parcours : maîtrise et déblocage de chaque compétence, et la leçon à
 /// reprendre.
+///
+/// [acquired] : compétences que l'élève dit savoir (point de départ). Elles
+/// débloquent ce qui les suit sans être maîtrisées, et ne sont pas
+/// proposées en premier à « Commencer ».
 class Course {
-  factory Course(Content content, Progress progress) {
+  factory Course(
+    Content content,
+    Progress progress, {
+    Set<String> acquired = const {},
+  }) {
     final bySkill = <String, SkillProgress>{};
     for (final skill in content.skills) {
       final lessons = [
@@ -80,7 +88,9 @@ class Course {
       // L'arbre déclare les prérequis plus haut : ils sont déjà calculés.
       final missing = [
         for (final id in skill.requires)
-          if (bySkill[id]!.state != SkillState.mastered) bySkill[id]!.skill,
+          if (bySkill[id]!.state != SkillState.mastered &&
+              !acquired.contains(id))
+            bySkill[id]!.skill,
       ];
       final started = lessons.any(
         (lesson) =>
@@ -103,13 +113,14 @@ class Course {
             : SkillState.todo,
       );
     }
-    return Course._(content, progress, bySkill);
+    return Course._(content, progress, acquired, bySkill);
   }
 
-  Course._(this._content, this._progress, this._bySkill);
+  Course._(this._content, this._progress, this._acquired, this._bySkill);
 
   final Content _content;
   final Progress _progress;
+  final Set<String> _acquired;
   final Map<String, SkillProgress> _bySkill;
 
   SkillProgress? skill(String id) => _bySkill[id];
@@ -139,7 +150,8 @@ class Course {
       lesson.skills.every((id) => _bySkill[id]!.state != SkillState.locked);
 
   /// La leçon commencée le plus récemment et jamais terminée. Sans elle, la
-  /// première leçon débloquée jamais ouverte. `null` si tout est fait.
+  /// première leçon débloquée jamais ouverte, hors compétences acquises
+  /// au départ, puis parmi elles. `null` si tout est fait.
   late final Resume? resume = () {
     final played = _progress.bestScores;
     final open = [
@@ -154,14 +166,19 @@ class Course {
         page: theory.read ? null : min(theory.page, lesson.theory.length - 1),
       );
     }
-    for (final lesson in _content.lessons) {
-      if (isUnlocked(lesson) &&
-          !played.containsKey(lesson.id) &&
-          !_progress.theory.containsKey(lesson.id)) {
-        return Resume(lesson: lesson, page: 0, started: false);
-      }
-    }
-    return null;
+    final fresh = [
+      for (final lesson in _content.lessons)
+        if (isUnlocked(lesson) &&
+            !played.containsKey(lesson.id) &&
+            !_progress.theory.containsKey(lesson.id))
+          lesson,
+    ];
+    final next =
+        fresh
+            .where((lesson) => !lesson.skills.every(_acquired.contains))
+            .firstOrNull ??
+        fresh.firstOrNull;
+    return next == null ? null : Resume(lesson: next, page: 0, started: false);
   }();
 }
 
