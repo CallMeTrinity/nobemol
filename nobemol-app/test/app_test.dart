@@ -828,8 +828,8 @@ void main() {
       PackageInfo.setMockInitialValues(
         appName: 'Nobémol',
         packageName: 'fr.antoninpamart.nobemol',
-        version: '0.0.1',
-        buildNumber: '1',
+        version: '1.0.0',
+        buildNumber: '2',
         buildSignature: '',
       );
       await launch(tester);
@@ -859,7 +859,7 @@ void main() {
       await tapSetting(tester, 'goal-twenty');
       await tapSetting(tester, 'theme-dark');
       await tapSetting(tester, 'haptics');
-      expect(find.text('0.0.1 (1)'), findsOneWidget);
+      expect(find.text('1.0.0 (2)'), findsOneWidget);
 
       final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
       expect(app.themeMode, ThemeMode.dark);
