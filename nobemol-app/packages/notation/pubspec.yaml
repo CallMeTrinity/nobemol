@@ -20,6 +20,12 @@ dev_dependencies:
   very_good_analysis: ^11.0.0
 
 flutter:
+  # Licences des polices, à afficher par l'appli qui utilise le package :
+  # packages/notation/fonts/OFL.txt (Bravura), Edwin-OFL.txt.
+  assets:
+    - fonts/OFL.txt
+    - fonts/Edwin-OFL.txt
+
   # Bravura (SMuFL), licence SIL OFL (fonts/OFL.txt).
   # Mise à jour : dart run tool/bravura.dart
   fonts:

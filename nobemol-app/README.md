@@ -19,6 +19,8 @@ nobemol-app/
 │   ├── theme/            tokens du design « Touches » et thème clair / sombre
 │   ├── ui/               composants : boutons à ombre pleine, tuiles, clavier
 │   ├── shell/            barre à 4 onglets, onglets à venir
+│   ├── onboarding/       démarrage : bienvenue, point de départ, objectif
+│   ├── settings/         réglages (shared_preferences) et leur écran
 │   ├── home/             Parcours (niveau, reprise, compétences) et écran compétence
 │   ├── progress/         base Drift, XP et niveaux, maîtrise et déblocage
 │   ├── lessons/          lecture du contenu (Dart pur) et écran de théorie

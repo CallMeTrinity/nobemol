@@ -9,6 +9,7 @@ import 'package:nobemol/progress/course.dart';
 import 'package:nobemol/progress/progress_provider.dart';
 import 'package:nobemol/progress/xp.dart';
 import 'package:nobemol/reading/start_level.dart';
+import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/depth.dart';
 import 'package:nobemol/ui/fit_words.dart';
@@ -17,7 +18,7 @@ import 'package:nobemol/ui/progress_bar.dart';
 
 /// Onglet Parcours : niveau, objectif du jour, la leçon à reprendre, puis
 /// les compétences par branche. En bas, la lecture libre (points de
-/// départ), en attendant l'écran de démarrage (étape 9).
+/// départ), en attendant l'arcade (étape 11).
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -45,7 +46,10 @@ class HomeScreen extends ConsumerWidget {
         children: [
           _LevelHeader(level: Level.of(progress.xp)),
           const SizedBox(height: Space.xl),
-          _DailyGoal(xp: progress.xpOn(ref.watch(clockProvider)())),
+          _DailyGoal(
+            xp: progress.xpOn(ref.watch(clockProvider)()),
+            goal: ref.watch(settingsProvider.select((s) => s.goal.xp)),
+          ),
           if (course.resume case final resume?) ...[
             const SizedBox(height: Space.m),
             _ResumeCard(resume: resume),
@@ -115,16 +119,17 @@ class _LevelHeader extends StatelessWidget {
 }
 
 class _DailyGoal extends StatelessWidget {
-  const _DailyGoal({required this.xp});
+  const _DailyGoal({required this.xp, required this.goal});
 
-  /// XP gagnés aujourd'hui.
+  /// XP gagnés aujourd'hui, et l'objectif.
   final int xp;
+  final int goal;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final c = context.colors;
-    final done = xp >= dailyGoal;
+    final done = xp >= goal;
     return AppTile(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -138,7 +143,7 @@ class _DailyGoal extends StatelessWidget {
                 ),
               ),
               Text(
-                (done ? l10n.dailyGoalDone : l10n.dailyGoalXp(xp, dailyGoal))
+                (done ? l10n.dailyGoalDone : l10n.dailyGoalXp(xp, goal))
                     .toUpperCase(),
                 style: AppText.meta.copyWith(
                   color: done ? c.success : c.inkMuted,
@@ -147,7 +152,7 @@ class _DailyGoal extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Space.sm),
-          ProgressBar(value: xp / dailyGoal),
+          ProgressBar(value: xp / goal),
         ],
       ),
     );

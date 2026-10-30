@@ -6,8 +6,20 @@ const xpPerAnswer = 10;
 const comboBonusFrom = 5;
 const comboBonus = 5;
 
-/// Objectif du jour, fixe jusqu'aux réglages (étape 9).
-const dailyGoal = 100;
+/// Objectif du jour, choisi au démarrage puis dans les réglages. Les XP
+/// suivent le rythme réel : une réponse et sa correction prennent environ
+/// 10 s, soit une soixantaine d'XP par minute.
+enum DailyGoal {
+  five(minutes: 5, xp: 300),
+  ten(minutes: 10, xp: 600),
+  fifteen(minutes: 15, xp: 900),
+  twenty(minutes: 20, xp: 1200);
+
+  const DailyGoal({required this.minutes, required this.xp});
+
+  final int minutes;
+  final int xp;
+}
 
 /// XP d'une réponse. [combo] compte les bonnes réponses d'affilée, celle-ci
 /// comprise : 0 pour une réponse fausse.

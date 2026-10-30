@@ -434,5 +434,59 @@
   "markingDolce": "avec douceur",
   "markingLegato": "lié",
   "markingEspressivo": "expressif",
-  "markingCantabile": "chantant"
+  "markingCantabile": "chantant",
+  "welcomeTitle": "Lire les notes sans y penser",
+  "welcomeBody": "Une note, une réponse, une explication. Quelques minutes par jour, et la lecture devient un réflexe.",
+  "welcomeStart": "Commencer",
+  "onboardingStep": "Étape {step} sur {count}",
+  "@onboardingStep": {
+    "placeholders": {
+      "step": { "type": "int" },
+      "count": { "type": "int" }
+    }
+  },
+  "onboardingLevelTitle": "Où en es-tu ?",
+  "onboardingLevelBody": "Ce que tu sais déjà se débloque dans le parcours. Tu pourras changer d'avis dans les réglages.",
+  "onboardingGoalTitle": "Combien de temps par jour ?",
+  "onboardingGoalBody": "Ton objectif du jour, en XP. Il se change dans les réglages.",
+  "onboardingNext": "Continuer",
+  "onboardingDone": "C'est parti",
+  "goalMinutes": "{minutes} min",
+  "@goalMinutes": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "goalXp": "{xp} XP par jour",
+  "@goalXp": {
+    "placeholders": {
+      "xp": { "type": "int" }
+    }
+  },
+  "goalFive": "Tranquille",
+  "goalTen": "Régulier",
+  "goalFifteen": "Sérieux",
+  "goalTwenty": "Intense",
+  "settingsTitle": "Réglages",
+  "settingsReading": "Lecture",
+  "settingsNaming": "Noms des notes",
+  "namingSolfege": "do ré mi",
+  "namingLetters": "C D E",
+  "settingsKeyLabels": "Noms sous les touches",
+  "settingsKeyLabelsHint": "Sur le clavier des exercices",
+  "settingsStart": "Point de départ",
+  "settingsGoal": "Objectif quotidien",
+  "settingsFeedback": "Retours",
+  "settingsHaptics": "Vibrations",
+  "settingsHapticsHint": "Courte si c'est juste, plus longue si c'est faux",
+  "settingsSound": "Son des notes",
+  "settingsAppearance": "Apparence",
+  "settingsTheme": "Thème",
+  "themeSystem": "Système",
+  "themeLight": "Clair",
+  "themeDark": "Sombre",
+  "settingsAbout": "À propos",
+  "settingsVersion": "Version",
+  "settingsLicenses": "Licences",
+  "settingsLicensesHint": "Polices et bibliothèques"
 }

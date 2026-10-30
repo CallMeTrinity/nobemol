@@ -58,7 +58,9 @@ Application mobile pour apprendre et réviser le solfège. Le but n'est pas d'af
 | Indexation des cibles | **Base 1** (`measure`, `event`) | Les leçons sont écrites à la main par des musiciens : « mesure 1, 2e note ». Conversion une seule fois, au chargement. |
 | Moteur sans Flutter | `package:notation/core.dart` (abc, modèle, layout) à côté de `notation.dart` (rendu) | Le validateur tourne avec `dart run`, sans `dart:ui`. Préfigure le découpage `notation_core` / `notation_flutter`. |
 | Stockage des leçons (MVP) | Embarquées dans l'appli | Du texte : ~1000 leçons pèsent environ 100 à 200 Ko compressées. |
-| Noms des notes | Modèle en **lettres** (comme l'ABC), affichage **do-ré-mi** | Réglage C-D-E ajoutable plus tard sans refonte. |
+| Noms des notes | Modèle en **lettres** (comme l'ABC), affichage **do-ré-mi** ou **C-D-E** (réglage) | Le réglage change les touches, les corrections et les noms sous la portée. Les textes des leçons restent en do-ré-mi. |
+| Point de départ | Compétences **acquises**, calculées depuis le réglage, pas stockées | Débloque ce qui suit sans marquer de maîtrise. Changer de point de départ est réversible, contrairement à une maîtrise en base. |
+| Objectif quotidien | 5 à 20 min, soit **300 à 1 200 XP** | Calé sur le rythme réel (environ 60 XP par minute, correction comprise). Les 20 à 150 XP du design tombaient en deux réponses. |
 | Gestion d'état | **Riverpod 3, sans codegen** | Réglages, score, chrono et progression dès le MVP. Pas de `build_runner` pour l'état. |
 | Persistance | **Drift** (progression, révision), `shared_preferences` (réglages) | Requêtes « cartes dues », migrations, maîtrise par compétence pour le futur test. Hive et Isar écartés (projets d'origine abandonnés). |
 | Navigation | `go_router` | Standard, maintenu par l'équipe Flutter. |

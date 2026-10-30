@@ -56,7 +56,7 @@ exercise:
 ### Pages de théorie
 
 - La **première phrase** de `text` s'affiche en titre, la suite en dessous. Une phrase finit sur `.`, `!`, `?` ou `…` suivi d'une majuscule : « la 2e ligne. La note » coupe bien, « 2e ligne » seul ne coupe pas.
-- `names: true` écrit le nom de chaque note sous la portée, sans l'altération, dans la notation choisie par l'élève (do-ré-mi aujourd'hui). Demande un `abc`. À réserver aux pages qui montrent plusieurs notes : sur une note seule, le texte la nomme déjà.
+- `names: true` écrit le nom de chaque note sous la portée, sans l'altération, dans la notation choisie par l'élève (do-ré-mi ou C-D-E, réglage). Demande un `abc`. À réserver aux pages qui montrent plusieurs notes : sur une note seule, le texte la nomme déjà.
 
 Tout champ inconnu est une erreur : une faute de frappe (`ledger_lines`) ne passe pas en silence.
 
@@ -199,7 +199,7 @@ Un terme se reconnaît à son texte, au-dessus (`^`) comme au-dessous (`_`) de l
 - **Phrases** : 3 ou 4 mesures au plus. Elles s'affichent sur une seule ligne, à la largeur de l'écran : au-delà, les notes deviennent trop petites. Avec des croches et des doubles croches, viser 2 ou 3 mesures.
 - **Ligatures** : en ABC, des croches collées sont ligaturées (`CDEF`), une espace coupe le groupe (`CD EF`). Un groupe par temps, en général.
 - **Signes et termes** : le moteur ne décale rien pour éviter un chevauchement horizontal. Deux nuances sur deux noires voisines (`!pp! C !mp! D`) ou deux termes à une noire d'écart se touchent : espacer les signes (blanches, ou un signe par mesure), surtout pour les termes, plus larges.
-- **Noms de notes** : en do-ré-mi dans les textes. L'ABC reste en lettres.
+- **Noms de notes** : en do-ré-mi dans les textes. L'ABC reste en lettres. Le réglage C-D-E ne touche pas aux textes des leçons : il change les touches, les corrections, les explications générées et les noms sous la portée (`names`).
 - **Cibles** (`identify-note`) : `measure` et `event` comptent **à partir de 1**, comme on compte les mesures en musique (« mesure 1, 2e note »). La conversion en index du code se fait au chargement.
 
 ## Ordre des leçons

@@ -30,6 +30,7 @@ class NoteKeyboard extends StatefulWidget {
     super.key,
     required this.label,
     required this.onKey,
+    this.whiteLabels = true,
     this.accidentals = false,
     this.tones = const {},
     this.height = Sizes.keyHeight,
@@ -37,6 +38,10 @@ class NoteKeyboard extends StatefulWidget {
 
   /// Nom d'une note : sur les touches blanches et dans la bulle.
   final String Function(NoteName name) label;
+
+  /// Noms sur les touches blanches. Sans eux, l'élève lit la portée sans
+  /// chercher le nom sous son doigt. La bulle d'orthographe garde les siens.
+  final bool whiteLabels;
 
   /// Nom choisi, `null` pour un clavier inactif.
   final ValueChanged<NoteName>? onKey;
@@ -105,7 +110,8 @@ class _NoteKeyboardState extends State<NoteKeyboard> {
                       width: white,
                       child: _WhiteKey(
                         key: ValueKey('answer-${name.name}'),
-                        label: widget.label(name),
+                        label: widget.whiteLabels ? widget.label(name) : null,
+                        semanticLabel: widget.label(name),
                         tone: widget.tones[name] ?? AnswerTone.rest,
                         height: height,
                         onPressed: onKey == null ? null : () => _choose(name),
@@ -162,12 +168,17 @@ class _WhiteKey extends StatelessWidget {
   const _WhiteKey({
     super.key,
     required this.label,
+    required this.semanticLabel,
     required this.tone,
     required this.height,
     required this.onPressed,
   });
 
-  final String label;
+  /// Nom affiché, `null` pour une touche muette.
+  final String? label;
+
+  /// Nom lu par le lecteur d'écran, même sur une touche muette.
+  final String semanticLabel;
   final AnswerTone tone;
   final double height;
   final VoidCallback? onPressed;
@@ -190,6 +201,7 @@ class _WhiteKey extends StatelessWidget {
       onPressed: onPressed,
       depth: Depths.key,
       height: height,
+      semanticLabel: semanticLabel,
       borderRadius: const BorderRadius.vertical(
         top: Radius.circular(6),
         bottom: Radius.circular(Radii.key),
@@ -199,7 +211,7 @@ class _WhiteKey extends StatelessWidget {
         alignment: Alignment.bottomCenter,
         child: FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text(label, style: AppText.labelKey),
+          child: Text(label ?? '', style: AppText.labelKey),
         ),
       ),
     );

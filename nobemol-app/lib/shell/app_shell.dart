@@ -128,10 +128,14 @@ class ComingSoonScreen extends StatelessWidget {
     super.key,
     required this.title,
     required this.description,
+    this.footer,
   });
 
   final String title;
   final String description;
+
+  /// Sous la carte « Bientôt » : ce qui existe déjà dans l'onglet.
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -167,6 +171,10 @@ class ComingSoonScreen extends StatelessWidget {
                 ],
               ),
             ),
+            if (footer case final footer?) ...[
+              const SizedBox(height: Space.xl),
+              footer,
+            ],
           ],
         ),
       ),

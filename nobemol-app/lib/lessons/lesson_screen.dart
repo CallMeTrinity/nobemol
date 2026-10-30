@@ -10,6 +10,7 @@ import 'package:nobemol/l10n/app_localizations.dart';
 import 'package:nobemol/l10n/labels.dart';
 import 'package:nobemol/lessons/lesson.dart';
 import 'package:nobemol/progress/progress_provider.dart';
+import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/depth.dart';
 
@@ -130,14 +131,14 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
 }
 
 /// Bandeau du haut : fermer, titre de la leçon, et la musique de la page.
-class _Header extends StatelessWidget {
+class _Header extends ConsumerWidget {
   const _Header({required this.title, required this.page});
 
   final String title;
   final TheoryPage page;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
     final l10n = AppLocalizations.of(context);
     final system = page.system;
@@ -195,7 +196,15 @@ class _Header extends StatelessWidget {
                       system: system,
                       staffSpace: StaffSpaces.theory,
                       color: c.ink,
-                      labels: page.names ? _names(system, l10n) : const {},
+                      labels: page.names
+                          ? _names(
+                              system,
+                              l10n,
+                              ref.watch(
+                                settingsProvider.select((s) => s.naming),
+                              ),
+                            )
+                          : const {},
                       labelStyle: AppText.staffLabel.copyWith(
                         color: c.inkMuted,
                       ),
@@ -211,12 +220,17 @@ class _Header extends StatelessWidget {
 }
 
 /// Nom de chaque note de [system], sans l'altération.
-Map<EventRef, String> _names(System system, AppLocalizations l10n) => {
+Map<EventRef, String> _names(
+  System system,
+  AppLocalizations l10n,
+  NoteNaming naming,
+) => {
   for (final (index, staff) in system.staves.indexed)
     for (final (:measure, :event, :value) in staff.events)
       if (value case Note(:final pitch))
         EventRef(staff: index, measure: measure, event: event): l10n.noteName(
           pitch.step,
+          naming: naming,
         ),
 };
 
