@@ -6,7 +6,7 @@ Le produit et les décisions techniques sont dans [IDEA.md](IDEA.md).
 
 ## Vue d'ensemble
 
-Les étapes 1 à 5 forment le MVP, publié en bêta (`0.0.1`, voir [CHANGELOG.md](CHANGELOG.md)). Leurs « À vérifier » se font sur l'APK de la release.
+Les étapes 1 à 5 forment le MVP, publié en bêta (`0.0.1`, voir [CHANGELOG.md](CHANGELOG.md)). Les étapes 6 à 9 font la version de lancement (`1.0.0`). Leurs « À vérifier » se font sur l'APK de la release.
 
 Les étapes 6 à 12 viennent du design « Touches » (Claude Design, tour 2) : tous les écrans de l'appli. Elles touchent surtout l'appli. Le moteur ne bouge que pour le halo de cible et les noms sous les notes.
 
@@ -18,10 +18,10 @@ Les étapes 6 à 12 viennent du design « Touches » (Claude Design, tour 2) : t
 | 3 | Mesures, chiffrage, armure, barres, hampes, **alignement entre portées** | Lecture de courtes phrases | Bêta 0.0.1 |
 | 4 | Silences, points, ligatures, liaisons de prolongation | Exercices de rythme | Bêta 0.0.1 |
 | 5 | Décorations : nuances, articulations, termes | Apprentissage des symboles | Bêta 0.0.1 |
-| 6 | Halo de cible, noms sous les notes | Design system, clavier, navigation à 4 onglets | Fait |
-| 7 | | Progression persistée : XP, niveaux, parcours | Fait |
-| 8 | | Boucle d'exercice : feedback, combo, résultats | Fait |
-| 9 | | Démarrage et réglages | Fait |
+| 6 | Halo de cible, noms sous les notes | Design system, clavier, navigation à 4 onglets | 1.0.0 |
+| 7 | | Progression persistée : XP, niveaux, parcours | 1.0.0 |
+| 8 | | Boucle d'exercice : feedback, combo, résultats | 1.0.0 |
+| 9 | | Démarrage et réglages | 1.0.0 |
 | 10 | | Révision espacée | |
 | 11 | | Arcade | |
 | 12 | | Profil, statistiques, succès, sauvegarde | |
@@ -33,6 +33,7 @@ Une release par version, publiée sur GitHub Releases avec l'APK signé (workflo
 
 - [x] `CHANGELOG.md`, version `0.0.1` (bêta 1)
 - [x] Workflow : tag `v*.*.*` sur `main` vers APK signé + release
+- [x] Version `1.0.0` (lancement) : étapes 6 à 9
 - [ ] Clé de signature créée, sauvegardée hors du repo, secrets GitHub renseignés
 - [ ] `0.0.1` installée sur un vrai téléphone, puis `0.0.2` installée **par-dessus** (même signature)
 

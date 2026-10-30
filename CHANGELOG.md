@@ -6,6 +6,10 @@ Le workflow de release reprend la section de la version comme notes de release :
 
 ## [Non publié]
 
+## [1.0.0] - 2026-10-30 (lancement)
+
+Version de lancement : les étapes 6 à 9 de la [feuille de route](https://github.com/CallMeTrinity/nobemol/blob/main/ROADMAP.md) sur le MVP de la bêta. Une mise à jour depuis la `0.0.1` s'installe par-dessus.
+
 ### Ajouté
 
 - Nouveau design « Touches » : couleurs, polices embarquées (Bricolage Grotesque, Instrument Sans, DM Mono), boutons à ombre pleine, thème sombre selon le téléphone.
@@ -39,6 +43,12 @@ Le workflow de release reprend la section de la version comme notes de release :
 - Avec une armure, la réponse porte l'altération : en sol majeur, un fa se répond fa dièse.
 - Objectif du jour en XP selon la durée choisie : 300 XP pour 5 minutes, jusqu'à 1 200 pour 20 minutes (100 XP fixes avant).
 
+### Limites connues
+
+- Réviser, Arcade et Profil (statistiques, succès, sauvegarde) arrivent bientôt.
+- Pas encore de son : « Son des notes » est annoncé dans les réglages.
+- Pas de vérification de mise à jour : surveiller les releases GitHub.
+
 ## [0.0.1] - 2026-10-28 (bêta 1)
 
 Première bêta : le MVP, étapes 1 à 5 de la [feuille de route](https://github.com/CallMeTrinity/nobemol/blob/main/ROADMAP.md).
@@ -61,5 +71,6 @@ Première bêta : le MVP, étapes 1 à 5 de la [feuille de route](https://github
 - Le moteur n'évite pas les chevauchements horizontaux entre signes voisins.
 - Icône d'appli par défaut.
 
-[Non publié]: https://github.com/CallMeTrinity/nobemol/compare/v0.0.1...HEAD
+[Non publié]: https://github.com/CallMeTrinity/nobemol/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/CallMeTrinity/nobemol/releases/tag/v1.0.0
 [0.0.1]: https://github.com/CallMeTrinity/nobemol/releases/tag/v0.0.1
