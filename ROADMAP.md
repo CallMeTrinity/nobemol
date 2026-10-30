@@ -21,7 +21,7 @@ Les étapes 6 à 12 viennent du design « Touches » (Claude Design, tour 2) : t
 | 6 | Halo de cible, noms sous les notes | Design system, clavier, navigation à 4 onglets | Fait |
 | 7 | | Progression persistée : XP, niveaux, parcours | Fait |
 | 8 | | Boucle d'exercice : feedback, combo, résultats | Fait |
-| 9 | | Démarrage et réglages | |
+| 9 | | Démarrage et réglages | Fait |
 | 10 | | Révision espacée | |
 | 11 | | Arcade | |
 | 12 | | Profil, statistiques, succès, sauvegarde | |
@@ -141,7 +141,7 @@ Une release par version, publiée sur GitHub Releases avec l'APK signé (workflo
 
 Source : `Nobemol Touches.dc.html` et `tokens/nobemol-tokens.json` (projet Claude Design). Les écrans existants passent au nouveau design avant d'en ajouter.
 
-- [x] Tokens clair / sombre en `ThemeExtension` : couleurs (`color.*`), rayons, profondeurs (ombre pleine décalée en Y), espacements (`lib/theme/tokens.dart`). Clair ou sombre selon le téléphone en attendant les réglages (étape 9)
+- [x] Tokens clair / sombre en `ThemeExtension` : couleurs (`color.*`), rayons, profondeurs (ombre pleine décalée en Y), espacements (`lib/theme/tokens.dart`). Clair ou sombre selon le téléphone, ou forcé dans les réglages (étape 9)
 - [x] Polices **embarquées** (pas de `google_fonts`, l'appli marche hors ligne) : Bricolage Grotesque (titres), Instrument Sans (texte), DM Mono (méta). Licences OFL à côté (`fonts/`). Les deux premières sont variables : graisse et taille optique par `fontVariations`
 - [x] Composants : bouton à ombre pleine (repos, appui, juste, faux, inactif), tuile, chip, carte réponse (`lib/ui/`)
 - [x] **Clavier** : 7 touches blanches do à si, 5 noires (inactives sans altérations), états juste / faux / appuyé
@@ -168,7 +168,7 @@ Tranché :
 Prérequis de toutes les étapes suivantes. Ouvre la base Drift prévue dans [IDEA.md](IDEA.md).
 
 - [x] Drift : schéma v1 (sessions, réponses, théorie, compétences maîtrisées), **migrations testées dès la v1** : schéma figé dans `drift_schemas/`, tests dans `test/drift/` ([doc/database.md](nobemol-app/doc/database.md))
-- [x] XP : 10 par bonne réponse, +5 à partir de la 5e d'affilée. Niveaux par paliers (100 × n × (n − 1) XP), objectif du jour (100 XP fixes jusqu'à l'étape 9)
+- [x] XP : 10 par bonne réponse, +5 à partir de la 5e d'affilée. Niveaux par paliers (100 × n × (n − 1) XP), objectif du jour (100 XP fixes, réglable depuis l'étape 9)
 - [x] Maîtrise par compétence (%), états « à faire », « en cours », « maîtrisé » (80 %)
 - [x] Déblocage par prérequis de l'arbre (`skills.yaml`) : « se débloque après … »
 - [x] Parcours : niveau et XP, objectif du jour, carte « Reprendre » (leçon en cours, page de théorie), tuiles par branche
@@ -187,7 +187,7 @@ Tranché :
 À vérifier :
 
 - Sur un vrai téléphone : `0.0.1` puis cette version **par-dessus**. La base se crée, puis une session jouée, une mise à jour de plus (`0.0.3`) : XP et page de théorie toujours là.
-- Équilibre XP : une session parfaite de 20 notes rapporte 280 XP, donc l'objectif de 100 XP tombe en une session. À revoir avec l'étape 9 (20 à 150 XP dans le design).
+- ~~Équilibre XP : une session parfaite de 20 notes rapporte 280 XP, donc l'objectif de 100 XP tombe en une session.~~ Tranché à l'étape 9 : objectifs de 300 à 1 200 XP.
 - Le design « Touches » n'a pas pu être relu pendant l'étape (pas d'accès au projet Claude Design) : Parcours et écran compétence sont construits avec les composants de l'étape 6, à comparer aux maquettes.
 
 ## Étape 8 : boucle d'exercice
@@ -221,13 +221,31 @@ Tranché :
 
 ## Étape 9 : démarrage et réglages
 
-- [ ] Bienvenue, point de départ (4 niveaux, existe déjà), objectif quotidien (5 à 20 min, 20 à 150 XP)
-- [ ] Réglages dans `shared_preferences` : noms des notes do-ré-mi / C-D-E, point de départ, noms sous les touches, objectif, vibrations, thème clair / sombre / système
-- [ ] Vibrations (retour haptique juste / faux)
-- [ ] « Son des notes » affiché « Bientôt » tant que l'audio n'existe pas
-- [ ] À propos : version de l'appli, licences des polices (Bravura, Edwin, polices d'interface) via `LicenseRegistry`
+- [x] Démarrage en 3 écrans (`/bienvenue`) : bienvenue, point de départ (4 niveaux), objectif quotidien (5 à 20 min). Rien n'est gardé avant « C'est parti »
+- [x] Réglages dans `shared_preferences` (`lib/settings/`) : noms des notes do-ré-mi / C-D-E, point de départ, noms sous les touches, objectif, vibrations, thème clair / sombre / système. Ouverts depuis l'onglet Profil
+- [x] Point de départ : ses compétences comptent comme **acquises** dans le parcours (`StartLevel.acquired`)
+- [x] Vibrations : courte si c'est juste (`lightImpact`), plus longue si c'est faux (`vibrate`)
+- [x] « Son des notes » affiché « Bientôt » tant que l'audio n'existe pas
+- [x] À propos : version de l'appli (`package_info_plus`), licences des polices (Bravura, Edwin, polices d'interface) via `LicenseRegistry`
 
 **Terminé quand** : le premier lancement passe par les 3 écrans, et le choix C-D-E change les touches, les feedbacks et la théorie.
+
+Tranché :
+
+- **Objectifs recalés : 300, 600, 900, 1 200 XP** pour 5, 10, 15, 20 min. Une réponse et sa correction prennent environ 10 s, soit une soixantaine d'XP par minute. Les 20 à 150 XP du design tombaient en deux réponses. Barème et niveaux inchangés. Objectif par défaut (avant le démarrage) : 5 min.
+- **Point de départ = compétences acquises, pas maîtrisées.** « Je lis les deux clés » ouvre la clé de fa, les lignes supplémentaires et la grande portée comme prérequis, sans rien écrire en base. Changer de point de départ dans les réglages est donc réversible. « Commencer » propose d'abord une leçon hors de ces compétences, puis y revient quand tout le reste est fait. Les compétences acquises restent jouables et comptent pour la maîtrise comme les autres.
+- **Tout le monde passe par le démarrage**, y compris après une mise à jour depuis une version sans réglages : la progression reste, et c'est l'occasion de choisir un objectif.
+- **C-D-E** : lettres capitales, altérations en toutes lettres (« F dièse »). Le réglage change les touches, les corrections, les explications générées, « À revoir » et les noms sous la portée. Les textes des leçons restent en do-ré-mi : ils sont écrits à la main.
+- **Noms sous les touches désactivés** : touches blanches muettes (le lecteur d'écran garde le nom). La bulle d'orthographe d'une touche noire garde ses noms.
+- **Réglages dans l'onglet Profil**, sous la carte « Bientôt », en attendant le profil (étape 12).
+- La lecture libre reste en bas du Parcours jusqu'à l'arcade (étape 11), qui la remplace.
+- Licences des polices embarquées comme assets (`fonts/*-OFL.txt`, et celles de Bravura et Edwin dans le package `notation`) : quelques Ko.
+
+À vérifier :
+
+- Sur un vrai téléphone : vibrations (Android les coupe si le retour tactile du système est désactivé), écran Licences, thème forcé sombre sur un téléphone en clair.
+- Le design « Touches » des écrans de démarrage et de réglages n'a pas pu être relu (pas d'accès au projet Claude Design) : construits avec les composants de l'étape 6, à comparer aux maquettes.
+- Équilibre des objectifs : 300 XP pour 5 min est une estimation. À recaler avec les temps de réponse réels (table `answers`) si l'objectif tombe trop vite ou trop lentement.
 
 ## Étape 10 : révision espacée
 

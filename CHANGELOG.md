@@ -23,6 +23,11 @@ Le workflow de release reprend la section de la version comme notes de release :
 - Résultats détaillés : XP par bonnes réponses et bonus de combo, notes à revoir.
 - Écran « Niveau supérieur » et compétences débloquées.
 - Confirmation avant de quitter un exercice commencé.
+- Démarrage au premier lancement : bienvenue, point de départ, objectif du jour de 5 à 20 minutes.
+- Le point de départ débloque le parcours : « je lis les deux clés » ouvre directement la clé de fa et la grande portée.
+- Réglages (onglet Profil) : noms des notes do-ré-mi ou C-D-E, noms sous les touches, point de départ, objectif du jour, vibrations, thème clair, sombre ou système.
+- Vibration courte si la réponse est juste, plus longue si elle est fausse.
+- À propos : version de l'appli et licences des polices.
 
 ### Modifié
 
@@ -32,6 +37,7 @@ Le workflow de release reprend la section de la version comme notes de release :
 - Les leçons se débloquent dans l'ordre de l'arbre de compétences.
 - Après chaque réponse, juste ou fausse, un panneau de correction monte sur les réponses et attend « Continuer ».
 - Avec une armure, la réponse porte l'altération : en sol majeur, un fa se répond fa dièse.
+- Objectif du jour en XP selon la durée choisie : 300 XP pour 5 minutes, jusqu'à 1 200 pour 20 minutes (100 XP fixes avant).
 
 ## [0.0.1] - 2026-10-28 (bêta 1)
 
