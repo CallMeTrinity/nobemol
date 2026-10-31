@@ -80,6 +80,35 @@ void main() {
     expect(progress.bestScores, isEmpty);
   });
 
+  test('cartes : écrites avec la réponse, rejouées à la lecture', () async {
+    Future<void> session(DateTime at, {required bool right}) =>
+        store.recordSession(
+          lessonId: null,
+          startedAt: at,
+          finishedAt: at,
+          answers: [
+            AnswerRecord(
+              expected: DiatonicStep.f,
+              given: right ? DiatonicStep.f : DiatonicStep.g,
+              elapsed: const Duration(seconds: 1),
+              xp: right ? 10 : 0,
+              card: 'note:treble:f5',
+            ),
+            // Sans carte (réponse d'avant la v2) : ignorée.
+            answer(DiatonicStep.c, DiatonicStep.d, 0),
+          ],
+          bestCombo: 0,
+        );
+
+    await session(start, right: false);
+    await session(start.add(const Duration(days: 1)), right: true);
+
+    final cards = (await store.load()).cards;
+    expect(cards.keys, ['note:treble:f5']);
+    expect(cards.values.single.box, 2);
+    expect(cards.values.single.due, DateTime(2026, 11, 2));
+  });
+
   test('théorie : une ligne par leçon, remplacée à chaque page', () async {
     await store.saveTheory(
       'treble-clef',

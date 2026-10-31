@@ -6,6 +6,15 @@ Le workflow de release reprend la section de la version comme notes de release :
 
 ## [Non publié]
 
+### Ajouté
+
+- Onglet Réviser : chaque note, durée ou signe raté devient une carte. Elle revient le lendemain, puis dans 3, 7, 14 et 30 jours tant que la réponse est juste. Une erreur, et elle repart du début.
+- Révision du jour (15 cartes, environ 3 minutes), cartes nouvelles et acquises, et les plus difficiles.
+
+### Modifié
+
+- Chaque réponse garde la carte de sa question. La mise à jour depuis la `1.0.0` garde toute la progression, mais les erreurs passées ne créent pas de cartes.
+
 ## [1.0.0] - 2026-10-30 (lancement)
 
 Version de lancement : les étapes 6 à 9 de la [feuille de route](https://github.com/CallMeTrinity/nobemol/blob/main/ROADMAP.md) sur le MVP de la bêta. Une mise à jour depuis la `0.0.1` s'installe par-dessus.

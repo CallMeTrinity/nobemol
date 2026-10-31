@@ -6,7 +6,34 @@
   "tabArcade": "Arcade",
   "tabProfile": "Profil",
   "comingSoon": "Bientôt",
-  "reviewSoon": "Les notes ratées reviendront ici, de plus en plus espacées à mesure que tu les retiens.",
+  "reviewEmpty": "Rien à réviser pour l'instant. Chaque note, durée ou signe raté revient ici le lendemain, puis de plus en plus espacé à mesure que tu le retiens.",
+  "reviewToday": "Révision du jour",
+  "reviewSession": "{count, plural, =1{1 carte} other{{count} cartes}} · environ {minutes} min",
+  "@reviewSession": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "minutes": { "type": "int" }
+    }
+  },
+  "reviewNothing": "Rien à réviser aujourd'hui.",
+  "reviewNext": "{days, plural, =1{Prochaine carte demain.} other{Prochaine carte dans {days} jours.}}",
+  "@reviewNext": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "reviewStart": "Réviser",
+  "reviewDue": "À réviser",
+  "reviewFresh": "Nouvelles",
+  "reviewAcquired": "Acquises",
+  "reviewRule": "Une carte ratée revient le lendemain. Juste, elle revient dans 3, 7, 14 puis 30 jours. Une erreur, et elle repart du début.",
+  "reviewHardest": "Les plus difficiles",
+  "reviewMisses": "{count, plural, =1{ratée 1 fois} other{ratée {count} fois}}",
+  "@reviewMisses": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "arcadeSoon": "Des parties contre la montre, avec les notes déjà apprises.",
   "profileSoon": "Ton niveau, tes statistiques et tes succès.",
   "close": "Fermer",

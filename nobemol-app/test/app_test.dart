@@ -25,6 +25,7 @@ import 'package:nobemol/main.dart';
 import 'package:nobemol/onboarding/onboarding_screen.dart';
 import 'package:nobemol/progress/course.dart';
 import 'package:nobemol/progress/database.dart';
+import 'package:nobemol/progress/progress.dart';
 import 'package:nobemol/progress/progress_provider.dart';
 import 'package:nobemol/progress/xp.dart';
 import 'package:nobemol/reading/beats.dart';
@@ -34,6 +35,8 @@ import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/reading/reading_screen.dart';
 import 'package:nobemol/reading/session.dart';
 import 'package:nobemol/reading/start_level.dart';
+import 'package:nobemol/review/card.dart';
+import 'package:nobemol/review/review_screen.dart';
 import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/settings/settings_screen.dart';
 import 'package:nobemol/theme/tokens.dart';
@@ -468,6 +471,118 @@ void main() {
     },
   );
 
+  group('révision', () {
+    /// Ouvre l'onglet Réviser.
+    Future<void> openReview(WidgetTester tester) async {
+      await tester.tap(find.byKey(const ValueKey('tab-1')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ReviewScreen), findsOneWidget);
+    }
+
+    testWidgets('une note ratée revient le lendemain, puis s’espace', (
+      tester,
+    ) async {
+      final container = await startSession(tester, 'Je débute');
+      const level = StartLevel.beginner;
+      final missed = cardOf(
+        container.read(sessionProvider(level.params)).question,
+      );
+      for (var i = 0; i < sessionLength; i++) {
+        await answer(tester, container, level, right: i > 0);
+      }
+      await tester.pumpAndSettle();
+
+      // Le jour même : la carte existe, pas encore due.
+      await launch(tester);
+      await openReview(tester);
+      expect(find.text("Rien à réviser aujourd'hui."), findsOneWidget);
+      expect(find.text('Prochaine carte demain.'), findsOneWidget);
+      expect(find.byKey(const ValueKey('review-start')), findsNothing);
+
+      // Le lendemain : elle revient.
+      now = now.add(const Duration(days: 1));
+      await launch(tester);
+      await openReview(tester);
+      expect(find.text('1 carte · environ 1 min'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('review-start')));
+      await tester.pumpAndSettle();
+
+      final exercise =
+          tester.widget<ReadingScreen>(find.byType(ReadingScreen)).exercise
+              as ReviewExercise;
+      final question = exercise.cards.single;
+      expect(cardOf(question), missed);
+      // Seule sur sa portée, en grand, comme la lecture de notes.
+      expect(question.system.staves.single.notes, hasLength(1));
+      await give(tester, question.answer);
+      await next(tester);
+      await tester.pumpAndSettle();
+      expect(find.text('SESSION TERMINÉE'), findsOneWidget);
+      // Rejouée, une révision ne serait plus une révision.
+      expect(find.text('Recommencer'), findsNothing);
+
+      // Juste : elle revient dans 3 jours.
+      await launch(tester);
+      await openReview(tester);
+      expect(find.text('Prochaine carte dans 3 jours.'), findsOneWidget);
+
+      now = now.add(const Duration(days: 3));
+      await launch(tester);
+      await openReview(tester);
+      expect(find.byKey(const ValueKey('review-start')), findsOneWidget);
+    });
+
+    testWidgets('sans carte : l’onglet explique ce qui viendra', (
+      tester,
+    ) async {
+      await launch(tester);
+      await openReview(tester);
+      expect(find.textContaining('Rien à réviser pour l'), findsOneWidget);
+    });
+
+    testWidgets('les plus difficiles, et les signes en révision', (
+      tester,
+    ) async {
+      final store = ProgressStore(db);
+      // Un crescendo raté deux fois, la veille et l'avant-veille.
+      for (final days in [2, 1]) {
+        final at = now.subtract(Duration(days: days));
+        await store.recordSession(
+          lessonId: 'hairpins',
+          startedAt: at,
+          finishedAt: at,
+          answers: [
+            AnswerRecord(
+              expected: Marking.crescendo,
+              given: Marking.diminuendo,
+              elapsed: const Duration(seconds: 2),
+              xp: 0,
+              card: 'marking:hairpin:crescendo',
+            ),
+          ],
+          bestCombo: 0,
+        );
+      }
+      await launch(tester);
+      await openReview(tester);
+      expect(find.text('Les plus difficiles'), findsOneWidget);
+      expect(find.text('ratée 2 fois'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('review-start')));
+      await tester.pumpAndSettle();
+      // Les réponses de la leçon des soufflets.
+      for (final marking in [
+        Marking.piano,
+        Marking.forte,
+        Marking.crescendo,
+        Marking.diminuendo,
+      ]) {
+        expect(find.byKey(ValueKey('answer-${marking.name}')), findsOneWidget);
+      }
+      expect(find.text('Ce signe veut dire…'), findsOneWidget);
+    });
+  });
+
   testWidgets('quatre onglets, chacun garde sa place', (tester) async {
     await openLesson(tester, 'treble-clef');
     // La leçon passe au-dessus de la barre d'onglets.
@@ -475,8 +590,11 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('close')));
     await tester.pumpAndSettle();
 
-    for (final (index, title) in ['Réviser', 'Arcade', 'Profil'].indexed) {
-      await tester.tap(find.byKey(ValueKey('tab-${index + 1}')));
+    await tester.tap(find.byKey(const ValueKey('tab-1')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ReviewScreen), findsOneWidget);
+    for (final (index, title) in ['Arcade', 'Profil'].indexed) {
+      await tester.tap(find.byKey(ValueKey('tab-${index + 2}')));
       await tester.pumpAndSettle();
       expect(find.text(title), findsWidgets);
       expect(find.text('BIENTÔT'), findsOneWidget);

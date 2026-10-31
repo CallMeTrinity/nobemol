@@ -1,7 +1,7 @@
 // Migrations de la base, une par version de schéma. Les schémas figés
 // (drift_schemas/) et generated/ viennent de
 // `dart run drift_dev make-migrations` : voir doc/database.md.
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:drift_dev/api/migrations_native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +10,7 @@ import 'package:nobemol/progress/database.dart';
 
 import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;
+import 'generated/schema_v2.dart' as v2;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -82,6 +83,30 @@ void main() {
     expect(
       (await db.select(db.masteredSkills).getSingle()).skillId,
       'note-reading.treble',
+    );
+    // v2 : les réponses de la v1 n'ont pas de carte.
+    expect((await db.select(db.answers).getSingle()).card, isNull);
+    await db.close();
+  });
+
+  test('données de la v2', () async {
+    final schema = await verifier.schemaAt(2);
+    final old = v2.DatabaseAtV2(schema.newConnection());
+    await old.customStatement(
+      "INSERT INTO sessions (lesson_id, started_at, finished_at, questions, "
+      "correct, xp, best_combo) VALUES (NULL, "
+      "'2026-10-29T18:00:00.000+01:00', '2026-10-29T18:01:00.000+01:00', 1, 0, 0, 0)",
+    );
+    await old.customStatement(
+      "INSERT INTO answers (session_id, expected, given, elapsed_ms, xp, card) "
+      "VALUES (1, 'fSharp', 'g', 1200, 0, 'note:treble:fSharp5')",
+    );
+    await old.close();
+
+    final db = NobemolDatabase(schema.newConnection());
+    expect(
+      (await db.select(db.answers).getSingle()).card,
+      'note:treble:fSharp5',
     );
     await db.close();
   });
