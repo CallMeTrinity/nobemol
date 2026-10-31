@@ -78,16 +78,31 @@ class MasteredSkills extends Table {
   Set<Column> get primaryKey => {skillId};
 }
 
+/// Succès débloqué, une fois pour toutes, comme une compétence maîtrisée :
+/// les succès sont définis dans `assets/achievements.yaml`.
+@DataClassName('AchievementRow')
+class Achievements extends Table {
+  TextColumn get achievementId => text()();
+
+  /// Fin de la session qui l'a débloqué.
+  DateTimeColumn get unlockedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {achievementId};
+}
+
 /// Progression de l'élève, sur le téléphone.
 ///
 /// La bêta est installée : chaque changement de schéma passe par une
 /// version et une migration testée (voir `doc/database.md`).
-@DriftDatabase(tables: [Sessions, Answers, Theory, MasteredSkills])
+@DriftDatabase(
+  tables: [Sessions, Answers, Theory, MasteredSkills, Achievements],
+)
 class NobemolDatabase extends _$NobemolDatabase {
   NobemolDatabase(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -98,6 +113,9 @@ class NobemolDatabase extends _$NobemolDatabase {
       from2To3: (m, schema) async {
         await m.addColumn(schema.sessions, schema.sessions.arcade);
         await m.addColumn(schema.sessions, schema.sessions.score);
+      },
+      from3To4: (m, schema) async {
+        await m.createTable(schema.achievements);
       },
     ),
     beforeOpen: (details) async {
