@@ -62,7 +62,8 @@ Application mobile pour apprendre et réviser le solfège. Le but n'est pas d'af
 | Point de départ | Compétences **acquises**, calculées depuis le réglage, pas stockées | Débloque ce qui suit sans marquer de maîtrise. Changer de point de départ est réversible, contrairement à une maîtrise en base. |
 | Objectif quotidien | 5 à 20 min, soit **300 à 1 200 XP** | Calé sur le rythme réel (environ 60 XP par minute, correction comprise). Les 20 à 150 XP du design tombaient en deux réponses. |
 | Révision espacée | **Leitner**, 5 boîtes : retour à 1, 3, 7, 14 et 30 jours, une erreur renvoie en boîte 1. **Recalculée** depuis le journal des réponses, pas stockée | Les réponses sont binaires (juste / faux) : FSRS vise 4 notes auto-évaluées et des paramètres optimisés sur l'historique de l'élève. Leitner se teste à l'horloge et s'explique à l'écran. Chaque réponse garde sa carte : passer à FSRS revient à rejouer le journal, sans migration. Recto écarté : il trie par dernière note, sans date de retour. |
-| Arcade | **Notes seulement**, dans les clés déjà apprises. Records **calculés** depuis les sessions (`sessions.arcade`, `sessions.score`). 3 XP par note juste | La lecture rapide est l'automatisme visé. Une partie enchaîne une note toutes les 2 à 3 s : 3 XP gardent environ 60 XP par minute, le rythme de l'objectif du jour. |
+| Arcade | **Notes seulement**, dans les clés déjà apprises. Records **calculés** depuis les sessions (`sessions.arcade`, `sessions.score`). 3 XP par note juste. Un mode **Entraînement** sans record : tessiture et altérations au choix | La lecture rapide est l'automatisme visé. Une partie enchaîne une note toutes les 2 à 3 s : 3 XP gardent environ 60 XP par minute, le rythme de l'objectif du jour. Les réglages d'exercice vivent dans l'entraînement : un record ne se compare qu'à réglages égaux. |
+| Mise à jour | L'appli interroge **la dernière release GitHub** au lancement (repo public, sans token) et signale une version plus récente. Réglage pour la couper | Pas de Play Store pour prévenir. Seul accès réseau de l'appli : sans réseau, rien ne s'affiche et tout marche. |
 | Succès | **Définis en données** (`assets/achievements.yaml`), comptes calculés, déblocage gardé en base avec sa date | Comme la maîtrise : le compte suit la progression sans migration, un succès débloqué ne se reverrouille pas. Un succès s'ajoute sans code. |
 | Sauvegarde | **Fichier JSON** partagé (Drive, mail) et réimporté, qui **remplace** la progression et les réglages. Format versionné, indépendant du schéma | Pas de compte ni de serveur, cohérent avec l'APK hors Play Store. Pas de fusion : deux historiques mêlés fausseraient la révision et les records. |
 | Gestion d'état | **Riverpod 3, sans codegen** | Réglages, score, chrono et progression dès le MVP. Pas de `build_runner` pour l'état. |
@@ -174,10 +175,6 @@ Voir [ROADMAP.md](ROADMAP.md) : étapes, tâches et état d'avancement.
 - Standard ABC notation (abcnotation.com)
 - abcjs (référence de comportement ABC), code source de VexFlow (algorithmes de layout)
 - `simple_sheet_music` (pub.dev) : à lire pour s'inspirer, pas comme dépendance
-
-## Journal de comparaison Flutter / React Native
-
-À tenir pendant le développement : ce qui est plus simple, plus dur ou juste différent. Matière pour le portfolio.
 
 ## Questions ouvertes
 

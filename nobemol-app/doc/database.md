@@ -31,7 +31,7 @@ La bêta est installée : **une mise à jour de l'APK ne doit jamais perdre la p
 
 ## Schéma v3
 
-- `sessions.arcade` : la partie d'arcade, mode et clé (`chrono:treble`, `endless:bass`, `survival`). Format dans `lib/arcade/arcade.dart` (`recordKey`). `null` hors arcade.
+- `sessions.arcade` : la partie d'arcade, mode et clé (`chrono:treble`, `endless:bass`, `survival`, et l'entraînement `practice:treble`, sans record affiché). Format dans `lib/arcade/arcade.dart` (`recordKey`). `null` hors arcade.
 - `sessions.score` : son score, points en chrono, notes justes ailleurs. `null` hors arcade.
 - `answers.given` peut valoir `timeout` : le temps de la note est écoulé (arcade). C'est une erreur.
 
@@ -82,7 +82,7 @@ L'onglet Profil exporte toute la base et les réglages dans un fichier JSON (`no
   "app": "nobemol",
   "format": 1,
   "exportedAt": "2026-10-31T17:00:00.000Z",
-  "settings": { "naming": "solfege", "start": "beginner", "keyLabels": true, "goal": "five", "haptics": true, "theme": "system" },
+  "settings": { "naming": "solfege", "start": "beginner", "keyLabels": true, "goal": "five", "haptics": true, "theme": "system", "updateCheck": true },
   "progress": {
     "sessions": [
       { "lessonId": "treble-clef", "arcade": null, "score": null, "startedAt": "…", "finishedAt": "…",
