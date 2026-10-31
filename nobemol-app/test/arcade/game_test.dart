@@ -162,4 +162,33 @@ void main() {
       expect(clefs, hasLength(2));
     });
   });
+
+  group('entraînement', () {
+    final practice = game(ArcadeMode.practice);
+
+    test('sans chrono : le temps ne compte pas', () {
+      container.listen(arcadeProvider(practice), (_, _) {});
+      expect(state(practice).endsAt, isNull);
+      expect(state(practice).deadline, isNull);
+      now = now.add(const Duration(minutes: 10));
+      notifier(practice).tick();
+      expect(state(practice).phase, ArcadePhase.asking);
+      expect(state(practice).answers, isEmpty);
+    });
+
+    test('20 notes, justes ou fausses, puis la fin', () {
+      container.listen(arcadeProvider(practice), (_, _) {});
+      for (var i = 0; i < practiceLength - 1; i++) {
+        play(practice, right: i.isEven);
+      }
+      expect(state(practice).phase, ArcadePhase.asking);
+      play(practice, right: true);
+      final end = state(practice);
+      expect(end.phase, ArcadePhase.finished);
+      expect(end.answers, hasLength(practiceLength));
+      // Le score compte les notes justes.
+      expect(end.score, 11);
+      expect(end.xp, 11 * arcadeXpPerNote);
+    });
+  });
 }

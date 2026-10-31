@@ -46,6 +46,25 @@
   "arcadeEndlessRule": "Les notes accélèrent. Une erreur et c'est fini.",
   "arcadeSurvival": "Survie",
   "arcadeSurvivalRule": "3 erreurs. Une nouvelle clé toutes les 10 notes.",
+  "arcadePractice": "Entraînement",
+  "arcadePracticeRule": "{count} notes, sans chrono ni record. Tu choisis la tessiture et les altérations.",
+  "@arcadePracticeRule": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "arcadeLedgerLines": "Lignes supplémentaires",
+  "arcadeAccidentals": "Altérations",
+  "arcadeWith": "Avec",
+  "arcadeWithout": "Sans",
+  "arcadePracticeStart": "S'entraîner",
+  "arcadeProgress": "{current} / {total}",
+  "@arcadeProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
   "arcadeSurvivalLocked": "Se débloque au niveau {level}.",
   "@arcadeSurvivalLocked": {
     "placeholders": {

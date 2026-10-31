@@ -145,6 +145,10 @@ class ArcadeNotifier extends Notifier<ArcadeState> {
 
   DateTime _now() => ref.read(clockProvider)();
 
+  /// Un temps par note : sans fin et survie.
+  bool get _timed =>
+      game.mode == ArcadeMode.endless || game.mode == ArcadeMode.survival;
+
   @override
   ArcadeState build() {
     _random = ref.watch(randomProvider);
@@ -157,7 +161,7 @@ class ArcadeNotifier extends Notifier<ArcadeState> {
       startedAt: now,
       askedAt: now,
       endsAt: game.mode == ArcadeMode.chrono ? now.add(chronoLength) : null,
-      deadline: game.mode == ArcadeMode.chrono ? null : now.add(noteTime(0)),
+      deadline: _timed ? now.add(noteTime(0)) : null,
     );
   }
 
@@ -235,9 +239,7 @@ class ArcadeNotifier extends Notifier<ArcadeState> {
           phase: ArcadePhase.asking,
           stage: stage,
           askedAt: now,
-          deadline: () => game.mode == ArcadeMode.chrono
-              ? null
-              : now.add(noteTime(current.correct)),
+          deadline: () => _timed ? now.add(noteTime(current.correct)) : null,
           flashUntil: () => null,
           choice: () => null,
         );
@@ -250,6 +252,7 @@ class ArcadeNotifier extends Notifier<ArcadeState> {
     ArcadeMode.chrono => false,
     ArcadeMode.endless => !current.answers.last.correct,
     ArcadeMode.survival => current.lives == 0,
+    ArcadeMode.practice => current.answers.length == practiceLength,
   };
 
   void _finish(DateTime at) {

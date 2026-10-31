@@ -74,6 +74,39 @@ void main() {
     );
   });
 
+  test('entraînement : réglages bornés par ce qui est appris', () {
+    final treble = arcade([session(lessonId: 'treble-clef')]);
+    expect(treble.maxLedgerLines, 0);
+    expect(treble.accidentalsLearned, isFalse);
+    expect(
+      treble
+          .practice(ArcadeClef.treble, ledgerLines: 2, accidentals: true)!
+          .stages
+          .single,
+      const NoteReadingParams(staff: StaffSetup.treble),
+    );
+    expect(
+      treble.practice(ArcadeClef.bass, ledgerLines: 0, accidentals: false),
+      isNull,
+    );
+
+    final fluent = arcade([], acquired: StartLevel.fluent.acquired);
+    final game = fluent.practice(
+      ArcadeClef.grand,
+      ledgerLines: 2,
+      accidentals: true,
+    )!;
+    expect(game.record, 'practice:grand');
+    expect(
+      game.stages.single,
+      const NoteReadingParams(
+        staff: StaffSetup.grand,
+        ledgerLines: practiceMaxLedgerLines,
+        accidentals: true,
+      ),
+    );
+  });
+
   test('le point de départ compte comme appris', () {
     final both = arcade([], acquired: StartLevel.readsBoth.acquired);
     expect(both.clefs, ArcadeClef.values);

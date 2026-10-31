@@ -699,6 +699,38 @@ void main() {
       expect((await db.select(db.sessions).get()).last.arcade, 'chrono:treble');
     });
 
+    testWidgets('entraînement : réglages, 20 notes, pas de record', (
+      tester,
+    ) async {
+      await seed(lessonId: 'treble-clef');
+      await seed(lessonId: 'ledger-lines');
+      await openArcade(tester);
+      // Altérations pas encore apprises : pas de choix.
+      expect(find.byKey(const ValueKey('accidentals-true')), findsNothing);
+      await scrollTo(tester, find.byKey(const ValueKey('ledger-2')));
+      await tester.tap(find.byKey(const ValueKey('ledger-2')));
+      await tester.pumpAndSettle();
+      await scrollTo(tester, find.byKey(const ValueKey('practice-start')));
+      await tester.tap(find.byKey(const ValueKey('practice-start')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      final game = tester.widget<GameScreen>(find.byType(GameScreen)).game;
+      expect(game.mode, ArcadeMode.practice);
+      expect(game.stages.single.ledgerLines, 2);
+
+      for (var i = 0; i < practiceLength; i++) {
+        await hit(tester, game);
+      }
+      await tester.pumpAndSettle();
+      expect(find.text('PARTIE TERMINÉE'), findsOneWidget);
+      expect(find.text('20 notes'), findsOneWidget);
+      expect(find.byKey(const ValueKey('arcade-record')), findsNothing);
+      expect(
+        (await db.select(db.sessions).get()).last.arcade,
+        'practice:treble',
+      );
+    });
+
     testWidgets('sans fin : une erreur, et elle part en révision', (
       tester,
     ) async {

@@ -295,6 +295,8 @@ class _TopBar extends ConsumerWidget {
       ),
       _ => (Duration.zero, chronoLength),
     };
+    // Entraînement : pas de temps, la barre suit les notes.
+    final practice = game.mode == ArcadeMode.practice;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(Space.s, Space.m, Space.ml, 0),
@@ -312,7 +314,9 @@ class _TopBar extends ConsumerWidget {
           const SizedBox(width: Space.s),
           Expanded(
             child: ProgressBar(
-              value: (left.inMilliseconds / total.inMilliseconds).clamp(0, 1),
+              value: practice
+                  ? state.answers.length / practiceLength
+                  : (left.inMilliseconds / total.inMilliseconds).clamp(0, 1),
             ),
           ),
           const SizedBox(width: Space.s),
@@ -321,6 +325,15 @@ class _TopBar extends ConsumerWidget {
               formatDuration(
                 Duration(seconds: (left.inMilliseconds / 1000).ceil()),
               ),
+              style: AppText.metaLarge.copyWith(
+                color: c.ink,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            )
+          else if (practice)
+            Text(
+              l10n.arcadeProgress(state.answers.length, practiceLength),
+              key: const ValueKey('practice-progress'),
               style: AppText.metaLarge.copyWith(
                 color: c.ink,
                 fontFeatures: const [FontFeature.tabularFigures()],
@@ -422,8 +435,12 @@ class _End extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final c = context.colors;
     final previous = previousRecord;
+    // L'entraînement n'a pas de record : ses réglages changent tout.
+    final ranked = game.mode != ArcadeMode.practice;
     final newRecord =
-        state.score > 0 && (previous == null || state.score > previous);
+        ranked &&
+        state.score > 0 &&
+        (previous == null || state.score > previous);
     final answered = state.answers.length;
     final misses = answered - state.correct;
 
@@ -463,7 +480,7 @@ class _End extends StatelessWidget {
                 style: AppText.displayXl.copyWith(color: c.ink, fontSize: 48),
               ),
               // Sans record ni point, rien à dire.
-              if (newRecord || previous != null) ...[
+              if (newRecord || ranked && previous != null) ...[
                 const SizedBox(height: Space.m),
                 Text(
                   newRecord
