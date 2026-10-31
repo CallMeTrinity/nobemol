@@ -10,8 +10,10 @@ import 'package:nobemol/lessons/content_provider.dart';
 import 'package:nobemol/lessons/lesson.dart';
 import 'package:nobemol/lessons/lesson_screen.dart';
 import 'package:nobemol/onboarding/onboarding_screen.dart';
+import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/reading/reading_screen.dart';
 import 'package:nobemol/reading/start_level.dart';
+import 'package:nobemol/review/review_screen.dart';
 import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/settings/settings_screen.dart';
 import 'package:nobemol/shell/app_shell.dart';
@@ -93,7 +95,26 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          _soon('/reviser', (l10n) => (l10n.tabReview, l10n.reviewSoon)),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/reviser',
+                builder: (context, state) => const ReviewScreen(),
+                routes: [
+                  // La session vient de l'onglet (extra) : sans elle, après
+                  // un redémarrage par exemple, retour à l'onglet.
+                  GoRoute(
+                    path: 'session',
+                    parentNavigatorKey: root,
+                    redirect: (context, state) =>
+                        state.extra is ReviewExercise ? null : '/reviser',
+                    builder: (context, state) =>
+                        ReadingScreen(exercise: state.extra! as ReviewExercise),
+                  ),
+                ],
+              ),
+            ],
+          ),
           _soon('/arcade', (l10n) => (l10n.tabArcade, l10n.arcadeSoon)),
           StatefulShellBranch(
             routes: [

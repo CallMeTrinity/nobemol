@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:nobemol/review/leitner.dart';
+
 /// Réponse donnée pendant une session.
 class AnswerRecord {
   const AnswerRecord({
@@ -7,6 +9,7 @@ class AnswerRecord {
     required this.given,
     required this.elapsed,
     required this.xp,
+    this.card,
   });
 
   /// Bonne réponse et réponse donnée : `DiatonicStep`, `Beats` ou `Marking`.
@@ -16,6 +19,9 @@ class AnswerRecord {
   /// De l'affichage de la question au choix.
   final Duration elapsed;
   final int xp;
+
+  /// Carte de révision de la question (voir `lib/review/card.dart`).
+  final String? card;
 
   bool get correct => expected == given;
 }
@@ -63,6 +69,7 @@ class Progress {
     this.sessions = const [],
     this.theory = const {},
     this.mastered = const {},
+    this.cardAnswers = const [],
   });
 
   /// Sessions terminées, de la plus ancienne à la plus récente.
@@ -73,6 +80,12 @@ class Progress {
 
   /// Compétences maîtrisées au moins une fois. Elles le restent.
   final Set<String> mastered;
+
+  /// Réponses qui ont une carte, de la plus ancienne à la plus récente.
+  final List<CardAnswer> cardAnswers;
+
+  /// Cartes de révision, par clé.
+  late final Map<String, ReviewCard> cards = replay(cardAnswers);
 
   /// Total d'XP.
   late final int xp = sessions.fold(0, (sum, session) => sum + session.xp);

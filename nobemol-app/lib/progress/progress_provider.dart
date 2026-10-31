@@ -8,6 +8,7 @@ import 'package:nobemol/progress/course.dart';
 import 'package:nobemol/progress/database.dart';
 import 'package:nobemol/progress/progress.dart';
 import 'package:nobemol/progress/xp.dart';
+import 'package:nobemol/review/leitner.dart';
 import 'package:nobemol/lessons/skill_tree.dart';
 import 'package:nobemol/settings/settings.dart';
 
@@ -34,6 +35,20 @@ class ProgressStore {
     )..orderBy([(session) => OrderingTerm(expression: session.id)])).get();
     final theory = await _db.select(_db.theory).get();
     final mastered = await _db.select(_db.masteredSkills).get();
+    final answers = _db.answers;
+    final cardAnswers =
+        await (_db.select(answers).join([
+                innerJoin(
+                  _db.sessions,
+                  _db.sessions.id.equalsExp(answers.sessionId),
+                ),
+              ])
+              ..where(answers.card.isNotNull())
+              ..orderBy([
+                OrderingTerm(expression: _db.sessions.id),
+                OrderingTerm(expression: answers.id),
+              ]))
+            .get();
     return Progress(
       sessions: [
         for (final row in sessions)
@@ -54,6 +69,14 @@ class ProgressStore {
           ),
       },
       mastered: {for (final row in mastered) row.skillId},
+      cardAnswers: cardAnswers.map((row) {
+        final answer = row.readTable(answers);
+        return CardAnswer(
+          card: answer.card!,
+          correct: answer.expected == answer.given,
+          answeredAt: row.readTable(_db.sessions).finishedAt,
+        );
+      }).toList(),
     );
   }
 
@@ -87,6 +110,7 @@ class ProgressStore {
             given: answer.given.name,
             elapsedMs: answer.elapsed.inMilliseconds,
             xp: answer.xp,
+            card: Value(answer.card),
           ),
       ]),
     );

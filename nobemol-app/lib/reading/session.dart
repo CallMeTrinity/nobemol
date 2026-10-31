@@ -6,6 +6,7 @@ import 'package:nobemol/clock.dart';
 import 'package:nobemol/progress/progress.dart';
 import 'package:nobemol/progress/xp.dart';
 import 'package:nobemol/reading/note_reading.dart';
+import 'package:nobemol/review/card.dart';
 
 /// Hasard des exercices, remplaçable en test.
 final randomProvider = Provider<Random>((ref) => Random());
@@ -108,6 +109,7 @@ class SessionNotifier extends Notifier<SessionState> {
         given: choice,
         elapsed: now.difference(current.askedAt),
         xp: answerXp(combo),
+        card: cardOf(current.question),
       ),
     ];
     state = SessionState(

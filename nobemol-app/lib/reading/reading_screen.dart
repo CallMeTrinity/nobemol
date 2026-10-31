@@ -18,6 +18,7 @@ import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/reading/session.dart';
+import 'package:nobemol/review/card_tile.dart';
 import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/depth.dart';
@@ -161,13 +162,13 @@ class _Exercise extends ConsumerWidget {
     final (target, halo) = _targetColors(session, c);
     final question = session.question;
     final feedback = session.phase == SessionPhase.feedback;
-    final caption = switch (exercise) {
-      NoteReadingParams() || IdentifyNoteExercise() =>
-        _accidentals(exercise)
+    final caption = switch (question) {
+      NoteQuestion() =>
+        _accidentals(exercise.choicesFor(question))
             ? l10n.keyboardAccidentals
             : l10n.keyboardNaturals,
-      IdentifyDurationExercise() => l10n.durationsHint,
-      IdentifyMarkingExercise() => null,
+      DurationQuestion() => l10n.durationsHint,
+      MarkingQuestion() => null,
     };
 
     return Column(
@@ -194,10 +195,10 @@ class _Exercise extends ConsumerWidget {
                 style: AppText.meta.copyWith(color: c.inkMuted),
               ),
               const SizedBox(height: Space.s),
-              Text(switch (exercise) {
-                IdentifyDurationExercise() => l10n.rhythmQuestion,
-                IdentifyMarkingExercise() => l10n.markingQuestion,
-                _ => l10n.noteQuestion,
+              Text(switch (question) {
+                NoteQuestion() => l10n.noteQuestion,
+                DurationQuestion() => l10n.rhythmQuestion,
+                MarkingQuestion() => l10n.markingQuestion,
               }, style: AppText.titlePrompt.copyWith(color: c.ink)),
             ],
           ),
@@ -211,7 +212,10 @@ class _Exercise extends ConsumerWidget {
                 fit: BoxFit.scaleDown,
                 child: NotationView(
                   system: question.system,
-                  staffSpace: exercise is NoteReadingParams
+                  // Une note, une durée ou un signe seul : en grand.
+                  staffSpace:
+                      exercise is NoteReadingParams ||
+                          exercise is ReviewExercise
                       ? StaffSpaces.exercise
                       : StaffSpaces.phrase,
                   options: exercise.layoutOptions,
@@ -261,9 +265,8 @@ class _Exercise extends ConsumerWidget {
 }
 
 /// Vrai si les touches noires du clavier sont ouvertes.
-bool _accidentals(ReadingExercise exercise) => exercise.choices.any(
-  (choice) => choice is NoteName && choice.accidental != null,
-);
+bool _accidentals(List<Enum> choices) =>
+    choices.any((choice) => choice is NoteName && choice.accidental != null);
 
 /// Couleur de la cible et de son halo : accent pendant la question, puis
 /// vert ou rouge à la correction.
@@ -428,20 +431,20 @@ class _Answers extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final choices = exercise.choices;
+    final choices = exercise.choicesFor(session.question);
 
-    return switch (exercise) {
-      NoteReadingParams() || IdentifyNoteExercise() => NoteKeyboard(
+    return switch (session.question) {
+      NoteQuestion() => NoteKeyboard(
         label: (name) => l10n.noteFullName(name, naming: naming),
         whiteLabels: keyLabels,
         onKey: onAnswer,
-        accidentals: _accidentals(exercise),
+        accidentals: _accidentals(choices),
         tones: {
           for (final name in NoteName.values)
             if (_tone(name) != AnswerTone.rest) name: _tone(name),
         },
       ),
-      IdentifyDurationExercise() => _Grid(
+      DurationQuestion() => _Grid(
         columns: 4,
         children: [
           for (final choice in choices)
@@ -457,7 +460,7 @@ class _Answers extends StatelessWidget {
             ),
         ],
       ),
-      IdentifyMarkingExercise() => _Grid(
+      MarkingQuestion() => _Grid(
         columns: 3,
         children: [
           for (final choice in choices)
@@ -833,10 +836,18 @@ class _Results extends ConsumerWidget {
                   runSpacing: Space.s,
                   children: [
                     for (final (question, given) in misses)
-                      _ReviewTile(
+                      CardTile(
                         question: question,
-                        given: given,
-                        naming: naming,
+                        // Une phrase entière serait trop large : seulement
+                        // la note seule.
+                        staff:
+                            question is NoteQuestion &&
+                            question.system.staves.every(
+                              (staff) => staff.notes.length <= 1,
+                            ),
+                        caption: l10n.resultReviewGiven(
+                          l10n.answerLabel(given, naming: naming),
+                        ),
                       ),
                   ],
                 ),
@@ -862,14 +873,18 @@ class _Results extends ConsumerWidget {
                   large: true,
                   expand: true,
                 ),
-                const SizedBox(height: Space.s),
-                DepthButton(
-                  label: l10n.resultRestart,
-                  onPressed: onRestart,
-                  variant: ButtonVariant.outline,
-                  large: true,
-                  expand: true,
-                ),
+                // Une révision rejouée ne serait plus une révision : ses
+                // cartes ne sont plus dues.
+                if (exercise is! ReviewExercise) ...[
+                  const SizedBox(height: Space.s),
+                  DepthButton(
+                    label: l10n.resultRestart,
+                    onPressed: onRestart,
+                    variant: ButtonVariant.outline,
+                    large: true,
+                    expand: true,
+                  ),
+                ],
               ],
             ),
           ),
@@ -900,60 +915,6 @@ Object _reviewKey(Question question) => switch (question) {
   ),
   _ => question.answer,
 };
-
-/// Une question à revoir : la note seule sur sa portée quand elle est
-/// seule, la bonne réponse, et celle donnée.
-class _ReviewTile extends StatelessWidget {
-  const _ReviewTile({
-    required this.question,
-    required this.given,
-    required this.naming,
-  });
-
-  final Question question;
-  final Enum given;
-  final NoteNaming naming;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final c = context.colors;
-    final question = this.question;
-    // Une phrase entière serait trop large : seulement la note seule.
-    final alone =
-        question is NoteQuestion &&
-        question.system.staves.every((staff) => staff.notes.length <= 1);
-
-    return Container(
-      padding: const EdgeInsets.all(Space.sm),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(Radii.button),
-        border: Border.all(color: c.line, width: 1.5),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (alone)
-            NotationView(
-              system: question.system,
-              staffSpace: StaffSpaces.mini,
-              color: c.ink,
-              highlights: {question.target: c.danger},
-            ),
-          Text(
-            l10n.answerLabel(question.answer, naming: naming),
-            style: AppText.titleCard.copyWith(fontSize: 15, color: c.ink),
-          ),
-          Text(
-            l10n.resultReviewGiven(l10n.answerLabel(given, naming: naming)),
-            style: AppText.body.copyWith(fontSize: 12, color: c.inkMuted),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 /// Palier franchi : un niveau, une compétence maîtrisée, et ce qui se
 /// débloque.

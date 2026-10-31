@@ -17,8 +17,9 @@ sealed class ReadingExercise {
   /// Nombre de questions d'une session.
   int get length;
 
-  /// Réponses possibles, une par bouton, dans l'ordre d'affichage.
-  List<Enum> get choices;
+  /// Réponses possibles de [question], une par bouton, dans l'ordre
+  /// d'affichage.
+  List<Enum> choicesFor(Question question);
 
   /// Réglages du layout, communs à toutes les questions.
   LayoutOptions get layoutOptions;
@@ -58,9 +59,11 @@ class NoteReadingParams extends ReadingExercise {
   @override
   int get length => sessionLength;
 
-  @override
   List<NoteName> get choices =>
       accidentals ? NoteName.values : NoteName.naturals;
+
+  @override
+  List<Enum> choicesFor(Question question) => choices;
 
   /// Réserve la place de la note la plus haute et la plus basse, altération
   /// comprise : la portée ne bouge pas d'une question à l'autre.
@@ -110,9 +113,11 @@ class IdentifyNoteExercise extends ReadingExercise {
   int get length => targets.length;
 
   /// Touches noires ouvertes dès que la phrase a une altération.
-  @override
   List<NoteName> get choices =>
       hasAccidentals(system) ? NoteName.values : NoteName.naturals;
+
+  @override
+  List<Enum> choicesFor(Question question) => choices;
 
   @override
   LayoutOptions get layoutOptions => const LayoutOptions();
@@ -146,8 +151,10 @@ class IdentifyDurationExercise extends ReadingExercise {
   @override
   int get length => targets.length;
 
+  List<Beats> get choices => Beats.values;
+
   @override
-  List<Enum> get choices => Beats.values;
+  List<Enum> choicesFor(Question question) => choices;
 
   @override
   LayoutOptions get layoutOptions => const LayoutOptions();
@@ -181,17 +188,61 @@ class IdentifyMarkingExercise extends ReadingExercise {
 
   /// Réponses proposées, choisies par l'auteur de la leçon, dans l'ordre de
   /// [Marking].
-  @override
   final List<Marking> choices;
 
   @override
   int get length => targets.length;
 
   @override
+  List<Enum> choicesFor(Question question) => choices;
+
+  @override
   LayoutOptions get layoutOptions => const LayoutOptions();
 
   @override
   QuestionSource questions(Random random) => _MarkingQuestions(this);
+}
+
+/// Révision : des cartes, chacune seule sur sa portée (voir
+/// `lib/review/card.dart`). Notes, durées et signes s'y mélangent : les
+/// réponses dépendent de la question.
+///
+/// Clé de la session comparée par identité : construite une fois, au
+/// lancement de la révision.
+class ReviewExercise extends ReadingExercise {
+  const ReviewExercise({required this.cards, this.markingChoices = const {}});
+
+  /// Questions des cartes, dans l'ordre.
+  final List<Question> cards;
+
+  /// Réponses proposées pour chaque signe des cartes.
+  final Map<Marking, List<Marking>> markingChoices;
+
+  @override
+  int get length => cards.length;
+
+  /// Touches noires ouvertes dès qu'une note de la révision est altérée,
+  /// pour toutes ses notes : elles ne trahissent pas la réponse.
+  @override
+  List<Enum> choicesFor(Question question) => switch (question) {
+    NoteQuestion() =>
+      cards.any(
+            (card) => card is NoteQuestion && card.answer.accidental != null,
+          )
+          ? NoteName.values
+          : NoteName.naturals,
+    DurationQuestion() => Beats.values,
+    MarkingQuestion(:final answer) => markingChoices[answer] ?? [answer],
+  };
+
+  /// La place de deux lignes supplémentaires, au-dessus et au-dessous : la
+  /// portée bouge peu d'une carte à l'autre.
+  @override
+  LayoutOptions get layoutOptions =>
+      const LayoutOptions(reserveAbove: 4.5, reserveBelow: 4.5);
+
+  @override
+  QuestionSource questions(Random random) => _CardQuestions(cards);
 }
 
 /// Une question : ce qui s'affiche, et la bonne réponse parmi les choix de
@@ -419,4 +470,15 @@ class _MarkingQuestions implements QuestionSource {
       explanation: exercise.explanations[target],
     );
   }
+}
+
+/// Les cartes d'une [ReviewExercise], dans l'ordre.
+class _CardQuestions implements QuestionSource {
+  _CardQuestions(this.cards);
+
+  final List<Question> cards;
+  var _index = 0;
+
+  @override
+  Question next({Question? previous}) => cards[_index++];
 }
