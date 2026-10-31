@@ -346,10 +346,23 @@ Tranché :
 
 ## En parallèle
 
-- [ ] Réglages d'exercice : clé de sol, clé de fa ou grande portée, tessiture, altérations
-- [ ] Journal de comparaison Flutter / React Native (dans [IDEA.md](IDEA.md))
-- [ ] Icône d'appli depuis `nobemol-icone.svg` (aujourd'hui l'icône Flutter par défaut)
-- [ ] Vérification de mise à jour : pas de Play Store, donc l'appli peut interroger la dernière release GitHub et le signaler. Demande un repo public (l'API des releases d'un repo privé exige un token)
+- [x] Réglages d'exercice : mode **Entraînement** de l'arcade, clé, lignes supplémentaires (0 à 2) et altérations au choix, dans la limite de ce qui est appris
+- [x] ~~Journal de comparaison Flutter / React Native~~ : annulé
+- [x] Icône d'appli depuis `nobemol-icone.svg` : adaptative et vectorielle (Android 8 et plus, monochrome pour les icônes à thème), PNG pour Android 7 et le web (`tool/icons.sh`)
+- [x] Vérification de mise à jour : la dernière release GitHub, au lancement (`lib/update/`). Le repo est public : pas de token
+
+Tranché :
+
+- **Entraînement plutôt que des réglages sur tous les modes** : un record ne se compare qu'à réglages égaux. Les trois modes classés gardent les notes apprises. L'entraînement : 20 notes, sans chrono ni temps par note, correction rapide de l'arcade, 3 XP par note juste, erreurs en révision. Gardé en base comme une partie (`practice:treble`), sans record affiché ni succès.
+- Réglages de l'entraînement bornés par l'apprentissage : lignes supplémentaires une fois leur leçon jouée (jusqu'à 2, contre 1 dans les autres modes), altérations une fois leur leçon jouée. Un choix sans alternative ne s'affiche pas. Les réglages ne sont pas gardés : par défaut, ceux des autres modes.
+- **Icône** : l'avant-plan adaptatif est le glyphe du SVG, réécrit à la main en vecteur Android (`drawable/ic_launcher_foreground.xml`). Il tient dans le cercle de 66 dp gardé par toutes les formes. Les PNG viennent d'un script (Chrome headless et `sips`, macOS) : à relancer si le SVG change, et le vecteur à reprendre.
+- **Mise à jour** : une requête par lancement, `releases/latest` (ni brouillon ni pré-version), comparée à la version de l'APK. Une tuile en haut du Profil ouvre la page de la release dans le navigateur. Sans réseau ou en cas d'erreur : rien. Réglage « Vérifier les mises à jour » dans À propos, actif par défaut, gardé dans la sauvegarde. Permission `INTERNET` ajoutée à l'APK de release : c'est le seul accès réseau.
+
+À vérifier :
+
+- Sur un vrai téléphone : l'icône dans le lanceur (rond, carré arrondi, goutte), l'icône à thème d'Android 13, et sur Android 7 si possible.
+- La tuile de mise à jour sur un vrai téléphone. La `1.0.0` ne vérifie rien : la tuile apparaîtra dans la version qui contient ce code, quand une release plus récente sortira.
+- Lien vers la release : le navigateur s'ouvre bien depuis l'appli (`<queries>` https dans le manifeste).
 
 ## Plus tard
 

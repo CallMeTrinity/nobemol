@@ -19,7 +19,8 @@ final arcadeOptionsProvider = Provider<Arcade>(
   ),
 );
 
-/// Onglet Arcade : la clé, puis les trois modes et leurs records.
+/// Onglet Arcade : la clé, puis les trois modes et leurs records, et
+/// l'entraînement avec ses réglages.
 class ArcadeScreen extends ConsumerStatefulWidget {
   const ArcadeScreen({super.key});
 
@@ -30,6 +31,11 @@ class ArcadeScreen extends ConsumerStatefulWidget {
 class _ArcadeScreenState extends ConsumerState<ArcadeScreen> {
   /// Clé choisie, la première apprise par défaut.
   ArcadeClef? _clef;
+
+  /// Réglages de l'entraînement, `null` tant que l'élève n'y a pas touché :
+  /// ceux des autres modes.
+  int? _ledgerLines;
+  bool? _accidentals;
 
   @override
   Widget build(BuildContext context) {
@@ -76,14 +82,23 @@ class _ArcadeScreenState extends ConsumerState<ArcadeScreen> {
             ),
             const SizedBox(height: Space.xl),
             for (final mode in ArcadeMode.values)
-              Padding(
-                padding: const EdgeInsets.only(bottom: Space.sm),
-                child: _ModeTile(
-                  mode: mode,
-                  game: arcade.game(mode, clef),
-                  record: arcade.record(mode, clef),
+              if (mode != ArcadeMode.practice)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: Space.sm),
+                  child: _ModeTile(
+                    mode: mode,
+                    game: arcade.game(mode, clef),
+                    record: arcade.record(mode, clef),
+                  ),
                 ),
-              ),
+            _PracticeTile(
+              arcade: arcade,
+              clef: clef,
+              ledgerLines: _ledgerLines ?? arcade.params(clef).ledgerLines,
+              accidentals: _accidentals ?? arcade.accidentalsLearned,
+              onLedgerLines: (value) => setState(() => _ledgerLines = value),
+              onAccidentals: (value) => setState(() => _accidentals = value),
+            ),
           ],
         ],
       ),
@@ -162,6 +177,100 @@ class _ModeTile extends StatelessWidget {
   }
 }
 
+/// L'entraînement : sa règle, ses réglages dans la limite de ce qui est
+/// appris, et le bouton pour lancer.
+class _PracticeTile extends StatelessWidget {
+  const _PracticeTile({
+    required this.arcade,
+    required this.clef,
+    required this.ledgerLines,
+    required this.accidentals,
+    required this.onLedgerLines,
+    required this.onAccidentals,
+  });
+
+  final Arcade arcade;
+  final ArcadeClef clef;
+  final int ledgerLines;
+  final bool accidentals;
+  final ValueChanged<int> onLedgerLines;
+  final ValueChanged<bool> onAccidentals;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final c = context.colors;
+    final game = arcade.practice(
+      clef,
+      ledgerLines: ledgerLines,
+      accidentals: accidentals,
+    );
+
+    Widget option(String title, List<Widget> chips) => Padding(
+      padding: const EdgeInsets.only(top: Space.m),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title.toUpperCase(),
+            style: AppText.meta.copyWith(color: c.inkMuted),
+          ),
+          const SizedBox(height: Space.s),
+          Wrap(spacing: Space.s, runSpacing: Space.s, children: chips),
+        ],
+      ),
+    );
+
+    return AppTile(
+      key: const ValueKey('mode-practice'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.arcadeModeName(ArcadeMode.practice),
+            style: AppText.titleCard.copyWith(fontSize: 15, color: c.ink),
+          ),
+          const SizedBox(height: Space.xs),
+          Text(
+            l10n.arcadeModeRule(ArcadeMode.practice),
+            style: AppText.body.copyWith(fontSize: 13, color: c.inkMuted),
+          ),
+          // Un choix n'apparaît que s'il y a de quoi choisir.
+          if (arcade.maxLedgerLines > 0)
+            option(l10n.arcadeLedgerLines, [
+              for (var lines = 0; lines <= arcade.maxLedgerLines; lines++)
+                AppChip(
+                  key: ValueKey('ledger-$lines'),
+                  label: '$lines',
+                  selected: lines == ledgerLines,
+                  onTap: () => onLedgerLines(lines),
+                ),
+            ]),
+          if (arcade.accidentalsLearned)
+            option(l10n.arcadeAccidentals, [
+              for (final value in [false, true])
+                AppChip(
+                  key: ValueKey('accidentals-$value'),
+                  label: value ? l10n.arcadeWith : l10n.arcadeWithout,
+                  selected: value == accidentals,
+                  onTap: () => onAccidentals(value),
+                ),
+            ]),
+          const SizedBox(height: Space.ml),
+          DepthButton(
+            key: const ValueKey('practice-start'),
+            label: l10n.arcadePracticeStart,
+            onPressed: game == null
+                ? null
+                : () => context.push('/arcade/partie', extra: game),
+            expand: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Textes de l'arcade qui dépendent d'un mode ou d'une clé.
 extension ArcadeLabels on AppLocalizations {
   String arcadeClefName(ArcadeClef clef) => switch (clef) {
@@ -174,12 +283,14 @@ extension ArcadeLabels on AppLocalizations {
     ArcadeMode.chrono => arcadeChrono,
     ArcadeMode.endless => arcadeEndless,
     ArcadeMode.survival => arcadeSurvival,
+    ArcadeMode.practice => arcadePractice,
   };
 
   String arcadeModeRule(ArcadeMode mode) => switch (mode) {
     ArcadeMode.chrono => arcadeChronoRule,
     ArcadeMode.endless => arcadeEndlessRule,
     ArcadeMode.survival => arcadeSurvivalRule,
+    ArcadeMode.practice => arcadePracticeRule(practiceLength),
   };
 
   /// Points en chrono, notes ailleurs.

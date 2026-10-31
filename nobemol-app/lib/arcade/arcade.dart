@@ -5,7 +5,7 @@ import 'package:nobemol/progress/progress.dart';
 import 'package:nobemol/progress/xp.dart';
 import 'package:nobemol/reading/note_reading.dart';
 
-/// Les trois parties d'arcade. Lecture de notes seulement.
+/// Les parties d'arcade. Lecture de notes seulement.
 enum ArcadeMode {
   /// 60 secondes : le plus de points possible.
   chrono,
@@ -15,6 +15,10 @@ enum ArcadeMode {
 
   /// Trois erreurs, et de nouvelles clés en route.
   survival,
+
+  /// Sans chrono ni record : [practiceLength] notes, tessiture et
+  /// altérations au choix.
+  practice,
 }
 
 /// Clé d'une partie de chrono ou de sans fin. La survie les mélange.
@@ -45,6 +49,13 @@ int comboMultiplier(int combo) => min(1 + combo ~/ 5, 4);
 /// première, 5 % de moins à chaque note juste, jamais moins de 1,5 s.
 Duration noteTime(int correct) =>
     Duration(milliseconds: max(6000 * pow(0.95, correct), 1500).round());
+
+/// Notes d'un entraînement.
+const practiceLength = 20;
+
+/// Lignes supplémentaires au plus en entraînement, une fois leur leçon
+/// jouée (les autres modes en prennent une).
+const practiceMaxLedgerLines = 2;
 
 /// Vies de la survie.
 const survivalLives = 3;
@@ -138,8 +149,34 @@ class Arcade {
     accidentals: learned('note-reading.accidentals'),
   );
 
+  /// Lignes supplémentaires possibles en entraînement.
+  int get maxLedgerLines =>
+      learned('note-reading.ledger-lines') ? practiceMaxLedgerLines : 0;
+
+  bool get accidentalsLearned => learned('note-reading.accidentals');
+
+  /// Entraînement dans [clef], `null` si elle n'est pas apprise. La
+  /// tessiture et les altérations restent dans ce qui est appris.
+  ArcadeGame? practice(
+    ArcadeClef? clef, {
+    required int ledgerLines,
+    required bool accidentals,
+  }) => clef == null || !clefs.contains(clef)
+      ? null
+      : ArcadeGame(
+          mode: ArcadeMode.practice,
+          clef: clef,
+          stages: [
+            NoteReadingParams(
+              staff: clef.staff,
+              ledgerLines: min(ledgerLines, maxLedgerLines),
+              accidentals: accidentals && accidentalsLearned,
+            ),
+          ],
+        );
+
   /// Partie de [mode] dans [clef] (ignorée en survie), `null` si elle ne se
-  /// joue pas encore.
+  /// joue pas encore. L'entraînement prend les notes apprises.
   ArcadeGame? game(ArcadeMode mode, ArcadeClef? clef) => switch (mode) {
     ArcadeMode.survival when !survivalUnlocked || clefs.isEmpty => null,
     ArcadeMode.survival => ArcadeGame(

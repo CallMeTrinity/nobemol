@@ -22,6 +22,7 @@ void main() {
     naming: NoteNaming.letters,
     goal: DailyGoal.fifteen,
     theme: ThemeMode.dark,
+    updateCheck: false,
   );
 
   /// Une base avec deux sessions, une théorie, une maîtrise et un succès.
@@ -124,6 +125,7 @@ void main() {
     expect(read.onboarded, isTrue);
     expect(read.naming, NoteNaming.letters);
     expect(read.goal, DailyGoal.fifteen);
+    expect(read.updateCheck, isFalse);
     expect(read.theme, ThemeMode.dark);
 
     // Un réglage inconnu (retiré d'une version) : celui du téléphone.

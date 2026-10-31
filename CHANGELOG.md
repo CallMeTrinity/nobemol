@@ -16,6 +16,9 @@ Le workflow de release reprend la section de la version comme notes de release :
 - Statistiques sur 7 jours, 30 jours ou depuis le début : XP par jour face à l'objectif, temps de pratique, temps moyen par note, précision par clé et par note.
 - 18 succès, débloqués à la fin d'une leçon, d'une révision ou d'une partie, avec leur date.
 - Sauvegarde : la progression, les records, les succès et les réglages s'exportent dans un fichier (Drive, mail...) et se réimportent sur un autre téléphone, depuis le Profil ou dès le démarrage avec « J'ai déjà une sauvegarde ».
+- Arcade, mode Entraînement : 20 notes sans chrono ni record, avec la clé, les lignes supplémentaires et les altérations au choix.
+- Icône de Nobémol à la place de celle de Flutter, adaptée à la forme choisie par le téléphone et aux icônes à thème.
+- L'appli signale une nouvelle version publiée sur GitHub, en haut du Profil. Le réglage « Vérifier les mises à jour » coupe cette vérification, seul accès de l'appli à Internet.
 
 ### Modifié
 

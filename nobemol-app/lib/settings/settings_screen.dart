@@ -152,6 +152,16 @@ class SettingsScreen extends ConsumerWidget {
                   _Group(
                     children: [
                       _Row(
+                        title: l10n.settingsUpdateCheck,
+                        hint: l10n.settingsUpdateCheckHint,
+                        trailing: _Switch(
+                          key: const ValueKey('updateCheck'),
+                          value: settings.updateCheck,
+                          onChanged: (value) =>
+                              update((s) => s.copyWith(updateCheck: value)),
+                        ),
+                      ),
+                      _Row(
                         title: l10n.settingsVersion,
                         trailing: Text(
                           ref.watch(appVersionProvider).value ?? '',

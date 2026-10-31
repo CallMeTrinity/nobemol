@@ -31,8 +31,10 @@ nobemol-app/
 │   ├── arcade/           onglet Arcade : modes, partie, records
 │   ├── profile/          onglet Profil : chiffres clés, statistiques
 │   ├── achievements/     succès : lecture, calcul, écran
-│   └── backup/           sauvegarde : fichier JSON, partage et import
+│   ├── backup/           sauvegarde : fichier JSON, partage et import
+│   └── update/           nouvelle version : dernière release GitHub
 ├── tool/validate_content.dart  validateur du contenu, lancé en CI
+├── tool/icons.sh         icônes PNG depuis nobemol-icone.svg (macOS)
 └── packages/notation/    moteur de rendu de notation (publiable)
     ├── doc/abc.md        sous-ensemble ABC accepté par le parser
     ├── fonts/            Bravura, Edwin Italic (termes) + licences OFL
@@ -60,6 +62,7 @@ flutter test              # tests de l'appli
 flutter run -d chrome     # itération rapide sur le moteur
 flutter run               # appareil Android ou émulateur
 dart run tool/validate_content.dart  # après modification d'une leçon
+sh tool/icons.sh                     # après modification de nobemol-icone.svg
 dart run build_runner build          # après modification de la base (doc/database.md)
 ```
 
