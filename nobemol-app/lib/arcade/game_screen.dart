@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:notation/notation.dart';
 
+import 'package:nobemol/achievements/achievement.dart';
 import 'package:nobemol/arcade/arcade.dart';
 import 'package:nobemol/arcade/arcade_screen.dart';
 import 'package:nobemol/arcade/game.dart';
@@ -46,6 +47,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   /// Record d'avant la partie, pour dire s'il est battu.
   int? _previousRecord;
 
+  /// Enregistrement de la partie finie : les succès qu'elle débloque.
+  Future<SessionOutcome>? _outcome;
+
   ArcadeGame get _game => widget.game;
   ArcadeNotifier get _notifier => ref.read(arcadeProvider(_game).notifier);
 
@@ -75,6 +79,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   void _replay() {
     ref.invalidate(arcadeProvider(_game));
+    _outcome = null;
     _start();
   }
 
@@ -96,8 +101,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         _ticker?.cancel();
         // Une partie sans réponse n'a rien à garder.
         if (next.answers.isEmpty) return;
-        unawaited(
-          ref
+        setState(() {
+          _outcome = ref
               .read(progressProvider.notifier)
               .recordSession(
                 lessonId: null,
@@ -107,8 +112,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 bestCombo: next.bestCombo,
                 arcade: _game.record,
                 score: next.score,
-              ),
-        );
+              );
+        });
       }
     });
     final finished = state.phase == ArcadePhase.finished;
@@ -127,6 +132,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   game: _game,
                   state: state,
                   previousRecord: _previousRecord,
+                  outcome: _outcome,
                   onReplay: _replay,
                 )
               : Stack(
@@ -399,12 +405,16 @@ class _End extends StatelessWidget {
     required this.game,
     required this.state,
     required this.previousRecord,
+    required this.outcome,
     required this.onReplay,
   });
 
   final ArcadeGame game;
   final ArcadeState state;
   final int? previousRecord;
+
+  /// `null` pour une partie sans réponse, qui n'est pas gardée.
+  final Future<SessionOutcome>? outcome;
   final VoidCallback onReplay;
 
   @override
@@ -501,6 +511,50 @@ class _End extends StatelessWidget {
                   style: AppText.body.copyWith(color: c.inkMuted),
                 ),
               ],
+              // Pas d'écran de palier après une partie : les succès sont ici.
+              FutureBuilder(
+                future: outcome,
+                builder: (context, snapshot) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final achievement
+                        in snapshot.data?.achievements ?? const <Achievement>[])
+                      Padding(
+                        padding: const EdgeInsets.only(top: Space.s),
+                        child: AppTile(
+                          key: ValueKey('achievement-${achievement.id}'),
+                          highlighted: true,
+                          child: Row(
+                            children: [
+                              Icon(Icons.emoji_events_rounded, color: c.accent),
+                              const SizedBox(width: Space.m),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l10n.milestoneAchievement.toUpperCase(),
+                                      style: AppText.meta.copyWith(
+                                        color: c.accentDeep,
+                                      ),
+                                    ),
+                                    const SizedBox(height: Space.xs),
+                                    Text(
+                                      achievement.title,
+                                      style: AppText.titleCard.copyWith(
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),

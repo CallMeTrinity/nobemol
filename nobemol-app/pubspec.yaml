@@ -52,6 +52,8 @@ dependencies:
   drift_flutter: ^0.3.1
   shared_preferences: ^2.5.6
   package_info_plus: ^10.2.2
+  share_plus: ^13.3.1
+  file_picker: ^13.3.0
 
 dev_dependencies:
   flutter_test:
@@ -83,6 +85,7 @@ flutter:
   # Contenu pédagogique, vérifié en CI par tool/validate_content.dart.
   assets:
     - assets/skills.yaml
+    - assets/achievements.yaml
     - assets/lessons/
     # Licences des polices, affichées dans À propos (lib/licenses.dart).
     - fonts/BricolageGrotesque-OFL.txt

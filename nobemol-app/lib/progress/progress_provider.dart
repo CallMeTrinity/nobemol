@@ -2,6 +2,9 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:nobemol/achievements/achievement.dart';
+import 'package:nobemol/achievements/achievements.dart';
+import 'package:nobemol/backup/backup.dart';
 import 'package:nobemol/clock.dart';
 import 'package:nobemol/lessons/content_provider.dart';
 import 'package:nobemol/progress/course.dart';
@@ -35,6 +38,7 @@ class ProgressStore {
     )..orderBy([(session) => OrderingTerm(expression: session.id)])).get();
     final theory = await _db.select(_db.theory).get();
     final mastered = await _db.select(_db.masteredSkills).get();
+    final achievements = await _db.select(_db.achievements).get();
     final answers = _db.answers;
     final cardAnswers =
         await (_db.select(answers).join([
@@ -54,10 +58,12 @@ class ProgressStore {
         for (final row in sessions)
           SessionSummary(
             lessonId: row.lessonId,
+            startedAt: row.startedAt,
             finishedAt: row.finishedAt,
             questions: row.questions,
             correct: row.correct,
             xp: row.xp,
+            bestCombo: row.bestCombo,
             arcade: row.arcade,
             arcadeScore: row.score,
           ),
@@ -77,8 +83,13 @@ class ProgressStore {
           card: answer.card!,
           correct: answer.expected == answer.given,
           answeredAt: row.readTable(_db.sessions).finishedAt,
+          elapsed: Duration(milliseconds: answer.elapsedMs),
+          timedOut: answer.given == NoAnswer.timeout.name,
         );
       }).toList(),
+      achievements: {
+        for (final row in achievements) row.achievementId: row.unlockedAt,
+      },
     );
   }
 
@@ -133,6 +144,46 @@ class ProgressStore {
         ], mode: InsertMode.insertOrIgnore),
       );
 
+  /// Enregistre des succès débloqués. Un succès déjà enregistré garde sa
+  /// date.
+  Future<void> saveAchievements(Iterable<String> ids, DateTime at) => _db.batch(
+    (batch) => batch.insertAll(_db.achievements, [
+      for (final id in ids)
+        AchievementsCompanion.insert(achievementId: id, unlockedAt: at),
+    ], mode: InsertMode.insertOrIgnore),
+  );
+
+  /// Toute la base, pour une sauvegarde.
+  Future<ProgressRows> rows() async => ProgressRows(
+    sessions: await (_db.select(
+      _db.sessions,
+    )..orderBy([(session) => OrderingTerm(expression: session.id)])).get(),
+    answers: await (_db.select(
+      _db.answers,
+    )..orderBy([(answer) => OrderingTerm(expression: answer.id)])).get(),
+    theory: await _db.select(_db.theory).get(),
+    mastered: await _db.select(_db.masteredSkills).get(),
+    achievements: await _db.select(_db.achievements).get(),
+  );
+
+  /// Remplace toute la base par [rows], d'un seul bloc : une sauvegarde
+  /// importée. En cas d'erreur, rien ne change.
+  Future<void> replace(ProgressRows rows) => _db.transaction(() async {
+    // Les réponses partent avec leurs sessions (cascade).
+    await _db.delete(_db.sessions).go();
+    await _db.delete(_db.theory).go();
+    await _db.delete(_db.masteredSkills).go();
+    await _db.delete(_db.achievements).go();
+    await _db.batch((batch) {
+      batch
+        ..insertAll(_db.sessions, rows.sessions)
+        ..insertAll(_db.answers, rows.answers)
+        ..insertAll(_db.theory, rows.theory)
+        ..insertAll(_db.masteredSkills, rows.mastered)
+        ..insertAll(_db.achievements, rows.achievements);
+    });
+  });
+
   Future<void> saveTheory(String lessonId, TheoryProgress theory) => _db
       .into(_db.theory)
       .insertOnConflictUpdate(
@@ -146,13 +197,14 @@ class ProgressStore {
 }
 
 /// Ce qu'une session a changé : de l'XP, peut-être un niveau, des
-/// compétences maîtrisées et d'autres débloquées.
+/// compétences maîtrisées et d'autres débloquées, des succès.
 class SessionOutcome {
   const SessionOutcome({
     required this.xpBefore,
     required this.xpAfter,
     this.mastered = const [],
     this.unlocked = const [],
+    this.achievements = const [],
   });
 
   final int xpBefore;
@@ -164,11 +216,15 @@ class SessionOutcome {
   /// Compétences débloquées par cette session, qui ont des leçons.
   final List<Skill> unlocked;
 
+  /// Succès débloqués par cette session.
+  final List<Achievement> achievements;
+
   Level get level => Level.of(xpAfter);
   bool get levelUp => level.number > Level.of(xpBefore).number;
 
-  /// Un palier à fêter : un niveau, ou une compétence.
-  bool get milestone => levelUp || mastered.isNotEmpty;
+  /// Un palier à fêter : un niveau, une compétence ou un succès.
+  bool get milestone =>
+      levelUp || mastered.isNotEmpty || achievements.isNotEmpty;
 }
 
 /// Progression, lue au démarrage (voir main.dart) puis relue après chaque
@@ -219,6 +275,18 @@ class ProgressNotifier extends Notifier<Progress> {
       await _store.saveMastered(mastered, finishedAt);
       progress = await _store.load();
     }
+    // Après les maîtrises : un succès peut en dépendre.
+    final achievements = AchievementList(
+      content,
+      progress,
+    ).newlyReached.toList();
+    if (achievements.isNotEmpty) {
+      await _store.saveAchievements(
+        achievements.map((achievement) => achievement.id),
+        finishedAt,
+      );
+      progress = await _store.load();
+    }
     state = progress;
 
     final after = Course(content, progress, acquired: acquired);
@@ -233,7 +301,17 @@ class ProgressNotifier extends Notifier<Progress> {
                 before.skill(skill.skill.id)!.state == SkillState.locked)
               skill.skill,
       ],
+      achievements: achievements,
     );
+  }
+
+  /// Toute la base, pour une sauvegarde.
+  Future<ProgressRows> rows() => _store.rows();
+
+  /// Remplace toute la progression par celle d'une sauvegarde.
+  Future<void> restore(ProgressRows rows) async {
+    await _store.replace(rows);
+    state = await _store.load();
   }
 
   /// Note la page de théorie ouverte. [finished] : la dernière page est

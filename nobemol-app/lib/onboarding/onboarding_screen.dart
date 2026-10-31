@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:nobemol/backup/backup_actions.dart';
 import 'package:nobemol/l10n/app_localizations.dart';
 import 'package:nobemol/progress/xp.dart';
 import 'package:nobemol/reading/start_level.dart';
@@ -16,7 +17,7 @@ import 'package:nobemol/ui/progress_bar.dart';
 
 /// Premier lancement : bienvenue, point de départ, objectif du jour. Les
 /// deux choix sont gardés à la fin seulement : un démarrage interrompu
-/// recommence.
+/// recommence. Avec une sauvegarde, rien à choisir : elle a ses réglages.
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -43,6 +44,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (mounted) context.go('/');
   }
 
+  Future<void> _restore() async {
+    if (await importBackup(context, ref) && mounted) context.go('/');
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -56,7 +61,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       child: Scaffold(
         body: SafeArea(
           child: switch (_step) {
-            0 => _Welcome(onStart: () => setState(() => _step = 1)),
+            0 => _Welcome(
+              onStart: () => setState(() => _step = 1),
+              onRestore: () => unawaited(_restore()),
+            ),
             1 => _Step(
               step: 1,
               title: l10n.onboardingLevelTitle,
@@ -89,9 +97,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 }
 
 class _Welcome extends StatelessWidget {
-  const _Welcome({required this.onStart});
+  const _Welcome({required this.onStart, required this.onRestore});
 
   final VoidCallback onStart;
+
+  /// « J'ai déjà une sauvegarde » : l'import, à la place du démarrage.
+  final VoidCallback onRestore;
 
   @override
   Widget build(BuildContext context) {
@@ -131,6 +142,14 @@ class _Welcome extends StatelessWidget {
             label: l10n.welcomeStart,
             onPressed: onStart,
             large: true,
+            expand: true,
+          ),
+          const SizedBox(height: Space.s),
+          DepthButton(
+            key: const ValueKey('onboarding-restore'),
+            label: l10n.welcomeRestore,
+            onPressed: onRestore,
+            variant: ButtonVariant.text,
             expand: true,
           ),
         ],

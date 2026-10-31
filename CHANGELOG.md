@@ -12,11 +12,16 @@ Le workflow de release reprend la section de la version comme notes de release :
 - Révision du jour (15 cartes, environ 3 minutes), cartes nouvelles et acquises, et les plus difficiles.
 - Onglet Arcade, avec les notes déjà apprises en clé de sol, en clé de fa ou sur la grande portée. Trois modes : Chrono (60 secondes, combo multiplicateur), Sans fin (les notes accélèrent, une erreur et c'est fini) et Survie (3 erreurs, de nouvelles clés en route, dès le niveau 5).
 - Records par mode et par clé, écran de fin de partie, pause. Les erreurs de l'arcade partent en révision.
+- Onglet Profil : niveau, leçons terminées, meilleur combo, record en chrono, précision globale.
+- Statistiques sur 7 jours, 30 jours ou depuis le début : XP par jour face à l'objectif, temps de pratique, temps moyen par note, précision par clé et par note.
+- 18 succès, débloqués à la fin d'une leçon, d'une révision ou d'une partie, avec leur date.
+- Sauvegarde : la progression, les records, les succès et les réglages s'exportent dans un fichier (Drive, mail...) et se réimportent sur un autre téléphone, depuis le Profil ou dès le démarrage avec « J'ai déjà une sauvegarde ».
 
 ### Modifié
 
 - L'arcade remplace la lecture libre en bas du Parcours.
 - Chaque réponse garde la carte de sa question. La mise à jour depuis la `1.0.0` garde toute la progression, mais les erreurs passées ne créent pas de cartes.
+- Les réglages passent dans le Profil, sous la sauvegarde. Les succès déjà mérités avant la mise à jour s'affichent tout de suite, et se fêtent à la session suivante.
 
 ## [1.0.0] - 2026-10-30 (lancement)
 

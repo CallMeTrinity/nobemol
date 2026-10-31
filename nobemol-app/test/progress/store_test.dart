@@ -140,4 +140,17 @@ void main() {
     )..where((row) => row.skillId.equals('note-reading.treble'))).getSingle();
     expect(treble.masteredAt, start);
   });
+
+  test('succès : la première date reste', () async {
+    await store.saveAchievements(['first-lesson'], start);
+    await store.saveAchievements([
+      'first-lesson',
+      'combo-10',
+    ], start.add(const Duration(days: 1)));
+
+    expect((await store.load()).achievements, {
+      'first-lesson': start,
+      'combo-10': start.add(const Duration(days: 1)),
+    });
+  });
 }

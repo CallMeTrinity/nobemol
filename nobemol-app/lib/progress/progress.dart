@@ -35,10 +35,12 @@ class AnswerRecord {
 class SessionSummary {
   const SessionSummary({
     required this.lessonId,
+    required this.startedAt,
     required this.finishedAt,
     required this.questions,
     required this.correct,
     required this.xp,
+    required this.bestCombo,
     this.arcade,
     this.arcadeScore,
   });
@@ -50,10 +52,12 @@ class SessionSummary {
   /// arcade.
   final String? arcade;
   final int? arcadeScore;
+  final DateTime startedAt;
   final DateTime finishedAt;
   final int questions;
   final int correct;
   final int xp;
+  final int bestCombo;
 
   /// Part de bonnes réponses, de 0 à 1.
   double get score => questions == 0 ? 0 : correct / questions;
@@ -82,6 +86,7 @@ class Progress {
     this.theory = const {},
     this.mastered = const {},
     this.cardAnswers = const [],
+    this.achievements = const {},
   });
 
   /// Sessions terminées, de la plus ancienne à la plus récente.
@@ -95,6 +100,9 @@ class Progress {
 
   /// Réponses qui ont une carte, de la plus ancienne à la plus récente.
   final List<CardAnswer> cardAnswers;
+
+  /// Succès débloqués, avec leur date. Ils le restent.
+  final Map<String, DateTime> achievements;
 
   /// Cartes de révision, par clé.
   late final Map<String, ReviewCard> cards = replay(cardAnswers);
@@ -135,6 +143,28 @@ class Progress {
   int xpOn(DateTime now) => sessions
       .where((session) => _sameDay(session.finishedAt.toLocal(), now))
       .fold(0, (sum, session) => sum + session.xp);
+
+  /// Jours (minuit local) où une session s'est terminée, dans l'ordre.
+  late final List<DateTime> practiceDays = {
+    for (final session in sessions) dayOf(session.finishedAt),
+  }.toList()..sort();
+
+  /// Plus longue série de jours de pratique consécutifs.
+  late final int bestStreak = () {
+    var best = 0;
+    var streak = 0;
+    DateTime? previous;
+    for (final day in practiceDays) {
+      // Jours de calendrier : un changement d'heure ne casse pas la série.
+      final next = previous == null
+          ? null
+          : DateTime(previous.year, previous.month, previous.day + 1);
+      streak = day == next ? streak + 1 : 1;
+      best = max(best, streak);
+      previous = day;
+    }
+    return best;
+  }();
 }
 
 bool _sameDay(DateTime a, DateTime b) =>

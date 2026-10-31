@@ -95,7 +95,109 @@
   },
   "arcadeReplay": "Rejouer",
   "arcadeDone": "Terminer",
-  "profileSoon": "Ton niveau, tes statistiques et tes succès.",
+  "profileFigures": "Chiffres clés",
+  "profileLessons": "Leçons terminées",
+  "profileBestCombo": "Meilleur combo",
+  "profileChronoRecord": "Record chrono",
+  "profileAccuracy": "Précision",
+  "profileStatsHint": "XP par jour, temps, précision par note",
+  "profileBackup": "Sauvegarde",
+  "profileBackupHint": "Pas de compte : ta progression vit sur ce téléphone. Exporte-la dans un fichier pour la garder, ou pour passer sur un autre téléphone.",
+  "backupExport": "Exporter",
+  "backupExportHint": "Progression, records, succès et réglages",
+  "backupImport": "Importer",
+  "backupImportHint": "Remplace la progression de ce téléphone",
+  "backupInvalid": "Ce fichier n'est pas une sauvegarde de Nobémol.",
+  "backupTooNew": "Cette sauvegarde vient d'une version plus récente de Nobémol. Mets l'appli à jour, puis réessaie.",
+  "backupReplaceTitle": "Remplacer ta progression ?",
+  "backupReplaceBody": "La sauvegarde du {date} ({backupXp} XP) remplace tout ce qui est sur ce téléphone ({currentXp} XP), réglages compris.",
+  "@backupReplaceBody": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "backupXp": { "type": "int" },
+      "currentXp": { "type": "int" }
+    }
+  },
+  "backupReplaceCancel": "Garder ma progression",
+  "backupReplaceConfirm": "Remplacer",
+  "backupRestored": "Sauvegarde importée : niveau {level}, {xp} XP.",
+  "@backupRestored": {
+    "placeholders": {
+      "level": { "type": "int" },
+      "xp": { "type": "int" }
+    }
+  },
+  "statsTitle": "Statistiques",
+  "statsWeek": "7 jours",
+  "statsMonth": "30 jours",
+  "statsAll": "Tout",
+  "statsEmpty": "Aucune session sur cette période.",
+  "statsXp": "XP gagnés",
+  "statsXpTotal": "{xp} XP",
+  "@statsXpTotal": {
+    "placeholders": {
+      "xp": { "type": "int" }
+    }
+  },
+  "statsGoalDays": "Objectif atteint {days, plural, =0{aucun jour} =1{1 jour} other{{days} jours}} sur {total}",
+  "@statsGoalDays": {
+    "placeholders": {
+      "days": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "statsGoalDay": "Trait : {xp} XP par jour",
+  "@statsGoalDay": {
+    "placeholders": {
+      "xp": { "type": "int" }
+    }
+  },
+  "statsGoalWeek": "Trait : {xp} XP par semaine",
+  "@statsGoalWeek": {
+    "placeholders": {
+      "xp": { "type": "int" }
+    }
+  },
+  "statsPractice": "Temps de pratique",
+  "statsTimePerNote": "Temps par note",
+  "statsMinutes": "{minutes} min",
+  "@statsMinutes": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "statsHours": "{hours} h {minutes}",
+  "@statsHours": {
+    "placeholders": {
+      "hours": { "type": "int" },
+      "minutes": { "type": "String" }
+    }
+  },
+  "statsNotes": "Lecture de notes",
+  "statsNotesEmpty": "Aucune note lue sur cette période.",
+  "statsNotesHint": "Bonnes réponses par note. Sur la grande portée, chaque note compte dans sa clé.",
+  "achievementsTitle": "Succès",
+  "achievementsCount": "{unlocked} sur {total} débloqués",
+  "@achievementsCount": {
+    "placeholders": {
+      "unlocked": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "achievementUnlocked": "Débloqué",
+  "achievementUnlockedOn": "Débloqué le {date}",
+  "@achievementUnlockedOn": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "achievementProgress": "{current} / {target}",
+  "@achievementProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "target": { "type": "int" }
+    }
+  },
   "close": "Fermer",
   "back": "Retour",
   "courseLevel": "Niveau {level}",
@@ -262,6 +364,8 @@
   "milestoneSkill": "Compétence maîtrisée",
   "milestoneMastered": "Maîtrisé",
   "milestoneUnlocked": "Débloqué",
+  "milestoneAchievement": "Succès débloqué",
+  "milestoneAchievements": "Succès",
   "feedbackRightNote": "Juste, c'est un {name}",
   "@feedbackRightNote": {
     "placeholders": {
@@ -525,6 +629,7 @@
   "welcomeTitle": "Lire les notes sans y penser",
   "welcomeBody": "Une note, une réponse, une explication. Quelques minutes par jour, et la lecture devient un réflexe.",
   "welcomeStart": "Commencer",
+  "welcomeRestore": "J'ai déjà une sauvegarde",
   "onboardingStep": "Étape {step} sur {count}",
   "@onboardingStep": {
     "placeholders": {

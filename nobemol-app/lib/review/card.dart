@@ -69,9 +69,24 @@ Question? questionOf(String card) {
   };
 }
 
+/// Clé et nom d'une carte de note (statistiques), `null` pour une autre
+/// carte ou une note qui ne se lit plus.
+(Clef, NoteName)? noteOfCard(String card) {
+  final parts = card.split(':');
+  if (parts case ['note', final clefName, final note]) {
+    final clef = _clefs[clefName];
+    final name = NoteName.values.asNameMap()[_noteName.firstMatch(note)?[1]];
+    if (clef != null && name != null) return (clef, name);
+  }
+  return null;
+}
+
+/// Nom au clavier et octave : `fSharp5`.
+final _noteName = RegExp(r'^([a-zA-Z]+)(\d+)$');
+
 NoteQuestion? _note(String clefName, String note) {
   final clef = _clefs[clefName];
-  final match = RegExp(r'^([a-zA-Z]+)(\d+)$').firstMatch(note);
+  final match = _noteName.firstMatch(note);
   final name = NoteName.values.asNameMap()[match?[1]];
   if (clef == null || name == null) return null;
   // L'altération est écrite, même quand elle venait de l'armure.

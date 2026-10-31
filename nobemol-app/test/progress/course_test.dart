@@ -47,10 +47,12 @@ exercise:
   SessionSummary played(String lessonId, int correct, {DateTime? at}) =>
       SessionSummary(
         lessonId: lessonId,
+        startedAt: at ?? t0,
         finishedAt: at ?? t0,
         questions: 10,
         correct: correct,
         xp: correct * 10,
+        bestCombo: correct,
       );
 
   test('au départ : la racine à faire, le reste verrouillé', () {
