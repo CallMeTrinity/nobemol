@@ -11,6 +11,7 @@ import 'package:nobemol/progress/database.dart';
 import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
+import 'generated/schema_v3.dart' as v3;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -108,6 +109,28 @@ void main() {
       (await db.select(db.answers).getSingle()).card,
       'note:treble:fSharp5',
     );
+    // v3 : une session d'avant n'est pas une partie d'arcade.
+    final session = await db.select(db.sessions).getSingle();
+    expect(session.arcade, isNull);
+    expect(session.score, isNull);
+    await db.close();
+  });
+
+  test('données de la v3', () async {
+    final schema = await verifier.schemaAt(3);
+    final old = v3.DatabaseAtV3(schema.newConnection());
+    await old.customStatement(
+      "INSERT INTO sessions (lesson_id, started_at, finished_at, questions, "
+      "correct, xp, best_combo, arcade, score) VALUES (NULL, "
+      "'2026-10-29T18:00:00.000+01:00', '2026-10-29T18:01:00.000+01:00', "
+      "24, 22, 66, 15, 'chrono:treble', 2150)",
+    );
+    await old.close();
+
+    final db = NobemolDatabase(schema.newConnection());
+    final session = await db.select(db.sessions).getSingle();
+    expect(session.arcade, 'chrono:treble');
+    expect(session.score, 2150);
     await db.close();
   });
 }
