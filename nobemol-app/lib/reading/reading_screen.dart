@@ -21,6 +21,7 @@ import 'package:nobemol/reading/session.dart';
 import 'package:nobemol/review/card_tile.dart';
 import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/theme/tokens.dart';
+import 'package:nobemol/ui/confirm_dialog.dart';
 import 'package:nobemol/ui/depth.dart';
 import 'package:nobemol/ui/fit_words.dart';
 import 'package:nobemol/ui/note_keyboard.dart';
@@ -916,8 +917,8 @@ Object _reviewKey(Question question) => switch (question) {
   _ => question.answer,
 };
 
-/// Palier franchi : un niveau, une compétence maîtrisée, et ce qui se
-/// débloque.
+/// Palier franchi : un niveau, une compétence maîtrisée ou un succès, et
+/// ce qui se débloque.
 class _Milestone extends StatelessWidget {
   const _Milestone({required this.outcome, required this.onDone});
 
@@ -929,7 +930,12 @@ class _Milestone extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final c = context.colors;
 
-    Widget skills(String title, List<Skill> skills, IconData icon) => Column(
+    /// Une liste titrée : titre et précision de chaque entrée.
+    Widget entries(
+      String title,
+      List<(String, String?)> entries,
+      IconData icon,
+    ) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: Space.xl),
@@ -937,7 +943,7 @@ class _Milestone extends StatelessWidget {
           title.toUpperCase(),
           style: AppText.meta.copyWith(color: c.inkMuted),
         ),
-        for (final skill in skills)
+        for (final (name, detail) in entries)
           Padding(
             padding: const EdgeInsets.only(top: Space.s),
             child: AppTile(
@@ -946,9 +952,24 @@ class _Milestone extends StatelessWidget {
                   Icon(icon, color: c.accent),
                   const SizedBox(width: Space.m),
                   Expanded(
-                    child: Text(
-                      skill.title,
-                      style: AppText.titleCard.copyWith(fontSize: 15),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          style: AppText.titleCard.copyWith(fontSize: 15),
+                        ),
+                        if (detail != null) ...[
+                          const SizedBox(height: Space.xxs),
+                          Text(
+                            detail,
+                            style: AppText.body.copyWith(
+                              fontSize: 13,
+                              color: c.inkMuted,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],
@@ -957,6 +978,15 @@ class _Milestone extends StatelessWidget {
           ),
       ],
     );
+    List<(String, String?)> skills(List<Skill> skills) => [
+      for (final skill in skills) (skill.title, null),
+    ];
+
+    final (kind, headline) = outcome.levelUp
+        ? (l10n.milestoneLevel, l10n.courseLevel(outcome.level.number))
+        : outcome.mastered.isNotEmpty
+        ? (l10n.milestoneSkill, outcome.mastered.first.title)
+        : (l10n.milestoneAchievement, outcome.achievements.first.title);
 
     return Column(
       key: const ValueKey('milestone'),
@@ -972,16 +1002,13 @@ class _Milestone extends StatelessWidget {
             ),
             children: [
               Text(
-                (outcome.levelUp ? l10n.milestoneLevel : l10n.milestoneSkill)
-                    .toUpperCase(),
+                kind.toUpperCase(),
                 textAlign: TextAlign.center,
                 style: AppText.meta.copyWith(color: c.accentDeep),
               ),
               const SizedBox(height: Space.ml),
               Text(
-                outcome.levelUp
-                    ? l10n.courseLevel(outcome.level.number)
-                    : outcome.mastered.first.title,
+                headline,
                 textAlign: TextAlign.center,
                 style: AppText.displayXl.copyWith(color: c.ink),
               ),
@@ -1002,17 +1029,22 @@ class _Milestone extends StatelessWidget {
                 ),
               ],
               if (outcome.mastered.isNotEmpty)
-                skills(
+                entries(
                   l10n.milestoneMastered,
-                  outcome.mastered,
+                  skills(outcome.mastered),
                   Icons.check_circle_rounded,
                 ),
               if (outcome.unlocked.isNotEmpty)
-                skills(
+                entries(
                   l10n.milestoneUnlocked,
-                  outcome.unlocked,
+                  skills(outcome.unlocked),
                   Icons.lock_open_rounded,
                 ),
+              if (outcome.achievements.isNotEmpty)
+                entries(l10n.milestoneAchievements, [
+                  for (final achievement in outcome.achievements)
+                    (achievement.title, achievement.description),
+                ], Icons.emoji_events_rounded),
             ],
           ),
         ),
@@ -1041,52 +1073,16 @@ class _Milestone extends StatelessWidget {
 
 /// Demande avant de quitter une session commencée : ses réponses et son XP
 /// seront perdus. Vrai pour quitter.
-Future<bool> _confirmQuit(BuildContext context, SessionState session) async {
+Future<bool> _confirmQuit(BuildContext context, SessionState session) {
   final l10n = AppLocalizations.of(context);
-  final c = context.colors;
-  final leave = await showDialog<bool>(
-    context: context,
-    builder: (context) => Dialog(
-      backgroundColor: c.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(Radii.card),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(Space.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              l10n.quitTitle,
-              style: AppText.titlePrompt.copyWith(color: c.ink),
-            ),
-            const SizedBox(height: Space.m),
-            Text(
-              l10n.quitBody(session.answered, session.xp),
-              style: AppText.body.copyWith(color: c.inkMuted),
-            ),
-            const SizedBox(height: Space.xl),
-            DepthButton(
-              key: const ValueKey('quit-stay'),
-              label: l10n.quitStay,
-              onPressed: () => Navigator.pop(context, false),
-              expand: true,
-            ),
-            const SizedBox(height: Space.s),
-            DepthButton(
-              key: const ValueKey('quit-leave'),
-              label: l10n.quitLeave,
-              variant: ButtonVariant.text,
-              onPressed: () => Navigator.pop(context, true),
-              expand: true,
-            ),
-          ],
-        ),
-      ),
-    ),
+  return confirmDialog(
+    context,
+    title: l10n.quitTitle,
+    body: l10n.quitBody(session.answered, session.xp),
+    stay: l10n.quitStay,
+    leave: l10n.quitLeave,
+    keyPrefix: 'quit',
   );
-  return leave ?? false;
 }
 
 /// Chrono de la session, rafraîchi chaque seconde jusqu'à la fin.

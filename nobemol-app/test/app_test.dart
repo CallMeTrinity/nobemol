@@ -12,10 +12,13 @@ import 'package:notation/notation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:nobemol/achievements/achievements_screen.dart';
 import 'package:nobemol/arcade/arcade.dart';
 import 'package:nobemol/arcade/arcade_screen.dart';
 import 'package:nobemol/arcade/game.dart';
 import 'package:nobemol/arcade/game_screen.dart';
+import 'package:nobemol/backup/backup.dart';
+import 'package:nobemol/backup/backup_files.dart';
 import 'package:nobemol/clock.dart';
 import 'package:nobemol/home/home_screen.dart';
 import 'package:nobemol/home/skill_screen.dart';
@@ -27,6 +30,8 @@ import 'package:nobemol/lessons/content_provider.dart';
 import 'package:nobemol/lessons/lesson_screen.dart';
 import 'package:nobemol/main.dart';
 import 'package:nobemol/onboarding/onboarding_screen.dart';
+import 'package:nobemol/profile/profile_screen.dart';
+import 'package:nobemol/profile/stats_screen.dart';
 import 'package:nobemol/progress/course.dart';
 import 'package:nobemol/progress/database.dart';
 import 'package:nobemol/progress/progress.dart';
@@ -58,6 +63,7 @@ void main() {
   late Content content;
   late NobemolDatabase db;
   late SharedPreferences prefs;
+  late _Files files;
 
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
@@ -75,6 +81,7 @@ void main() {
     db = NobemolDatabase(NativeDatabase.memory());
     SharedPreferences.setMockInitialValues({'onboarded': true});
     prefs = await SharedPreferences.getInstance();
+    files = _Files();
   });
   tearDown(() => db.close());
 
@@ -99,6 +106,7 @@ void main() {
           ),
           randomProvider.overrideWithValue(Random(1)),
           clockProvider.overrideWithValue(() => now),
+          backupFilesProvider.overrideWithValue(files),
         ],
         child: const NobemolApp(),
       ),
@@ -674,6 +682,12 @@ void main() {
       expect(find.text('Nouveau record !'), findsOneWidget);
       expect(find.text('3 / 3'), findsOneWidget);
       expect(find.text('+9 XP'), findsOneWidget);
+      // La leçon, écrite en base sans passer par une session, n'avait pas
+      // encore son succès : la partie l'enregistre, et l'écran de fin le dit.
+      expect(
+        find.byKey(const ValueKey('achievement-first-lesson')),
+        findsOneWidget,
+      );
 
       await tester.tap(find.byKey(const ValueKey('arcade-done')));
       await tester.pumpAndSettle();
@@ -786,8 +800,7 @@ void main() {
     expect(find.byType(ArcadeScreen), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('tab-3')));
     await tester.pumpAndSettle();
-    expect(find.text('Profil'), findsWidgets);
-    expect(find.text('BIENTÔT'), findsOneWidget);
+    expect(find.byType(ProfileScreen), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('tab-0')));
     await tester.pumpAndSettle();
     // Le Parcours garde sa position : on y était descendu.
@@ -936,6 +949,12 @@ void main() {
     expect(find.text('MAÎTRISÉ'), findsOneWidget);
     expect(find.text('Lire en clé de sol'), findsOneWidget);
     expect(find.text('Lire en clé de fa'), findsOneWidget);
+    // Et des succès : une leçon, 19 bonnes réponses d'affilée, et la
+    // maîtrise enregistrée juste avant.
+    expect(
+      (await db.select(db.achievements).get()).map((row) => row.achievementId),
+      unorderedEquals(['first-lesson', 'combo-10', 'first-mastery']),
+    );
     await tester.tap(find.byKey(const ValueKey('milestone-continue')));
     await tester.pumpAndSettle();
     expect(find.byType(SkillScreen), findsOneWidget);
@@ -1142,6 +1161,8 @@ void main() {
       await launch(tester);
       await tester.tap(find.byKey(const ValueKey('tab-3')));
       await tester.pumpAndSettle();
+      // En bas du Profil.
+      await scrollTo(tester, find.byKey(const ValueKey('open-settings')));
       await tester.tap(find.byKey(const ValueKey('open-settings')));
       await tester.pumpAndSettle();
       expect(find.byType(SettingsScreen), findsOneWidget);
@@ -1287,4 +1308,247 @@ void main() {
       expect(calls, isEmpty);
     });
   });
+
+  group('profil', () {
+    /// Une leçon en clé de sol (18 sur 20, combo de 12) et une partie de
+    /// chrono (10 sur 12, 1 500 points), écrites en base.
+    Future<void> seed() async {
+      final store = ProgressStore(db);
+      await store.recordSession(
+        lessonId: 'treble-clef',
+        startedAt: now,
+        finishedAt: now.add(const Duration(minutes: 3)),
+        answers: [
+          for (var i = 0; i < 20; i++)
+            AnswerRecord(
+              expected: NoteName.c,
+              given: i < 18 ? NoteName.c : NoteName.d,
+              elapsed: const Duration(seconds: 2),
+              xp: i < 18 ? 10 : 0,
+              card: i.isEven ? 'note:treble:c5' : 'note:treble:g4',
+            ),
+        ],
+        bestCombo: 12,
+      );
+      await store.recordSession(
+        lessonId: null,
+        startedAt: now,
+        finishedAt: now.add(const Duration(minutes: 1)),
+        answers: [
+          for (var i = 0; i < 12; i++)
+            AnswerRecord(
+              expected: NoteName.f,
+              given: i < 10 ? NoteName.f : NoAnswer.timeout,
+              elapsed: const Duration(seconds: 2),
+              xp: i < 10 ? arcadeXpPerNote : 0,
+              card: 'note:bass:f3',
+            ),
+        ],
+        bestCombo: 10,
+        arcade: 'chrono:treble',
+        score: 1500,
+      );
+      await store.saveAchievements(['first-lesson'], now);
+    }
+
+    Future<void> openProfile(WidgetTester tester) async {
+      await launch(tester);
+      await tester.tap(find.byKey(const ValueKey('tab-3')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ProfileScreen), findsOneWidget);
+    }
+
+    Future<void> tapProfile(WidgetTester tester, String key) async {
+      await scrollTo(tester, find.byKey(ValueKey(key)));
+      await tester.tap(find.byKey(ValueKey(key)));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('niveau et chiffres clés', (tester) async {
+      await seed();
+      await openProfile(tester);
+      String figure(String key) => tester
+          .widget<Text>(
+            find
+                .descendant(
+                  of: find.byKey(ValueKey('figure-$key')),
+                  matching: find.byType(Text),
+                )
+                .first,
+          )
+          .data!;
+      // 210 XP : le niveau 2 commence à 200.
+      expect(find.text('Niveau 2'), findsOneWidget);
+      expect(figure('lessons'), '1');
+      expect(figure('combo'), '×12');
+      expect(figure('chrono'), '1500');
+      // 28 bonnes réponses sur 32.
+      expect(figure('accuracy'), '88 %');
+    });
+
+    testWidgets('succès : débloqués, datés, ou en cours', (tester) async {
+      await seed();
+      await openProfile(tester);
+      expect(find.text('2 sur 18 débloqués'), findsOneWidget);
+      await tapProfile(tester, 'open-achievements');
+      expect(find.byType(AchievementsScreen), findsOneWidget);
+
+      Finder within(String id, Finder finder) => find.descendant(
+        of: find.byKey(ValueKey('achievement-$id')),
+        matching: finder,
+      );
+      expect(
+        within('first-lesson', find.text('DÉBLOQUÉ LE 01/01/2026')),
+        findsOneWidget,
+      );
+      // Atteint avant la mise à jour : débloqué, sans date.
+      expect(within('combo-10', find.text('DÉBLOQUÉ')), findsOneWidget);
+      expect(within('ten-lessons', find.text('1 / 10')), findsOneWidget);
+    });
+
+    testWidgets('statistiques : XP, temps, précision par note', (tester) async {
+      await seed();
+      await openProfile(tester);
+      await tapProfile(tester, 'open-stats');
+      expect(find.byType(StatsScreen), findsOneWidget);
+      expect(find.text('210 XP'), findsOneWidget);
+      expect(find.text('4 min'), findsOneWidget);
+      expect(find.text('2,0 s'), findsOneWidget);
+      expect(find.text('Clé de sol'), findsOneWidget);
+      expect(find.text('Clé de fa'), findsOneWidget);
+      // do : 9 sur 10.
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('note-c')),
+          matching: find.text('90 %'),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('period-all')));
+      await tester.pumpAndSettle();
+      expect(find.text('TRAIT : 2100 XP PAR SEMAINE'), findsOneWidget);
+    });
+
+    testWidgets('sauvegarde : exportée, puis importée sur un autre '
+        'téléphone au démarrage', (tester) async {
+      await seed();
+      await prefs.setString('naming', 'letters');
+      await openProfile(tester);
+      await tapProfile(tester, 'backup-export');
+      final exported = files.shared!;
+      expect(files.sharedName, 'nobemol-2026-01-01.json');
+
+      // Un autre téléphone : base vide, premier lancement.
+      await db.close();
+      db = NobemolDatabase(NativeDatabase.memory());
+      await prefs.clear();
+      await launch(tester);
+      expect(find.byType(OnboardingScreen), findsOneWidget);
+
+      // Annuler le choix du fichier : rien ne change.
+      await tester.tap(find.byKey(const ValueKey('onboarding-restore')));
+      await tester.pumpAndSettle();
+      expect(find.byType(OnboardingScreen), findsOneWidget);
+
+      files.toPick = exported;
+      await tester.tap(find.byKey(const ValueKey('onboarding-restore')));
+      await tester.pumpAndSettle();
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(
+        find.text('Sauvegarde importée : niveau 2, 210 XP.'),
+        findsOneWidget,
+      );
+
+      // Progression, record, succès et réglages : tout est là.
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(HomeScreen)),
+      );
+      final progress = container.read(progressProvider);
+      expect(progress.xp, 210);
+      expect(progress.records, {'chrono:treble': 1500});
+      expect(progress.achievements.keys, ['first-lesson']);
+      expect(container.read(settingsProvider).naming, NoteNaming.letters);
+      // Et ça survit au redémarrage.
+      await launch(tester);
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.text('210 / 300 XP'), findsOneWidget);
+    });
+
+    testWidgets('import sur une progression : confirmation', (tester) async {
+      // Une sauvegarde d'un autre téléphone, sans rien.
+      final other = ProgressStore(NobemolDatabase(NativeDatabase.memory()));
+      await other.recordSession(
+        lessonId: null,
+        startedAt: now,
+        finishedAt: now,
+        answers: const [
+          AnswerRecord(
+            expected: NoteName.c,
+            given: NoteName.c,
+            elapsed: Duration(seconds: 1),
+            xp: 10,
+          ),
+        ],
+        bestCombo: 1,
+      );
+      files.toPick = Backup(
+        rows: await other.rows(),
+        settings: const Settings(onboarded: true),
+        exportedAt: now,
+      ).encode();
+
+      await seed();
+      await openProfile(tester);
+      await tapProfile(tester, 'backup-import');
+      expect(find.text('Remplacer ta progression ?'), findsOneWidget);
+      expect(
+        find.textContaining('La sauvegarde du 01/01/2026 (10 XP)'),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('restore-stay')));
+      await tester.pumpAndSettle();
+      expect((await ProgressStore(db).load()).xp, 210);
+
+      await tapProfile(tester, 'backup-import');
+      await tester.tap(find.byKey(const ValueKey('restore-leave')));
+      await tester.pumpAndSettle();
+      expect((await ProgressStore(db).load()).xp, 10);
+      expect(
+        find.text('Sauvegarde importée : niveau 1, 10 XP.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('fichier étranger : refusé, rien ne change', (tester) async {
+      await seed();
+      files.toPick = '{"app": "autre"}';
+      await openProfile(tester);
+      await tapProfile(tester, 'backup-import');
+      expect(
+        find.text("Ce fichier n'est pas une sauvegarde de Nobémol."),
+        findsOneWidget,
+      );
+      expect(find.text('Remplacer ta progression ?'), findsNothing);
+      expect((await ProgressStore(db).load()).xp, 210);
+    });
+  });
+}
+
+/// Le fichier de sauvegarde, sans feuille de partage ni sélecteur.
+class _Files implements BackupFiles {
+  String? sharedName;
+  String? shared;
+
+  /// Contenu du prochain fichier choisi, `null` : l'élève annule.
+  String? toPick;
+
+  @override
+  Future<void> share(String name, String contents) async {
+    sharedName = name;
+    shared = contents;
+  }
+
+  @override
+  Future<String?> pick() async => toPick;
 }

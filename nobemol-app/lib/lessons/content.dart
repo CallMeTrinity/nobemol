@@ -1,3 +1,4 @@
+import 'package:nobemol/achievements/achievement.dart';
 import 'package:nobemol/lessons/lesson.dart';
 import 'package:nobemol/lessons/skill_tree.dart';
 import 'package:nobemol/lessons/yaml_fields.dart';
@@ -8,14 +9,21 @@ const skillsPath = 'assets/skills.yaml';
 /// Dossier des leçons, une par fichier `.yaml`.
 const lessonsDir = 'assets/lessons/';
 
-/// Contenu pédagogique : arbre de compétences et leçons.
+/// Contenu pédagogique : arbre de compétences, leçons et succès.
 class Content {
-  const Content({required this.skills, required this.lessons});
+  const Content({
+    required this.skills,
+    required this.lessons,
+    this.achievements = const [],
+  });
 
   final List<Skill> skills;
 
   /// Leçons dans l'ordre de l'arbre de compétences (voir [parseContent]).
   final List<Lesson> lessons;
+
+  /// Succès, dans l'ordre du fichier.
+  final List<Achievement> achievements;
 
   Lesson? lesson(String id) =>
       lessons.where((lesson) => lesson.id == id).firstOrNull;
@@ -55,7 +63,7 @@ class ContentErrors implements Exception {
 }
 
 /// Lit et vérifie tout le contenu. [lessons] associe le chemin de chaque
-/// leçon à sa source YAML.
+/// leçon à sa source YAML. Sans [achievements], aucun succès.
 ///
 /// Les leçons sont triées par compétence la plus avancée dans l'arbre, puis
 /// par niveau, puis par identifiant. Lève une [ContentErrors] qui liste
@@ -63,6 +71,7 @@ class ContentErrors implements Exception {
 Content parseContent({
   required String skills,
   required Map<String, String> lessons,
+  String? achievements,
 }) {
   final errors = <String>[];
   String format(String file, ContentException e) => [
@@ -104,7 +113,26 @@ Content parseContent({
       final order => order,
     },
   );
-  final content = Content(skills: tree, lessons: parsed);
+
+  // Un succès de branche ne vise qu'une branche qui a des leçons.
+  final branches = {
+    for (final skill in tree)
+      if (parsed.any((lesson) => lesson.skills.contains(skill.id)))
+        skill.id.split('.').first,
+  };
+  var achieved = const <Achievement>[];
+  if (achievements != null) {
+    try {
+      achieved = parseAchievements(achievements, branches: branches);
+    } on ContentException catch (e) {
+      errors.add(format(achievementsPath, e));
+    }
+  }
+  final content = Content(
+    skills: tree,
+    lessons: parsed,
+    achievements: achieved,
+  );
 
   // Une compétence avec des leçons se débloque quand ses prérequis sont
   // maîtrisés : chacun doit avoir une leçon qui compte pour sa maîtrise.

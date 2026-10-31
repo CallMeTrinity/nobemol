@@ -1,5 +1,5 @@
 // Vérifie le contenu pédagogique : arbre de compétences, schéma des leçons,
-// ABC (avec le parser du moteur), compétences citées.
+// ABC (avec le parser du moteur), compétences citées, succès.
 //
 // Depuis nobemol-app : dart run tool/validate_content.dart
 //
@@ -7,6 +7,7 @@
 // format fichier:ligne:colonne, cliquables dans un éditeur.
 import 'dart:io';
 
+import 'package:nobemol/achievements/achievement.dart';
 import 'package:nobemol/lessons/content.dart';
 
 void main() {
@@ -23,10 +24,15 @@ void main() {
   };
 
   try {
-    final content = parseContent(skills: read(skillsPath), lessons: lessons);
+    final content = parseContent(
+      skills: read(skillsPath),
+      lessons: lessons,
+      achievements: read(achievementsPath),
+    );
     stdout.writeln(
-      '${content.lessons.length} leçons et '
-      '${content.skills.length} compétences valides.',
+      '${content.lessons.length} leçons, '
+      '${content.skills.length} compétences et '
+      '${content.achievements.length} succès valides.',
     );
   } on ContentErrors catch (e) {
     for (final message in e.messages) {

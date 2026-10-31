@@ -10,6 +10,8 @@ class CardAnswer {
     required this.card,
     required this.correct,
     required this.answeredAt,
+    this.elapsed = Duration.zero,
+    this.timedOut = false,
   });
 
   /// Clé de la carte (voir `card.dart`).
@@ -18,6 +20,13 @@ class CardAnswer {
 
   /// Fin de la session de la réponse : elle compte ce jour-là.
   final DateTime answeredAt;
+
+  /// Temps de réponse, pour les statistiques.
+  final Duration elapsed;
+
+  /// Pas de réponse : le temps de la note est écoulé (arcade). Une erreur,
+  /// qui ne compte pas dans le temps de réponse moyen.
+  final bool timedOut;
 }
 
 /// Carte de révision, recalculée depuis les réponses (méthode de Leitner).

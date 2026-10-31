@@ -24,7 +24,7 @@ Les étapes 6 à 12 viennent du design « Touches » (Claude Design, tour 2) : t
 | 9 | | Démarrage et réglages | 1.0.0 |
 | 10 | | Révision espacée | Fait |
 | 11 | | Arcade | Fait |
-| 12 | | Profil, statistiques, succès, sauvegarde | |
+| 12 | | Profil, statistiques, succès, sauvegarde | Fait |
 | Plus tard | Accords, n-olets, liaisons d'expression | Au besoin | |
 
 ## Releases
@@ -313,13 +313,36 @@ Tranché :
 
 ## Étape 12 : profil, statistiques, succès, sauvegarde
 
-- [ ] Profil : niveau, chiffres clés (leçons terminées, meilleur combo, record arcade, précision globale)
-- [ ] Statistiques sur 7 jours, 30 jours, tout : XP par jour face à l'objectif, précision par note et par clé, temps moyen par note, temps de pratique
-- [ ] Succès (18 dans le design) : définis en données, pas en code. Débloqués sur événement (leçon terminée, combo, record)
-- [ ] Sauvegarde : export / import d'un fichier (pas de compte, pas de serveur). Branché sur « J'ai déjà une sauvegarde » au démarrage
-- [ ] Nom du profil : à demander au démarrage, ou à retirer du design
+- [x] Profil : niveau, chiffres clés (leçons terminées, meilleur combo, record chrono, précision globale), liens vers les statistiques, les succès, la sauvegarde et les réglages
+- [x] Statistiques sur 7 jours, 30 jours, tout : XP par jour face à l'objectif (par semaine sur « Tout »), précision par note et par clé, temps moyen par note, temps de pratique (`lib/profile/stats.dart`)
+- [x] Succès (18) : définis en données (`assets/achievements.yaml`, [doc/achievements.md](nobemol-app/doc/achievements.md)), vérifiés par le validateur. Débloqués à la fin d'une session, gardés en base. Schéma v4 : table `achievements` ([doc/database.md](nobemol-app/doc/database.md))
+- [x] Sauvegarde : export / import d'un fichier JSON (pas de compte, pas de serveur). Branché sur « J'ai déjà une sauvegarde » au démarrage
+- [x] Nom du profil : retiré du design
 
 **Terminé quand** : une sauvegarde exportée sur un téléphone se réimporte sur un autre avec la progression, les records et les succès.
+
+Tranché :
+
+- **Pas de nom de profil** : pas de compte, une personne par téléphone. Le nom n'apportait rien, et aurait ajouté un écran au démarrage.
+- **Succès calculés, déblocage stocké**, comme la maîtrise : le compte suit la progression, seul le fait d'avoir débloqué (et sa date) est gardé. Durcir une condition ne reverrouille rien. Un succès retiré du fichier reste en base, ignoré.
+- **Déblocage en fin de session** : une session quittée n'est pas gardée, elle ne débloque rien non plus. Les maîtrises sont enregistrées d'abord : « maîtriser une compétence » se débloque dans la même session.
+- Les 18 succès sont définis ici, pas repris du design (illisible) : leçons, sans faute, bonnes réponses, combo, séries de jours, niveaux, maîtrise, lecture de notes complète, chrono, sans fin, cartes acquises. Pas de succès sur l'objectif du jour : l'historique de l'objectif n'est pas gardé, un changement de réglage aurait réécrit le passé.
+- Après la mise à jour, les succès déjà atteints s'affichent **débloqués sans date**, puis s'enregistrent à la session suivante, qui les fête tous d'un coup.
+- **Statistiques à l'objectif d'aujourd'hui** : l'historique des réglages n'est pas gardé. La précision par note vient des cartes de révision : les réponses d'avant la v2 n'y sont pas, et une note de la grande portée compte dans sa propre clé. Le temps moyen par note ne compte pas les temps écoulés de l'arcade.
+- **Série** = jours de calendrier locaux avec au moins une session terminée.
+- **Record arcade du profil = record chrono**, toutes clés : un score en points se lit seul. Sans fin et survie restent dans l'onglet Arcade.
+- **Sauvegarde : feuille de partage à l'export (`share_plus`), sélecteur de fichiers à l'import (`file_picker`)**. Le partage mène au Drive, au mail ou aux Fichiers, le chemin naturel d'un téléphone à l'autre. Le sélecteur accepte tout fichier : le contenu est vérifié ensuite.
+- **L'import remplace tout**, progression et réglages, d'un seul bloc. Pas de fusion : deux historiques mêlés fausseraient la révision et les records. Confirmation si le téléphone a déjà une progression (y compris au démarrage, après une mise à jour). Un fichier refusé ne change rien.
+- **Format versionné** (`format: 1`), indépendant du schéma Drift : pas d'identifiants, réponses rangées dans leur session, dates en UTC. Un fichier d'un format plus récent est refusé avec « mets l'appli à jour ». Règles dans [doc/database.md](nobemol-app/doc/database.md#sauvegarde).
+- Confirmation commune (`lib/ui/confirm_dialog.dart`) : quitter un exercice et remplacer la progression.
+
+À vérifier :
+
+- Sur deux vrais téléphones : export vers le Drive, import sur l'autre au démarrage (« J'ai déjà une sauvegarde »). Progression, records, succès et réglages identiques.
+- Sélecteur de fichiers Android sur un fichier du Drive (fournisseur de contenu, pas un chemin local) et nom du fichier partagé (`nobemol-AAAA-MM-JJ.json`).
+- `1.0.0` puis cette version **par-dessus** (migration v4) : les succès déjà atteints s'affichent, puis se fêtent à la session suivante.
+- Le design « Touches » du profil, des statistiques et des succès n'a pas pu être relu (pas d'accès au projet Claude Design) : construits avec les composants de l'étape 6, à comparer aux maquettes.
+- Seuils des succès (chrono 2 500, sans fin 25, combo 25) et couleurs de précision (80 % et 50 %) : à recaler avec l'usage.
 
 ## En parallèle
 

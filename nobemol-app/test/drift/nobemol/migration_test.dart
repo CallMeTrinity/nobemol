@@ -12,6 +12,7 @@ import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
+import 'generated/schema_v4.dart' as v4;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -131,6 +132,24 @@ void main() {
     final session = await db.select(db.sessions).getSingle();
     expect(session.arcade, 'chrono:treble');
     expect(session.score, 2150);
+    // v4 : aucun succès, il se débloque à la session suivante.
+    expect(await db.select(db.achievements).get(), isEmpty);
+    await db.close();
+  });
+
+  test('données de la v4', () async {
+    final schema = await verifier.schemaAt(4);
+    final old = v4.DatabaseAtV4(schema.newConnection());
+    await old.customStatement(
+      "INSERT INTO achievements (achievement_id, unlocked_at) "
+      "VALUES ('first-lesson', '2026-10-31T18:00:00.000+01:00')",
+    );
+    await old.close();
+
+    final db = NobemolDatabase(schema.newConnection());
+    final achievement = await db.select(db.achievements).getSingle();
+    expect(achievement.achievementId, 'first-lesson');
+    expect(achievement.unlockedAt.toUtc(), DateTime.utc(2026, 10, 31, 17));
     await db.close();
   });
 }

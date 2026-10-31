@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:nobemol/achievements/achievement.dart';
 import 'package:nobemol/lessons/content.dart';
 import 'package:nobemol/lessons/skill_tree.dart';
 import 'package:nobemol/lessons/yaml_fields.dart';
@@ -122,7 +123,29 @@ exercise:
     final content = parseContent(
       skills: File(skillsPath).readAsStringSync(),
       lessons: lessons,
+      achievements: File(achievementsPath).readAsStringSync(),
     );
     expect(content.lessons, isNotEmpty);
+    expect(content.achievements, hasLength(18));
+  });
+
+  test('succès invalide : situé dans son fichier', () {
+    expect(
+      () => parseContent(
+        skills: skills,
+        lessons: {'assets/lessons/a.yaml': lesson('a')},
+        achievements: '''
+- id: x
+  title: X
+  description: x
+  when: { branch: z }
+''',
+      ),
+      throwsA(
+        isA<ContentErrors>().having((e) => e.messages, 'messages', [
+          allOf(startsWith('assets/achievements.yaml:4:19: '), contains('z')),
+        ]),
+      ),
+    );
   });
 }

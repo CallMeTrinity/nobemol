@@ -1,0 +1,110 @@
+# Succès de l'onglet Profil, dans l'ordre d'affichage. Format dans
+# doc/achievements.md.
+#
+# Un succès se débloque à la fin d'une session, une fois pour toutes. Le
+# retirer d'ici le cache sans rien effacer chez l'élève. Ne jamais réutiliser
+# l'id d'un succès retiré : il est gardé en base.
+#
+# when : une seule condition.
+#   lessons: n     leçons différentes terminées
+#   perfect: n     leçons terminées sans erreur (la même compte plusieurs fois)
+#   answers: n     bonnes réponses, partout
+#   combo: n       bonnes réponses d'affilée dans une session
+#   streak: n      jours de pratique d'affilée
+#   level: n       niveau atteint
+#   mastered: n    compétences maîtrisées
+#   branch: id     toutes les compétences de la branche maîtrisées
+#   chrono: n      points en une partie de chrono, toutes clés
+#   endless: n     notes en une partie sans fin, toutes clés
+#   survival: n    notes en une partie de survie
+#   acquired: n    cartes de révision acquises
+
+- id: first-lesson
+  title: Premier pas
+  description: Termine une leçon.
+  when: { lessons: 1 }
+
+- id: ten-lessons
+  title: Dix leçons
+  description: Termine 10 leçons différentes.
+  when: { lessons: 10 }
+
+- id: perfect
+  title: Sans faute
+  description: Termine une leçon sans erreur.
+  when: { perfect: 1 }
+
+- id: perfect-ten
+  title: Perfectionniste
+  description: Termine 10 leçons sans erreur.
+  when: { perfect: 10 }
+
+- id: hundred-answers
+  title: Cent
+  description: Donne 100 bonnes réponses.
+  when: { answers: 100 }
+
+- id: thousand-answers
+  title: Mille
+  description: Donne 1 000 bonnes réponses.
+  when: { answers: 1000 }
+
+- id: combo-10
+  title: En rythme
+  description: Enchaîne 10 bonnes réponses.
+  when: { combo: 10 }
+
+- id: combo-25
+  title: Inarrêtable
+  description: Enchaîne 25 bonnes réponses.
+  when: { combo: 25 }
+
+- id: streak-3
+  title: Trois jours
+  description: Pratique 3 jours d'affilée.
+  when: { streak: 3 }
+
+- id: streak-7
+  title: Une semaine
+  description: Pratique 7 jours d'affilée.
+  when: { streak: 7 }
+
+- id: streak-30
+  title: Un mois
+  description: Pratique 30 jours d'affilée.
+  when: { streak: 30 }
+
+- id: level-5
+  title: Niveau 5
+  description: Atteins le niveau 5.
+  when: { level: 5 }
+
+- id: level-10
+  title: Niveau 10
+  description: Atteins le niveau 10.
+  when: { level: 10 }
+
+- id: first-mastery
+  title: Maîtrise
+  description: Maîtrise une compétence.
+  when: { mastered: 1 }
+
+- id: note-reading
+  title: Lecteur
+  description: Maîtrise toute la lecture de notes.
+  when: { branch: note-reading }
+
+- id: chrono-2500
+  title: Contre la montre
+  description: Marque 2 500 points en une partie de chrono.
+  when: { chrono: 2500 }
+
+- id: endless-25
+  title: Endurant
+  description: Lis 25 notes en une partie sans fin.
+  when: { endless: 25 }
+
+- id: acquired-10
+  title: Mémoire
+  description: Acquiers 10 cartes de révision.
+  when: { acquired: 10 }

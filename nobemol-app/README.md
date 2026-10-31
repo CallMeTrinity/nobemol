@@ -9,22 +9,29 @@ nobemol-app/
 ├── pubspec.yaml          appli + racine du workspace pub (un seul pubspec.lock)
 ├── assets/
 │   ├── skills.yaml       arbre de compétences
+│   ├── achievements.yaml succès (voir doc/achievements.md)
 │   └── lessons/          une leçon par fichier YAML (voir doc/lessons.md)
 ├── doc/lessons.md        format des leçons
-├── doc/database.md       base de la progression, migrations
+├── doc/achievements.md   format des succès
+├── doc/database.md       base de la progression, migrations, sauvegarde
 ├── drift_schemas/        schéma figé de chaque version de la base
 ├── fonts/                polices de l'interface + licences OFL
 ├── lib/
 │   ├── l10n/             textes (app_fr.arb), AppLocalizations généré par pub get
 │   ├── theme/            tokens du design « Touches » et thème clair / sombre
 │   ├── ui/               composants : boutons à ombre pleine, tuiles, clavier
-│   ├── shell/            barre à 4 onglets, onglets à venir
+│   ├── shell/            barre à 4 onglets
 │   ├── onboarding/       démarrage : bienvenue, point de départ, objectif
 │   ├── settings/         réglages (shared_preferences) et leur écran
 │   ├── home/             Parcours (niveau, reprise, compétences) et écran compétence
 │   ├── progress/         base Drift, XP et niveaux, maîtrise et déblocage
 │   ├── lessons/          lecture du contenu (Dart pur) et écran de théorie
-│   └── reading/          lecture de notes : générateur, session, écran
+│   ├── reading/          lecture de notes : générateur, session, écran
+│   ├── review/           révision espacée (Leitner) et onglet Réviser
+│   ├── arcade/           onglet Arcade : modes, partie, records
+│   ├── profile/          onglet Profil : chiffres clés, statistiques
+│   ├── achievements/     succès : lecture, calcul, écran
+│   └── backup/           sauvegarde : fichier JSON, partage et import
 ├── tool/validate_content.dart  validateur du contenu, lancé en CI
 └── packages/notation/    moteur de rendu de notation (publiable)
     ├── doc/abc.md        sous-ensemble ABC accepté par le parser

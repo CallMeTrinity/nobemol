@@ -27,10 +27,12 @@ void main() {
     int? score,
   }) => SessionSummary(
     lessonId: lessonId,
+    startedAt: day,
     finishedAt: day,
     questions: 1,
     correct: 1,
     xp: xp,
+    bestCombo: 1,
     arcade: arcade,
     arcadeScore: score,
   );

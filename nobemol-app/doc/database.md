@@ -35,6 +35,10 @@ La bêta est installée : **une mise à jour de l'APK ne doit jamais perdre la p
 - `sessions.score` : son score, points en chrono, notes justes ailleurs. `null` hors arcade.
 - `answers.given` peut valoir `timeout` : le temps de la note est écoulé (arcade). C'est une erreur.
 
+## Schéma v4
+
+- `achievements` : les succès débloqués, avec la date de la première fois (fin de la session qui les a débloqués). Les succès sont définis dans `assets/achievements.yaml` ([doc/achievements.md](achievements.md)) : un id retiré du fichier reste en base, ignoré.
+
 Les records ne sont pas stockés : chacun est le meilleur score de ses parties.
 
 Les cartes ne sont pas stockées : leur boîte et leur date de retour se rejouent depuis les réponses, dans l'ordre (`lib/review/leitner.dart`).
@@ -68,6 +72,39 @@ Les tests échouent si l'une de ces étapes manque :
 - Une migration qui ne produit pas le schéma attendu : « migrations, de N à M ».
 
 **Ne jamais modifier un schéma figé** (`drift_schema_vN.json`) : il décrit ce qui est installé sur les téléphones.
+
+## Sauvegarde
+
+L'onglet Profil exporte toute la base et les réglages dans un fichier JSON (`nobemol-2026-10-31.json`), partagé par la feuille de partage d'Android. L'import, depuis le Profil ou « J'ai déjà une sauvegarde » au démarrage, **remplace** la base et les réglages, d'un seul bloc : un fichier refusé ne change rien. Code dans `lib/backup/`.
+
+```json
+{
+  "app": "nobemol",
+  "format": 1,
+  "exportedAt": "2026-10-31T17:00:00.000Z",
+  "settings": { "naming": "solfege", "start": "beginner", "keyLabels": true, "goal": "five", "haptics": true, "theme": "system" },
+  "progress": {
+    "sessions": [
+      { "lessonId": "treble-clef", "arcade": null, "score": null, "startedAt": "…", "finishedAt": "…",
+        "questions": 20, "correct": 18, "xp": 255, "bestCombo": 12,
+        "answers": [{ "expected": "c", "given": "c", "elapsedMs": 1200, "xp": 10, "card": "note:treble:c5" }] }
+    ],
+    "theory": [{ "lessonId": "bass-clef", "page": 2, "read": false, "updatedAt": "…" }],
+    "mastered": [{ "skillId": "note-reading.treble", "masteredAt": "…" }],
+    "achievements": [{ "id": "first-lesson", "unlockedAt": "…" }]
+  }
+}
+```
+
+- Les **identifiants** de la base ne sont pas gardés : les réponses sont rangées dans leur session, dans l'ordre. La révision rejoue ce journal dans cet ordre.
+- Dates en **UTC**, relues en heure locale.
+- Un réglage absent ou inconnu garde la valeur du téléphone. Le démarrage est marqué passé.
+
+Le fichier vit hors du téléphone (Drive, mail) et peut être réimporté des mois plus tard. Quand le schéma change :
+
+1. Le fichier suit la nouvelle base : ajouter le champ à `encode()` et à la lecture.
+2. Si un fichier d'avant ne se lit plus tel quel (champ obligatoire ajouté, champ renommé), augmenter `backupFormat` et lire l'ancien format **en plus** du nouveau, avec une valeur par défaut. Un champ facultatif (`null` pour les anciennes lignes, comme `answers.card`) ne demande rien.
+3. Un fichier d'un format plus récent que l'appli est refusé : « mets l'appli à jour ».
 
 ## Dates
 
