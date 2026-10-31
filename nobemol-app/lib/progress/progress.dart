@@ -2,6 +2,10 @@ import 'dart:math';
 
 import 'package:nobemol/review/leitner.dart';
 
+/// Réponse qui n'en est pas une : le temps de la note est écoulé (arcade).
+/// Gardée comme une erreur, sous le nom `timeout`.
+enum NoAnswer { timeout }
+
 /// Réponse donnée pendant une session.
 class AnswerRecord {
   const AnswerRecord({
@@ -12,7 +16,8 @@ class AnswerRecord {
     this.card,
   });
 
-  /// Bonne réponse et réponse donnée : `DiatonicStep`, `Beats` ou `Marking`.
+  /// Bonne réponse et réponse donnée : `NoteName`, `Beats` ou `Marking`.
+  /// Réponse donnée [NoAnswer.timeout] si le temps est écoulé.
   final Enum expected;
   final Enum given;
 
@@ -34,10 +39,17 @@ class SessionSummary {
     required this.questions,
     required this.correct,
     required this.xp,
+    this.arcade,
+    this.arcadeScore,
   });
 
-  /// `null` en lecture libre.
+  /// `null` hors leçon : lecture libre, révision, arcade.
   final String? lessonId;
+
+  /// Partie d'arcade (`ArcadeGame.record`) et son score, `null` hors
+  /// arcade.
+  final String? arcade;
+  final int? arcadeScore;
   final DateTime finishedAt;
   final int questions;
   final int correct;
@@ -103,6 +115,20 @@ class Progress {
       }
     }
     return best;
+  }();
+
+  /// Meilleur score de chaque partie d'arcade jouée (`ArcadeGame.record`).
+  late final Map<String, int> records = () {
+    final records = <String, int>{};
+    for (final session in sessions) {
+      if ((session.arcade, session.arcadeScore) case (
+        final id?,
+        final score?,
+      )) {
+        records.update(id, (best) => max(best, score), ifAbsent: () => score);
+      }
+    }
+    return records;
   }();
 
   /// XP gagnés le jour (local) de [now].

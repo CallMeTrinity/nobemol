@@ -8,7 +8,6 @@ import 'package:nobemol/l10n/labels.dart';
 import 'package:nobemol/progress/course.dart';
 import 'package:nobemol/progress/progress_provider.dart';
 import 'package:nobemol/progress/xp.dart';
-import 'package:nobemol/reading/start_level.dart';
 import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/depth.dart';
@@ -17,8 +16,7 @@ import 'package:nobemol/ui/nobemol_icon.dart';
 import 'package:nobemol/ui/progress_bar.dart';
 
 /// Onglet Parcours : niveau, objectif du jour, la leçon à reprendre, puis
-/// les compétences par branche. En bas, la lecture libre (points de
-/// départ), en attendant l'arcade (étape 11).
+/// les compétences par branche.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -63,18 +61,6 @@ class HomeScreen extends ConsumerWidget {
               ],
             ),
           ],
-          section(l10n.freeReading),
-          for (final level in StartLevel.values)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Space.sm),
-              child: AppTile(
-                onTap: () => context.push('/lecture/${level.name}'),
-                child: _TileText(
-                  title: l10n.levelTitle(level),
-                  subtitle: l10n.levelDescription(level),
-                ),
-              ),
-            ),
         ],
       ),
     );
