@@ -33,6 +33,24 @@ class $SessionsTable extends Sessions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _arcadeMeta = const VerificationMeta('arcade');
+  @override
+  late final GeneratedColumn<String> arcade = GeneratedColumn<String>(
+    'arcade',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _scoreMeta = const VerificationMeta('score');
+  @override
+  late final GeneratedColumn<int> score = GeneratedColumn<int>(
+    'score',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _startedAtMeta = const VerificationMeta(
     'startedAt',
   );
@@ -101,6 +119,8 @@ class $SessionsTable extends Sessions
   List<GeneratedColumn> get $columns => [
     id,
     lessonId,
+    arcade,
+    score,
     startedAt,
     finishedAt,
     questions,
@@ -127,6 +147,18 @@ class $SessionsTable extends Sessions
       context.handle(
         _lessonIdMeta,
         lessonId.isAcceptableOrUnknown(data['lesson_id']!, _lessonIdMeta),
+      );
+    }
+    if (data.containsKey('arcade')) {
+      context.handle(
+        _arcadeMeta,
+        arcade.isAcceptableOrUnknown(data['arcade']!, _arcadeMeta),
+      );
+    }
+    if (data.containsKey('score')) {
+      context.handle(
+        _scoreMeta,
+        score.isAcceptableOrUnknown(data['score']!, _scoreMeta),
       );
     }
     if (data.containsKey('started_at')) {
@@ -191,6 +223,14 @@ class $SessionsTable extends Sessions
         DriftSqlType.string,
         data['${effectivePrefix}lesson_id'],
       ),
+      arcade: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}arcade'],
+      ),
+      score: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}score'],
+      ),
       startedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}started_at'],
@@ -227,8 +267,16 @@ class $SessionsTable extends Sessions
 class SessionRow extends DataClass implements Insertable<SessionRow> {
   final int id;
 
-  /// Leçon jouée, `null` en lecture libre (point de départ).
+  /// Leçon jouée, `null` hors leçon : lecture libre (jusqu'à la v2),
+  /// révision, arcade.
   final String? lessonId;
+
+  /// Partie d'arcade : mode et clé (`chrono:treble`, `survival`), `null`
+  /// hors arcade. Voir `lib/arcade/arcade.dart`.
+  final String? arcade;
+
+  /// Score d'une partie d'arcade, `null` hors arcade.
+  final int? score;
   final DateTime startedAt;
   final DateTime finishedAt;
   final int questions;
@@ -238,6 +286,8 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
   const SessionRow({
     required this.id,
     this.lessonId,
+    this.arcade,
+    this.score,
     required this.startedAt,
     required this.finishedAt,
     required this.questions,
@@ -251,6 +301,12 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     map['id'] = Variable<int>(id);
     if (!nullToAbsent || lessonId != null) {
       map['lesson_id'] = Variable<String>(lessonId);
+    }
+    if (!nullToAbsent || arcade != null) {
+      map['arcade'] = Variable<String>(arcade);
+    }
+    if (!nullToAbsent || score != null) {
+      map['score'] = Variable<int>(score);
     }
     map['started_at'] = Variable<DateTime>(startedAt);
     map['finished_at'] = Variable<DateTime>(finishedAt);
@@ -267,6 +323,12 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
       lessonId: lessonId == null && nullToAbsent
           ? const Value.absent()
           : Value(lessonId),
+      arcade: arcade == null && nullToAbsent
+          ? const Value.absent()
+          : Value(arcade),
+      score: score == null && nullToAbsent
+          ? const Value.absent()
+          : Value(score),
       startedAt: Value(startedAt),
       finishedAt: Value(finishedAt),
       questions: Value(questions),
@@ -284,6 +346,8 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     return SessionRow(
       id: serializer.fromJson<int>(json['id']),
       lessonId: serializer.fromJson<String?>(json['lessonId']),
+      arcade: serializer.fromJson<String?>(json['arcade']),
+      score: serializer.fromJson<int?>(json['score']),
       startedAt: serializer.fromJson<DateTime>(json['startedAt']),
       finishedAt: serializer.fromJson<DateTime>(json['finishedAt']),
       questions: serializer.fromJson<int>(json['questions']),
@@ -298,6 +362,8 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'lessonId': serializer.toJson<String?>(lessonId),
+      'arcade': serializer.toJson<String?>(arcade),
+      'score': serializer.toJson<int?>(score),
       'startedAt': serializer.toJson<DateTime>(startedAt),
       'finishedAt': serializer.toJson<DateTime>(finishedAt),
       'questions': serializer.toJson<int>(questions),
@@ -310,6 +376,8 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
   SessionRow copyWith({
     int? id,
     Value<String?> lessonId = const Value.absent(),
+    Value<String?> arcade = const Value.absent(),
+    Value<int?> score = const Value.absent(),
     DateTime? startedAt,
     DateTime? finishedAt,
     int? questions,
@@ -319,6 +387,8 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
   }) => SessionRow(
     id: id ?? this.id,
     lessonId: lessonId.present ? lessonId.value : this.lessonId,
+    arcade: arcade.present ? arcade.value : this.arcade,
+    score: score.present ? score.value : this.score,
     startedAt: startedAt ?? this.startedAt,
     finishedAt: finishedAt ?? this.finishedAt,
     questions: questions ?? this.questions,
@@ -330,6 +400,8 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     return SessionRow(
       id: data.id.present ? data.id.value : this.id,
       lessonId: data.lessonId.present ? data.lessonId.value : this.lessonId,
+      arcade: data.arcade.present ? data.arcade.value : this.arcade,
+      score: data.score.present ? data.score.value : this.score,
       startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
       finishedAt: data.finishedAt.present
           ? data.finishedAt.value
@@ -346,6 +418,8 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     return (StringBuffer('SessionRow(')
           ..write('id: $id, ')
           ..write('lessonId: $lessonId, ')
+          ..write('arcade: $arcade, ')
+          ..write('score: $score, ')
           ..write('startedAt: $startedAt, ')
           ..write('finishedAt: $finishedAt, ')
           ..write('questions: $questions, ')
@@ -360,6 +434,8 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
   int get hashCode => Object.hash(
     id,
     lessonId,
+    arcade,
+    score,
     startedAt,
     finishedAt,
     questions,
@@ -373,6 +449,8 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
       (other is SessionRow &&
           other.id == this.id &&
           other.lessonId == this.lessonId &&
+          other.arcade == this.arcade &&
+          other.score == this.score &&
           other.startedAt == this.startedAt &&
           other.finishedAt == this.finishedAt &&
           other.questions == this.questions &&
@@ -384,6 +462,8 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
 class SessionsCompanion extends UpdateCompanion<SessionRow> {
   final Value<int> id;
   final Value<String?> lessonId;
+  final Value<String?> arcade;
+  final Value<int?> score;
   final Value<DateTime> startedAt;
   final Value<DateTime> finishedAt;
   final Value<int> questions;
@@ -393,6 +473,8 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
   const SessionsCompanion({
     this.id = const Value.absent(),
     this.lessonId = const Value.absent(),
+    this.arcade = const Value.absent(),
+    this.score = const Value.absent(),
     this.startedAt = const Value.absent(),
     this.finishedAt = const Value.absent(),
     this.questions = const Value.absent(),
@@ -403,6 +485,8 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
   SessionsCompanion.insert({
     this.id = const Value.absent(),
     this.lessonId = const Value.absent(),
+    this.arcade = const Value.absent(),
+    this.score = const Value.absent(),
     required DateTime startedAt,
     required DateTime finishedAt,
     required int questions,
@@ -418,6 +502,8 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
   static Insertable<SessionRow> custom({
     Expression<int>? id,
     Expression<String>? lessonId,
+    Expression<String>? arcade,
+    Expression<int>? score,
     Expression<DateTime>? startedAt,
     Expression<DateTime>? finishedAt,
     Expression<int>? questions,
@@ -428,6 +514,8 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (lessonId != null) 'lesson_id': lessonId,
+      if (arcade != null) 'arcade': arcade,
+      if (score != null) 'score': score,
       if (startedAt != null) 'started_at': startedAt,
       if (finishedAt != null) 'finished_at': finishedAt,
       if (questions != null) 'questions': questions,
@@ -440,6 +528,8 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
   SessionsCompanion copyWith({
     Value<int>? id,
     Value<String?>? lessonId,
+    Value<String?>? arcade,
+    Value<int?>? score,
     Value<DateTime>? startedAt,
     Value<DateTime>? finishedAt,
     Value<int>? questions,
@@ -450,6 +540,8 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     return SessionsCompanion(
       id: id ?? this.id,
       lessonId: lessonId ?? this.lessonId,
+      arcade: arcade ?? this.arcade,
+      score: score ?? this.score,
       startedAt: startedAt ?? this.startedAt,
       finishedAt: finishedAt ?? this.finishedAt,
       questions: questions ?? this.questions,
@@ -467,6 +559,12 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     }
     if (lessonId.present) {
       map['lesson_id'] = Variable<String>(lessonId.value);
+    }
+    if (arcade.present) {
+      map['arcade'] = Variable<String>(arcade.value);
+    }
+    if (score.present) {
+      map['score'] = Variable<int>(score.value);
     }
     if (startedAt.present) {
       map['started_at'] = Variable<DateTime>(startedAt.value);
@@ -494,6 +592,8 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     return (StringBuffer('SessionsCompanion(')
           ..write('id: $id, ')
           ..write('lessonId: $lessonId, ')
+          ..write('arcade: $arcade, ')
+          ..write('score: $score, ')
           ..write('startedAt: $startedAt, ')
           ..write('finishedAt: $finishedAt, ')
           ..write('questions: $questions, ')
@@ -1527,6 +1627,8 @@ abstract class _$NobemolDatabase extends GeneratedDatabase {
 typedef $$SessionsTableCreateCompanionBuilder = SessionsCompanion Function({
   Value<int> id,
   Value<String?> lessonId,
+  Value<String?> arcade,
+  Value<int?> score,
   required DateTime startedAt,
   required DateTime finishedAt,
   required int questions,
@@ -1537,6 +1639,8 @@ typedef $$SessionsTableCreateCompanionBuilder = SessionsCompanion Function({
 typedef $$SessionsTableUpdateCompanionBuilder = SessionsCompanion Function({
   Value<int> id,
   Value<String?> lessonId,
+  Value<String?> arcade,
+  Value<int?> score,
   Value<DateTime> startedAt,
   Value<DateTime> finishedAt,
   Value<int> questions,
@@ -1585,6 +1689,16 @@ class $$SessionsTableFilterComposer
 
   ColumnFilters<String> get lessonId => $composableBuilder(
     column: $table.lessonId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get arcade => $composableBuilder(
+    column: $table.arcade,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get score => $composableBuilder(
+    column: $table.score,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1663,6 +1777,16 @@ class $$SessionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get arcade => $composableBuilder(
+    column: $table.arcade,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get score => $composableBuilder(
+    column: $table.score,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get startedAt => $composableBuilder(
     column: $table.startedAt,
     builder: (column) => ColumnOrderings(column),
@@ -1708,6 +1832,12 @@ class $$SessionsTableAnnotationComposer
 
   GeneratedColumn<String> get lessonId =>
       $composableBuilder(column: $table.lessonId, builder: (column) => column);
+
+  GeneratedColumn<String> get arcade =>
+      $composableBuilder(column: $table.arcade, builder: (column) => column);
+
+  GeneratedColumn<int> get score =>
+      $composableBuilder(column: $table.score, builder: (column) => column);
 
   GeneratedColumn<DateTime> get startedAt =>
       $composableBuilder(column: $table.startedAt, builder: (column) => column);
@@ -1785,6 +1915,8 @@ class $$SessionsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String?> lessonId = const Value.absent(),
+                Value<String?> arcade = const Value.absent(),
+                Value<int?> score = const Value.absent(),
                 Value<DateTime> startedAt = const Value.absent(),
                 Value<DateTime> finishedAt = const Value.absent(),
                 Value<int> questions = const Value.absent(),
@@ -1794,6 +1926,8 @@ class $$SessionsTableTableManager
               }) => SessionsCompanion(
                 id: id,
                 lessonId: lessonId,
+                arcade: arcade,
+                score: score,
                 startedAt: startedAt,
                 finishedAt: finishedAt,
                 questions: questions,
@@ -1805,6 +1939,8 @@ class $$SessionsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String?> lessonId = const Value.absent(),
+                Value<String?> arcade = const Value.absent(),
+                Value<int?> score = const Value.absent(),
                 required DateTime startedAt,
                 required DateTime finishedAt,
                 required int questions,
@@ -1814,6 +1950,8 @@ class $$SessionsTableTableManager
               }) => SessionsCompanion.insert(
                 id: id,
                 lessonId: lessonId,
+                arcade: arcade,
+                score: score,
                 startedAt: startedAt,
                 finishedAt: finishedAt,
                 questions: questions,

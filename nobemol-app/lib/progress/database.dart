@@ -9,8 +9,16 @@ part 'database.g.dart';
 class Sessions extends Table {
   IntColumn get id => integer().autoIncrement()();
 
-  /// Leçon jouée, `null` en lecture libre (point de départ).
+  /// Leçon jouée, `null` hors leçon : lecture libre (jusqu'à la v2),
+  /// révision, arcade.
   TextColumn get lessonId => text().nullable()();
+
+  /// Partie d'arcade : mode et clé (`chrono:treble`, `survival`), `null`
+  /// hors arcade. Voir `lib/arcade/arcade.dart`.
+  TextColumn get arcade => text().nullable()();
+
+  /// Score d'une partie d'arcade, `null` hors arcade.
+  IntColumn get score => integer().nullable()();
   DateTimeColumn get startedAt => dateTime()();
   DateTimeColumn get finishedAt => dateTime()();
   IntColumn get questions => integer()();
@@ -79,13 +87,17 @@ class NobemolDatabase extends _$NobemolDatabase {
   NobemolDatabase(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: stepByStep(
       from1To2: (m, schema) async {
         await m.addColumn(schema.answers, schema.answers.card);
+      },
+      from2To3: (m, schema) async {
+        await m.addColumn(schema.sessions, schema.sessions.arcade);
+        await m.addColumn(schema.sessions, schema.sessions.score);
       },
     ),
     beforeOpen: (details) async {

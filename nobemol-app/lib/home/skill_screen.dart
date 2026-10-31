@@ -151,13 +151,16 @@ class _LessonSteps extends StatelessWidget {
               : () => context.push('/lecon/${lesson.id}/exercice'),
         ),
         const SizedBox(height: Space.sm),
-        // L'arcade arrive à l'étape 11.
-        _Step(
-          key: ValueKey('arcade-${lesson.id}'),
-          title: l10n.skillArcade,
-          subtitle: best == null ? l10n.skillArcadeLocked : l10n.comingSoon,
-          onTap: null,
-        ),
+        // L'arcade ne lit que des notes.
+        if (branchOf(lesson.skills.first) == 'note-reading')
+          _Step(
+            key: ValueKey('arcade-${lesson.id}'),
+            title: l10n.skillArcade,
+            subtitle: best == null
+                ? l10n.skillArcadeLocked
+                : l10n.skillArcadeOpen,
+            onTap: best == null ? null : () => context.go('/arcade'),
+          ),
       ],
     );
   }

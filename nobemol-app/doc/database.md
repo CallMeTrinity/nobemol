@@ -20,7 +20,7 @@ La bêta est installée : **une mise à jour de l'APK ne doit jamais perdre la p
 
 ## Schéma v1
 
-- `sessions` : une session d'exercice **terminée** (une session quittée avant la fin n'est pas gardée). Leçon (`null` en lecture libre), début, fin, questions, bonnes réponses, XP, meilleur combo.
+- `sessions` : une session d'exercice **terminée** (une session quittée avant la fin n'est pas gardée). Leçon (`null` hors leçon : lecture libre jusqu'à la v2, révision, arcade), début, fin, questions, bonnes réponses, XP, meilleur combo.
 - `answers` : les réponses d'une session, dans l'ordre. Bonne réponse et réponse donnée (nom de l'enum : `c`, `half`, `piano`), temps de réponse, XP.
 - `theory` : la dernière page ouverte de chaque leçon, et si la théorie est lue.
 - `mastered_skills` : les compétences maîtrisées, avec la date de la première fois.
@@ -28,6 +28,14 @@ La bêta est installée : **une mise à jour de l'APK ne doit jamais perdre la p
 ## Schéma v2
 
 - `answers.card` : la carte de révision de la question (`note:treble:fSharp5`, `duration:half+quarter`, `marking:above:rit.`). Format dans `lib/review/card.dart` : il est stocké, ne jamais le changer sans migration. `null` pour les réponses de la v1.
+
+## Schéma v3
+
+- `sessions.arcade` : la partie d'arcade, mode et clé (`chrono:treble`, `endless:bass`, `survival`). Format dans `lib/arcade/arcade.dart` (`recordKey`). `null` hors arcade.
+- `sessions.score` : son score, points en chrono, notes justes ailleurs. `null` hors arcade.
+- `answers.given` peut valoir `timeout` : le temps de la note est écoulé (arcade). C'est une erreur.
+
+Les records ne sont pas stockés : chacun est le meilleur score de ses parties.
 
 Les cartes ne sont pas stockées : leur boîte et leur date de retour se rejouent depuis les réponses, dans l'ordre (`lib/review/leitner.dart`).
 

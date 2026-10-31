@@ -12,6 +12,10 @@ import 'package:notation/notation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:nobemol/arcade/arcade.dart';
+import 'package:nobemol/arcade/arcade_screen.dart';
+import 'package:nobemol/arcade/game.dart';
+import 'package:nobemol/arcade/game_screen.dart';
 import 'package:nobemol/clock.dart';
 import 'package:nobemol/home/home_screen.dart';
 import 'package:nobemol/home/skill_screen.dart';
@@ -34,13 +38,20 @@ import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/reading/reading_screen.dart';
 import 'package:nobemol/reading/session.dart';
-import 'package:nobemol/reading/start_level.dart';
 import 'package:nobemol/review/card.dart';
 import 'package:nobemol/review/review_screen.dart';
 import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/settings/settings_screen.dart';
 import 'package:nobemol/theme/tokens.dart';
+import 'package:nobemol/ui/depth.dart';
 import 'package:nobemol/ui/glyph_view.dart';
+import 'package:nobemol/ui/note_keyboard.dart';
+
+/// Exercices des leçons de lecture de notes : clé de sol, clé de fa,
+/// grande portée.
+const trebleClef = NoteReadingParams(staff: StaffSetup.treble);
+const bassClef = NoteReadingParams(staff: StaffSetup.bass);
+const grandStaff = NoteReadingParams(staff: StaffSetup.grand, ledgerLines: 1);
 
 void main() {
   late DateTime now;
@@ -110,15 +121,13 @@ void main() {
     }
   }
 
-  /// Lance l'appli et ouvre le point de départ [levelTitle] de la lecture
-  /// libre.
-  Future<ProviderContainer> startSession(
-    WidgetTester tester,
-    String levelTitle,
-  ) async {
+  /// Lance l'appli et ouvre l'exercice de la leçon [id], sans sa théorie.
+  Future<ProviderContainer> startSession(WidgetTester tester, String id) async {
     await launch(tester);
-    await scrollTo(tester, find.text(levelTitle));
-    await tester.tap(find.text(levelTitle));
+    unawaited(
+      GoRouter.of(tester.element(find.byType(HomeScreen)))
+          .push('/lecon/$id/exercice'),
+    );
     await tester.pumpAndSettle();
     expect(find.byType(NotationView), findsOneWidget);
 
@@ -171,12 +180,11 @@ void main() {
   Future<void> answer(
     WidgetTester tester,
     ProviderContainer container,
-    StartLevel level, {
+    NoteReadingParams level, {
     required bool right,
   }) async {
     final expected =
-        container.read(sessionProvider(level.params)).question.answer
-            as NoteName;
+        container.read(sessionProvider(level)).question.answer as NoteName;
     final choice = right
         ? expected
         : NoteName.naturals[(expected.step.index + 1) % 7];
@@ -186,8 +194,8 @@ void main() {
   }
 
   testWidgets('une session complète en clé de sol', (tester) async {
-    final container = await startSession(tester, 'Je débute');
-    const level = StartLevel.beginner;
+    final container = await startSession(tester, 'treble-clef');
+    const level = trebleClef;
 
     for (var i = 0; i < sessionLength; i++) {
       await answer(tester, container, level, right: i.isEven);
@@ -200,7 +208,7 @@ void main() {
 
     await tester.tap(find.text('Recommencer'));
     await tester.pumpAndSettle();
-    expect(container.read(sessionProvider(level.params)).answered, 0);
+    expect(container.read(sessionProvider(level)).answered, 0);
     expect(find.byType(NotationView), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('close')));
@@ -209,8 +217,8 @@ void main() {
   });
 
   testWidgets('la correction ne compte qu’une réponse', (tester) async {
-    final container = await startSession(tester, 'Je connais la clé de sol');
-    final params = StartLevel.knowsTreble.params;
+    final container = await startSession(tester, 'bass-clef');
+    final params = bassClef;
     final expected = container.read(sessionProvider(params)).question.answer;
 
     await tester.tap(find.byKey(ValueKey('answer-${expected.name}')));
@@ -236,8 +244,8 @@ void main() {
   });
 
   testWidgets('« Continuer » ignore un appui trop rapide', (tester) async {
-    final container = await startSession(tester, 'Je débute');
-    final params = StartLevel.beginner.params;
+    final container = await startSession(tester, 'treble-clef');
+    final params = trebleClef;
     final expected = container.read(sessionProvider(params)).question.answer;
     await tester.tap(find.byKey(ValueKey('answer-${expected.name}')));
     await tester.pump();
@@ -259,13 +267,13 @@ void main() {
   testWidgets('le panneau de correction ne décale pas la portée', (
     tester,
   ) async {
-    await startSession(tester, 'Je débute');
+    await startSession(tester, 'treble-clef');
     final before = tester.getRect(find.byType(NotationView));
     final container = ProviderScope.containerOf(
       tester.element(find.byType(ReadingScreen)),
     );
     final expected = container
-        .read(sessionProvider(StartLevel.beginner.params))
+        .read(sessionProvider(trebleClef))
         .question
         .answer;
     await tester.tap(find.byKey(ValueKey('answer-${expected.name}')));
@@ -275,10 +283,8 @@ void main() {
   });
 
   testWidgets('grande portée', (tester) async {
-    final container = await startSession(tester, 'Je lis les deux clés');
-    final session = container.read(
-      sessionProvider(StartLevel.readsBoth.params),
-    );
+    final container = await startSession(tester, 'grand-staff');
+    final session = container.read(sessionProvider(grandStaff));
     expect(session.question.system.staves, hasLength(2));
   });
 
@@ -482,11 +488,9 @@ void main() {
     testWidgets('une note ratée revient le lendemain, puis s’espace', (
       tester,
     ) async {
-      final container = await startSession(tester, 'Je débute');
-      const level = StartLevel.beginner;
-      final missed = cardOf(
-        container.read(sessionProvider(level.params)).question,
-      );
+      final container = await startSession(tester, 'treble-clef');
+      const level = trebleClef;
+      final missed = cardOf(container.read(sessionProvider(level)).question);
       for (var i = 0; i < sessionLength; i++) {
         await answer(tester, container, level, right: i > 0);
       }
@@ -583,6 +587,190 @@ void main() {
     });
   });
 
+  group('arcade', () {
+    /// Une session gardée en base, à [at] : l'exercice d'une leçon, ou une
+    /// partie d'arcade.
+    Future<void> seed({
+      String? lessonId,
+      String? arcade,
+      int? score,
+      int xp = 10,
+    }) => ProgressStore(db).recordSession(
+      lessonId: lessonId,
+      startedAt: now.subtract(const Duration(days: 1)),
+      finishedAt: now.subtract(const Duration(days: 1)),
+      answers: [
+        AnswerRecord(
+          expected: NoteName.c,
+          given: NoteName.c,
+          elapsed: const Duration(seconds: 1),
+          xp: xp,
+        ),
+      ],
+      bestCombo: 1,
+      arcade: arcade,
+      score: score,
+    );
+
+    Future<void> openArcade(WidgetTester tester) async {
+      await launch(tester);
+      await tester.tap(find.byKey(const ValueKey('tab-2')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ArcadeScreen), findsOneWidget);
+    }
+
+    /// Lance un mode. La partie tourne : pas de pumpAndSettle.
+    Future<ArcadeGame> play(WidgetTester tester, ArcadeMode mode) async {
+      await tester.tap(find.byKey(ValueKey('mode-${mode.name}')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      return tester.widget<GameScreen>(find.byType(GameScreen)).game;
+    }
+
+    ProviderContainer containerOf(WidgetTester tester) =>
+        ProviderScope.containerOf(tester.element(find.byType(GameScreen)));
+
+    /// Répond juste, puis laisse passer la correction.
+    Future<void> hit(WidgetTester tester, ArcadeGame game) async {
+      final expected = containerOf(tester)
+          .read(arcadeProvider(game))
+          .question
+          .answer;
+      now = now.add(const Duration(seconds: 1));
+      await give(tester, expected);
+      now = now.add(rightFlash);
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    testWidgets('fermée tant qu’aucun exercice de notes n’est joué', (
+      tester,
+    ) async {
+      await openArcade(tester);
+      expect(find.byKey(const ValueKey('mode-chrono')), findsNothing);
+      expect(find.textContaining('pour ouvrir l'), findsOneWidget);
+    });
+
+    testWidgets('un record battu en chrono, gardé au redémarrage', (
+      tester,
+    ) async {
+      await seed(lessonId: 'treble-clef');
+      await seed(arcade: 'chrono:treble', score: 100);
+      await openArcade(tester);
+      expect(find.text('RECORD : 100 POINTS'), findsOneWidget);
+      // La survie attend le niveau 5.
+      expect(find.text('SE DÉBLOQUE AU NIVEAU 5.'), findsOneWidget);
+
+      final game = await play(tester, ArcadeMode.chrono);
+      expect(game.record, 'chrono:treble');
+      for (var i = 0; i < 3; i++) {
+        await hit(tester, game);
+      }
+      expect(find.text('150 points'), findsOneWidget);
+
+      now = now.add(chronoLength);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pumpAndSettle();
+      expect(find.text('PARTIE TERMINÉE'), findsOneWidget);
+      expect(find.text('Nouveau record !'), findsOneWidget);
+      expect(find.text('3 / 3'), findsOneWidget);
+      expect(find.text('+9 XP'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('arcade-done')));
+      await tester.pumpAndSettle();
+      expect(find.text('RECORD : 150 POINTS'), findsOneWidget);
+
+      // Redémarrage : relu depuis la base.
+      await openArcade(tester);
+      expect(find.text('RECORD : 150 POINTS'), findsOneWidget);
+      expect((await db.select(db.sessions).get()).last.arcade, 'chrono:treble');
+    });
+
+    testWidgets('sans fin : une erreur, et elle part en révision', (
+      tester,
+    ) async {
+      await seed(lessonId: 'treble-clef');
+      await openArcade(tester);
+      final game = await play(tester, ArcadeMode.endless);
+      await hit(tester, game);
+
+      final expected = containerOf(tester)
+          .read(arcadeProvider(game))
+          .question
+          .answer;
+      final wrong = NoteName.naturals[(expected.step.index + 1) % 7];
+      now = now.add(const Duration(seconds: 1));
+      await give(tester, wrong);
+      // La bonne touche s'allume, la mauvaise aussi.
+      final keyboard = tester.widget<NoteKeyboard>(find.byType(NoteKeyboard));
+      expect(keyboard.tones, {
+        expected: AnswerTone.right,
+        wrong: AnswerTone.wrong,
+      });
+      now = now.add(wrongFlash);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pumpAndSettle();
+      expect(find.text('1 note'), findsOneWidget);
+      expect(find.text('Nouveau record !'), findsOneWidget);
+      expect(find.text('1 erreur part en révision.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('arcade-done')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('tab-1')));
+      await tester.pumpAndSettle();
+      expect(find.text('Prochaine carte demain.'), findsOneWidget);
+    });
+
+    testWidgets('pause : la note cachée, le temps arrêté', (tester) async {
+      await seed(lessonId: 'treble-clef');
+      await openArcade(tester);
+      final game = await play(tester, ArcadeMode.chrono);
+
+      await tester.tap(find.byKey(const ValueKey('pause')));
+      await tester.pump();
+      expect(find.text('En pause'), findsOneWidget);
+      now = now.add(const Duration(minutes: 3));
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(
+        containerOf(tester).read(arcadeProvider(game)).phase,
+        ArcadePhase.asking,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('resume')));
+      await tester.pump();
+      expect(find.text('En pause'), findsNothing);
+
+      // Retour du téléphone : la pause, pas la sortie.
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(find.text('En pause'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('quit')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ArcadeScreen), findsOneWidget);
+      // Une partie quittée n'est pas gardée.
+      expect(await db.select(db.sessions).get(), hasLength(1));
+    });
+
+    testWidgets('survie : trois vies', (tester) async {
+      await seed(lessonId: 'treble-clef');
+      await seed(xp: Level.threshold(survivalLevel));
+      await openArcade(tester);
+      final game = await play(tester, ArcadeMode.survival);
+      expect(game.clef, isNull);
+      final lives = find.descendant(
+        of: find.byKey(const ValueKey('lives')),
+        matching: find.byIcon(Icons.favorite_rounded),
+      );
+      expect(lives, findsNWidgets(3));
+
+      // Temps écoulé : une vie de moins.
+      now = now.add(noteTime(0));
+      await tester.pump(const Duration(milliseconds: 50));
+      now = now.add(wrongFlash);
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(lives, findsNWidgets(2));
+    });
+  });
+
   testWidgets('quatre onglets, chacun garde sa place', (tester) async {
     await openLesson(tester, 'treble-clef');
     // La leçon passe au-dessus de la barre d'onglets.
@@ -593,12 +781,13 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('tab-1')));
     await tester.pumpAndSettle();
     expect(find.byType(ReviewScreen), findsOneWidget);
-    for (final (index, title) in ['Arcade', 'Profil'].indexed) {
-      await tester.tap(find.byKey(ValueKey('tab-${index + 2}')));
-      await tester.pumpAndSettle();
-      expect(find.text(title), findsWidgets);
-      expect(find.text('BIENTÔT'), findsOneWidget);
-    }
+    await tester.tap(find.byKey(const ValueKey('tab-2')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ArcadeScreen), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('tab-3')));
+    await tester.pumpAndSettle();
+    expect(find.text('Profil'), findsWidgets);
+    expect(find.text('BIENTÔT'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('tab-0')));
     await tester.pumpAndSettle();
     // Le Parcours garde sa position : on y était descendu.
@@ -609,7 +798,7 @@ void main() {
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
     addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
 
-    final container = await startSession(tester, 'Je débute');
+    final container = await startSession(tester, 'treble-clef');
     expect(container, isNotNull);
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).last);
     expect(
@@ -623,9 +812,9 @@ void main() {
   testWidgets('une session terminée rapporte de l’XP, gardée en base', (
     tester,
   ) async {
-    final container = await startSession(tester, 'Je débute');
+    final container = await startSession(tester, 'treble-clef');
     for (var i = 0; i < sessionLength; i++) {
-      await answer(tester, container, StartLevel.beginner, right: true);
+      await answer(tester, container, trebleClef, right: true);
     }
     await tester.pumpAndSettle();
     // 4 × 10, puis 16 × 15 avec le combo.
@@ -642,8 +831,8 @@ void main() {
   testWidgets('une session quittée avant la fin n’est pas gardée', (
     tester,
   ) async {
-    final container = await startSession(tester, 'Je débute');
-    await answer(tester, container, StartLevel.beginner, right: true);
+    final container = await startSession(tester, 'treble-clef');
+    await answer(tester, container, trebleClef, right: true);
 
     // Retour du téléphone, puis la croix : la même confirmation.
     await tester.binding.handlePopRoute();
@@ -735,7 +924,7 @@ void main() {
       tester.element(find.byType(ReadingScreen)),
     );
     for (var i = 0; i < sessionLength; i++) {
-      await answer(tester, container, StartLevel.beginner, right: i > 0);
+      await answer(tester, container, trebleClef, right: i > 0);
     }
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('result-continue')));
@@ -752,7 +941,8 @@ void main() {
     expect(find.byType(SkillScreen), findsOneWidget);
     expect(find.text('Meilleur score : 95 %'), findsOneWidget);
     expect(find.text('MAÎTRISÉ'), findsOneWidget);
-    expect(find.text('Bientôt'), findsOneWidget);
+    // L'exercice joué ouvre l'arcade.
+    expect(find.text('Chrono, sans fin, survie'), findsOneWidget);
     expect(
       (await db.select(db.masteredSkills).get()).map((row) => row.skillId),
       ['note-reading.treble'],
@@ -768,8 +958,8 @@ void main() {
 
   testWidgets('une erreur affiche son explication, et la note ratée revient '
       'dans « À revoir »', (tester) async {
-    final container = await startSession(tester, 'Je débute');
-    final params = StartLevel.beginner.params;
+    final container = await startSession(tester, 'treble-clef');
+    final params = trebleClef;
     final question =
         container.read(sessionProvider(params)).question as NoteQuestion;
     final expected = question.answer;
@@ -802,7 +992,7 @@ void main() {
     await next(tester);
 
     for (var i = 1; i < sessionLength; i++) {
-      await answer(tester, container, StartLevel.beginner, right: true);
+      await answer(tester, container, trebleClef, right: true);
     }
     await tester.pumpAndSettle();
     await tester.dragUntilVisible(
@@ -825,8 +1015,8 @@ void main() {
   testWidgets('combo : affiché à partir de 2, perdu à la première erreur', (
     tester,
   ) async {
-    final container = await startSession(tester, 'Je débute');
-    const level = StartLevel.beginner;
+    final container = await startSession(tester, 'treble-clef');
+    const level = trebleClef;
     await answer(tester, container, level, right: true);
     expect(find.byKey(const ValueKey('combo')), findsNothing);
     await answer(tester, container, level, right: true);
@@ -834,8 +1024,7 @@ void main() {
     expect(find.text('×3'), findsOneWidget);
 
     final expected =
-        container.read(sessionProvider(level.params)).question.answer
-            as NoteName;
+        container.read(sessionProvider(level)).question.answer as NoteName;
     await give(tester, NoteName.naturals[(expected.step.index + 1) % 7]);
     expect(find.text('COMBO ×3 PERDU'), findsOneWidget);
     await next(tester);
@@ -1019,8 +1208,8 @@ void main() {
     setUp(() => prefs.setString('naming', NoteNaming.letters.name));
 
     testWidgets('touches, correction et explication', (tester) async {
-      final container = await startSession(tester, 'Je débute');
-      final params = StartLevel.beginner.params;
+      final container = await startSession(tester, 'treble-clef');
+      final params = trebleClef;
       for (final letter in ['C', 'D', 'E', 'F', 'G', 'A', 'B']) {
         expect(find.text(letter), findsOneWidget);
       }
@@ -1056,7 +1245,7 @@ void main() {
     tester,
   ) async {
     await prefs.setBool('keyLabels', false);
-    await startSession(tester, 'Je débute');
+    await startSession(tester, 'treble-clef');
     expect(find.text('do'), findsNothing);
     expect(find.bySemanticsLabel('do'), findsOneWidget);
   });
@@ -1079,9 +1268,9 @@ void main() {
           null,
         ),
       );
-      final container = await startSession(tester, 'Je débute');
-      await answer(tester, container, StartLevel.beginner, right: true);
-      await answer(tester, container, StartLevel.beginner, right: false);
+      final container = await startSession(tester, 'treble-clef');
+      await answer(tester, container, trebleClef, right: true);
+      await answer(tester, container, trebleClef, right: false);
     }
 
     testWidgets('courte si c’est juste, longue si c’est faux', (tester) async {

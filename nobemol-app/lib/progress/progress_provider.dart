@@ -58,6 +58,8 @@ class ProgressStore {
             questions: row.questions,
             correct: row.correct,
             xp: row.xp,
+            arcade: row.arcade,
+            arcadeScore: row.score,
           ),
       ],
       theory: {
@@ -81,12 +83,15 @@ class ProgressStore {
   }
 
   /// Enregistre une session terminée et ses réponses, d'un seul bloc.
+  /// [arcade] et [score] : une partie d'arcade.
   Future<void> recordSession({
     required String? lessonId,
     required DateTime startedAt,
     required DateTime finishedAt,
     required List<AnswerRecord> answers,
     required int bestCombo,
+    String? arcade,
+    int? score,
   }) => _db.transaction(() async {
     final id = await _db
         .into(_db.sessions)
@@ -99,6 +104,8 @@ class ProgressStore {
             correct: answers.where((answer) => answer.correct).length,
             xp: answers.fold(0, (sum, answer) => sum + answer.xp),
             bestCombo: bestCombo,
+            arcade: Value(arcade),
+            score: Value(score),
           ),
         );
     await _db.batch(
@@ -186,6 +193,8 @@ class ProgressNotifier extends Notifier<Progress> {
     required DateTime finishedAt,
     required List<AnswerRecord> answers,
     required int bestCombo,
+    String? arcade,
+    int? score,
   }) async {
     final content = ref.read(contentProvider);
     final acquired = ref.read(settingsProvider).start.acquired;
@@ -197,6 +206,8 @@ class ProgressNotifier extends Notifier<Progress> {
       finishedAt: finishedAt,
       answers: answers,
       bestCombo: bestCombo,
+      arcade: arcade,
+      score: score,
     );
     var progress = await _store.load();
     final mastered = Course(

@@ -34,7 +34,67 @@
       "count": { "type": "int" }
     }
   },
-  "arcadeSoon": "Des parties contre la montre, avec les notes déjà apprises.",
+  "arcadeIntro": "Des parties rapides, avec les notes déjà apprises. Les erreurs vont à la révision.",
+  "arcadeLocked": "Joue un exercice de lecture de notes pour ouvrir l'arcade.",
+  "arcadeClef": "Clé",
+  "arcadeClefTreble": "Sol",
+  "arcadeClefBass": "Fa",
+  "arcadeClefGrand": "Grande portée",
+  "arcadeChrono": "Chrono",
+  "arcadeChronoRule": "60 secondes. 50 points par note, ×2 à 5 d'affilée, jusqu'à ×4.",
+  "arcadeEndless": "Sans fin",
+  "arcadeEndlessRule": "Les notes accélèrent. Une erreur et c'est fini.",
+  "arcadeSurvival": "Survie",
+  "arcadeSurvivalRule": "3 erreurs. Une nouvelle clé toutes les 10 notes.",
+  "arcadeSurvivalLocked": "Se débloque au niveau {level}.",
+  "@arcadeSurvivalLocked": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
+  "arcadeRecord": "Record : {score}",
+  "@arcadeRecord": {
+    "placeholders": {
+      "score": { "type": "String" }
+    }
+  },
+  "arcadeNoRecord": "Pas encore de record",
+  "arcadePoints": "{score, plural, =0{0 point} =1{1 point} other{{score} points}}",
+  "@arcadePoints": {
+    "placeholders": {
+      "score": { "type": "int" }
+    }
+  },
+  "arcadeNotes": "{score, plural, =0{0 note} =1{1 note} other{{score} notes}}",
+  "@arcadeNotes": {
+    "placeholders": {
+      "score": { "type": "int" }
+    }
+  },
+  "arcadePause": "Pause",
+  "arcadePaused": "En pause",
+  "arcadeResume": "Reprendre",
+  "arcadeQuit": "Quitter la partie",
+  "arcadeQuitBody": "Une partie quittée n'est pas gardée.",
+  "arcadeOver": "Partie terminée",
+  "arcadeNewRecord": "Nouveau record !",
+  "arcadeCorrect": "Notes justes",
+  "arcadeAccuracy": "Précision",
+  "arcadeTimePerNote": "Temps par note",
+  "arcadeSeconds": "{seconds} s",
+  "@arcadeSeconds": {
+    "placeholders": {
+      "seconds": { "type": "String" }
+    }
+  },
+  "arcadeToReview": "{count, plural, =1{1 erreur part en révision.} other{{count} erreurs partent en révision.}}",
+  "@arcadeToReview": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "arcadeReplay": "Rejouer",
+  "arcadeDone": "Terminer",
   "profileSoon": "Ton niveau, tes statistiques et tes succès.",
   "close": "Fermer",
   "back": "Retour",
@@ -119,7 +179,7 @@
   },
   "skillArcade": "Arcade",
   "skillArcadeLocked": "Après l'exercice",
-  "freeReading": "Lecture libre",
+  "skillArcadeOpen": "Chrono, sans fin, survie",
   "levelBeginnerTitle": "Je débute",
   "levelBeginnerDescription": "Clé de sol, notes sur la portée",
   "levelKnowsTrebleTitle": "Je connais la clé de sol",

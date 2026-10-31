@@ -10,9 +10,12 @@ Le workflow de release reprend la section de la version comme notes de release :
 
 - Onglet Réviser : chaque note, durée ou signe raté devient une carte. Elle revient le lendemain, puis dans 3, 7, 14 et 30 jours tant que la réponse est juste. Une erreur, et elle repart du début.
 - Révision du jour (15 cartes, environ 3 minutes), cartes nouvelles et acquises, et les plus difficiles.
+- Onglet Arcade, avec les notes déjà apprises en clé de sol, en clé de fa ou sur la grande portée. Trois modes : Chrono (60 secondes, combo multiplicateur), Sans fin (les notes accélèrent, une erreur et c'est fini) et Survie (3 erreurs, de nouvelles clés en route, dès le niveau 5).
+- Records par mode et par clé, écran de fin de partie, pause. Les erreurs de l'arcade partent en révision.
 
 ### Modifié
 
+- L'arcade remplace la lecture libre en bas du Parcours.
 - Chaque réponse garde la carte de sa question. La mise à jour depuis la `1.0.0` garde toute la progression, mais les erreurs passées ne créent pas de cartes.
 
 ## [1.0.0] - 2026-10-30 (lancement)

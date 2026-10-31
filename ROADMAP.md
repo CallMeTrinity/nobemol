@@ -23,7 +23,7 @@ Les étapes 6 à 12 viennent du design « Touches » (Claude Design, tour 2) : t
 | 8 | | Boucle d'exercice : feedback, combo, résultats | 1.0.0 |
 | 9 | | Démarrage et réglages | 1.0.0 |
 | 10 | | Révision espacée | Fait |
-| 11 | | Arcade | |
+| 11 | | Arcade | Fait |
 | 12 | | Profil, statistiques, succès, sauvegarde | |
 | Plus tard | Accords, n-olets, liaisons d'expression | Au besoin | |
 
@@ -279,15 +279,37 @@ Tranché :
 
 ## Étape 11 : arcade
 
-- [ ] Correction rapide, pour enchaîner : couleur sur la cible (et son ou vibration), sans panneau ni explication. Les erreurs vont à la révision (étape 10)
-- [ ] Remplace la lecture libre (points de départ du Parcours)
-- [ ] Générateur limité aux notes déjà apprises, choix de la clé (sol, fa, grande portée)
-- [ ] Chrono : 60 s, +50 par note × multiplicateur de combo
-- [ ] Sans fin : les notes accélèrent, une erreur et c'est fini
-- [ ] Survie : 3 erreurs, nouvelles clés en route, débloqué au niveau 5
-- [ ] Records par mode et par clé, écran de fin (record, notes justes, précision, temps par note, XP), pause
+- [x] Correction rapide, pour enchaîner : couleur sur la cible et la touche, vibration, sans panneau ni explication. Les erreurs vont à la révision (étape 10)
+- [x] Remplace la lecture libre (points de départ du Parcours)
+- [x] Générateur limité aux notes déjà apprises, choix de la clé (sol, fa, grande portée)
+- [x] Chrono : 60 s, +50 par note × multiplicateur de combo
+- [x] Sans fin : les notes accélèrent, une erreur et c'est fini
+- [x] Survie : 3 erreurs, nouvelles clés en route, débloqué au niveau 5
+- [x] Records par mode et par clé, écran de fin (record, notes justes, précision, temps par note, XP), pause. Schéma v3 : `sessions.arcade` et `sessions.score` ([doc/database.md](nobemol-app/doc/database.md))
 
 **Terminé quand** : un record battu en Chrono s'affiche comme nouveau record et survit au redémarrage.
+
+Tranché :
+
+- **Notes seulement** : l'arcade travaille la lecture rapide. Durées et signes restent aux leçons et à la révision.
+- **Notes apprises** = compétences dont un exercice a été joué, ou données par le point de départ. Une clé s'ouvre avec sa compétence (`note-reading.treble`, `.bass`, `.grand`). Les lignes supplémentaires (une) et les altérations s'ajoutent à toutes les clés une fois leur leçon jouée. Avant tout exercice de notes, l'arcade est fermée.
+- **Multiplicateur** : ×2 à la 5e note juste d'affilée, ×3 à la 10e, ×4 à partir de la 15e. Une erreur ne coûte que le combo, et le temps de la correction (600 ms).
+- **Accélération** (sans fin et survie) : 6 s pour la première note, 5 % de moins à chaque note juste, jamais sous 1,5 s. Le temps écoulé compte comme une erreur, et part en révision (réponse gardée `timeout`).
+- **Survie** : une nouvelle clé apprise toutes les 10 notes justes (sol, puis fa, puis grande portée), tirées au hasard parmi celles ouvertes. Un seul record, toutes clés mêlées. Les deux autres modes : un record par clé.
+- Score : des points en chrono, des notes justes en sans fin et en survie.
+- **3 XP par note juste**, sans bonus de combo : le combo compte déjà dans le score. Une note toutes les 2 à 3 s donne environ 60 XP par minute, le rythme de l'objectif du jour.
+- **Records calculés** depuis les sessions, comme la maîtrise. « Nouveau record » : un score au-dessus du précédent, ou un premier score non nul.
+- **Pause** : bouton, retour du téléphone, appli en arrière-plan. La note est cachée pendant la pause. Le chrono, le temps de la note et le temps de réponse s'arrêtent. Une partie quittée n'est pas gardée, comme une leçon.
+- La correction : 150 ms en vert, 600 ms en rouge avec la bonne touche allumée. Pas de son tant que l'audio n'existe pas.
+- Écran compétence : la tuile « Arcade » ouvre l'onglet, une fois l'exercice joué. Elle n'apparaît que sur les leçons de lecture de notes.
+- Pas d'écran « Niveau supérieur » après une partie : l'XP compte, le palier se verra à la prochaine leçon.
+- Les tests de l'écran de lecture passent par les exercices des leçons de clé de sol, de clé de fa et de grande portée : mêmes paramètres que les anciens points de départ.
+
+À vérifier :
+
+- Sur un vrai téléphone : fluidité de la barre de temps (rafraîchie toutes les 33 ms), vibration à chaque note, pause en passant sur une autre appli.
+- Le design « Touches » de l'arcade n'a pas pu être relu (pas d'accès au projet Claude Design) : construit avec les composants de l'étape 6, à comparer aux maquettes.
+- Équilibre : durée des notes en sans fin (6 s, −5 %), paliers du multiplicateur, 3 XP par note. À recaler avec les temps de réponse réels.
 
 ## Étape 12 : profil, statistiques, succès, sauvegarde
 

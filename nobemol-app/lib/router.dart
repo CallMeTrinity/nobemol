@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:nobemol/arcade/arcade.dart';
+import 'package:nobemol/arcade/arcade_screen.dart';
+import 'package:nobemol/arcade/game_screen.dart';
 import 'package:nobemol/home/home_screen.dart';
 import 'package:nobemol/home/skill_screen.dart';
 import 'package:nobemol/l10n/app_localizations.dart';
@@ -12,7 +15,6 @@ import 'package:nobemol/lessons/lesson_screen.dart';
 import 'package:nobemol/onboarding/onboarding_screen.dart';
 import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/reading/reading_screen.dart';
-import 'package:nobemol/reading/start_level.dart';
 import 'package:nobemol/review/review_screen.dart';
 import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/settings/settings_screen.dart';
@@ -63,14 +65,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                         SkillScreen(skillId: state.pathParameters['id']!),
                   ),
                   GoRoute(
-                    path: 'lecture/:level',
-                    parentNavigatorKey: root,
-                    redirect: (context, state) =>
-                        _level(state) == null ? '/' : null,
-                    builder: (context, state) =>
-                        ReadingScreen(exercise: _level(state)!.params),
-                  ),
-                  GoRoute(
                     path: 'lecon/:id',
                     parentNavigatorKey: root,
                     redirect: (context, state) =>
@@ -115,7 +109,25 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          _soon('/arcade', (l10n) => (l10n.tabArcade, l10n.arcadeSoon)),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/arcade',
+                builder: (context, state) => const ArcadeScreen(),
+                routes: [
+                  // La partie vient de l'onglet (extra), comme la révision.
+                  GoRoute(
+                    path: 'partie',
+                    parentNavigatorKey: root,
+                    redirect: (context, state) =>
+                        state.extra is ArcadeGame ? null : '/arcade',
+                    builder: (context, state) =>
+                        GameScreen(game: state.extra! as ArcadeGame),
+                  ),
+                ],
+              ),
+            ],
+          ),
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -156,25 +168,6 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(router.dispose);
   return router;
 });
-
-/// Onglet pas encore construit.
-StatefulShellBranch _soon(
-  String path,
-  (String, String) Function(AppLocalizations l10n) texts,
-) => StatefulShellBranch(
-  routes: [
-    GoRoute(
-      path: path,
-      builder: (context, state) {
-        final (title, description) = texts(AppLocalizations.of(context));
-        return ComingSoonScreen(title: title, description: description);
-      },
-    ),
-  ],
-);
-
-StartLevel? _level(GoRouterState state) =>
-    StartLevel.values.asNameMap()[state.pathParameters['level']];
 
 /// Vrai si la compétence [id] existe et a au moins une leçon.
 bool _hasLessons(Content content, String id) =>
