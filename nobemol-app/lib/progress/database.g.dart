@@ -577,6 +577,15 @@ class $AnswersTable extends Answers with TableInfo<$AnswersTable, AnswerRow> {
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _cardMeta = const VerificationMeta('card');
+  @override
+  late final GeneratedColumn<String> card = GeneratedColumn<String>(
+    'card',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -585,6 +594,7 @@ class $AnswersTable extends Answers with TableInfo<$AnswersTable, AnswerRow> {
     given,
     elapsedMs,
     xp,
+    card,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -638,6 +648,12 @@ class $AnswersTable extends Answers with TableInfo<$AnswersTable, AnswerRow> {
     } else if (isInserting) {
       context.missing(_xpMeta);
     }
+    if (data.containsKey('card')) {
+      context.handle(
+        _cardMeta,
+        card.isAcceptableOrUnknown(data['card']!, _cardMeta),
+      );
+    }
     return context;
   }
 
@@ -671,6 +687,10 @@ class $AnswersTable extends Answers with TableInfo<$AnswersTable, AnswerRow> {
         DriftSqlType.int,
         data['${effectivePrefix}xp'],
       )!,
+      card: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}card'],
+      ),
     );
   }
 
@@ -692,6 +712,10 @@ class AnswerRow extends DataClass implements Insertable<AnswerRow> {
   /// Temps de réponse, de l'affichage de la question au choix.
   final int elapsedMs;
   final int xp;
+
+  /// Carte de révision de la question (voir `lib/review/card.dart`).
+  /// `null` avant la v2 : ces réponses ne créent pas de carte.
+  final String? card;
   const AnswerRow({
     required this.id,
     required this.sessionId,
@@ -699,6 +723,7 @@ class AnswerRow extends DataClass implements Insertable<AnswerRow> {
     required this.given,
     required this.elapsedMs,
     required this.xp,
+    this.card,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -709,6 +734,9 @@ class AnswerRow extends DataClass implements Insertable<AnswerRow> {
     map['given'] = Variable<String>(given);
     map['elapsed_ms'] = Variable<int>(elapsedMs);
     map['xp'] = Variable<int>(xp);
+    if (!nullToAbsent || card != null) {
+      map['card'] = Variable<String>(card);
+    }
     return map;
   }
 
@@ -720,6 +748,7 @@ class AnswerRow extends DataClass implements Insertable<AnswerRow> {
       given: Value(given),
       elapsedMs: Value(elapsedMs),
       xp: Value(xp),
+      card: card == null && nullToAbsent ? const Value.absent() : Value(card),
     );
   }
 
@@ -735,6 +764,7 @@ class AnswerRow extends DataClass implements Insertable<AnswerRow> {
       given: serializer.fromJson<String>(json['given']),
       elapsedMs: serializer.fromJson<int>(json['elapsedMs']),
       xp: serializer.fromJson<int>(json['xp']),
+      card: serializer.fromJson<String?>(json['card']),
     );
   }
   @override
@@ -747,6 +777,7 @@ class AnswerRow extends DataClass implements Insertable<AnswerRow> {
       'given': serializer.toJson<String>(given),
       'elapsedMs': serializer.toJson<int>(elapsedMs),
       'xp': serializer.toJson<int>(xp),
+      'card': serializer.toJson<String?>(card),
     };
   }
 
@@ -757,6 +788,7 @@ class AnswerRow extends DataClass implements Insertable<AnswerRow> {
     String? given,
     int? elapsedMs,
     int? xp,
+    Value<String?> card = const Value.absent(),
   }) => AnswerRow(
     id: id ?? this.id,
     sessionId: sessionId ?? this.sessionId,
@@ -764,6 +796,7 @@ class AnswerRow extends DataClass implements Insertable<AnswerRow> {
     given: given ?? this.given,
     elapsedMs: elapsedMs ?? this.elapsedMs,
     xp: xp ?? this.xp,
+    card: card.present ? card.value : this.card,
   );
   AnswerRow copyWithCompanion(AnswersCompanion data) {
     return AnswerRow(
@@ -773,6 +806,7 @@ class AnswerRow extends DataClass implements Insertable<AnswerRow> {
       given: data.given.present ? data.given.value : this.given,
       elapsedMs: data.elapsedMs.present ? data.elapsedMs.value : this.elapsedMs,
       xp: data.xp.present ? data.xp.value : this.xp,
+      card: data.card.present ? data.card.value : this.card,
     );
   }
 
@@ -784,14 +818,15 @@ class AnswerRow extends DataClass implements Insertable<AnswerRow> {
           ..write('expected: $expected, ')
           ..write('given: $given, ')
           ..write('elapsedMs: $elapsedMs, ')
-          ..write('xp: $xp')
+          ..write('xp: $xp, ')
+          ..write('card: $card')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode =>
-      Object.hash(id, sessionId, expected, given, elapsedMs, xp);
+      Object.hash(id, sessionId, expected, given, elapsedMs, xp, card);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -801,7 +836,8 @@ class AnswerRow extends DataClass implements Insertable<AnswerRow> {
           other.expected == this.expected &&
           other.given == this.given &&
           other.elapsedMs == this.elapsedMs &&
-          other.xp == this.xp);
+          other.xp == this.xp &&
+          other.card == this.card);
 }
 
 class AnswersCompanion extends UpdateCompanion<AnswerRow> {
@@ -811,6 +847,7 @@ class AnswersCompanion extends UpdateCompanion<AnswerRow> {
   final Value<String> given;
   final Value<int> elapsedMs;
   final Value<int> xp;
+  final Value<String?> card;
   const AnswersCompanion({
     this.id = const Value.absent(),
     this.sessionId = const Value.absent(),
@@ -818,6 +855,7 @@ class AnswersCompanion extends UpdateCompanion<AnswerRow> {
     this.given = const Value.absent(),
     this.elapsedMs = const Value.absent(),
     this.xp = const Value.absent(),
+    this.card = const Value.absent(),
   });
   AnswersCompanion.insert({
     this.id = const Value.absent(),
@@ -826,6 +864,7 @@ class AnswersCompanion extends UpdateCompanion<AnswerRow> {
     required String given,
     required int elapsedMs,
     required int xp,
+    this.card = const Value.absent(),
   }) : sessionId = Value(sessionId),
        expected = Value(expected),
        given = Value(given),
@@ -838,6 +877,7 @@ class AnswersCompanion extends UpdateCompanion<AnswerRow> {
     Expression<String>? given,
     Expression<int>? elapsedMs,
     Expression<int>? xp,
+    Expression<String>? card,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -846,6 +886,7 @@ class AnswersCompanion extends UpdateCompanion<AnswerRow> {
       if (given != null) 'given': given,
       if (elapsedMs != null) 'elapsed_ms': elapsedMs,
       if (xp != null) 'xp': xp,
+      if (card != null) 'card': card,
     });
   }
 
@@ -856,6 +897,7 @@ class AnswersCompanion extends UpdateCompanion<AnswerRow> {
     Value<String>? given,
     Value<int>? elapsedMs,
     Value<int>? xp,
+    Value<String?>? card,
   }) {
     return AnswersCompanion(
       id: id ?? this.id,
@@ -864,6 +906,7 @@ class AnswersCompanion extends UpdateCompanion<AnswerRow> {
       given: given ?? this.given,
       elapsedMs: elapsedMs ?? this.elapsedMs,
       xp: xp ?? this.xp,
+      card: card ?? this.card,
     );
   }
 
@@ -888,6 +931,9 @@ class AnswersCompanion extends UpdateCompanion<AnswerRow> {
     if (xp.present) {
       map['xp'] = Variable<int>(xp.value);
     }
+    if (card.present) {
+      map['card'] = Variable<String>(card.value);
+    }
     return map;
   }
 
@@ -899,7 +945,8 @@ class AnswersCompanion extends UpdateCompanion<AnswerRow> {
           ..write('expected: $expected, ')
           ..write('given: $given, ')
           ..write('elapsedMs: $elapsedMs, ')
-          ..write('xp: $xp')
+          ..write('xp: $xp, ')
+          ..write('card: $card')
           ..write(')'))
         .toString();
   }
@@ -1834,6 +1881,7 @@ typedef $$AnswersTableCreateCompanionBuilder = AnswersCompanion Function({
   required String given,
   required int elapsedMs,
   required int xp,
+  Value<String?> card,
 });
 typedef $$AnswersTableUpdateCompanionBuilder = AnswersCompanion Function({
   Value<int> id,
@@ -1842,6 +1890,7 @@ typedef $$AnswersTableUpdateCompanionBuilder = AnswersCompanion Function({
   Value<String> given,
   Value<int> elapsedMs,
   Value<int> xp,
+  Value<String?> card,
 });
 
 final class $$AnswersTableReferences
@@ -1897,6 +1946,11 @@ class $$AnswersTableFilterComposer
 
   ColumnFilters<int> get xp => $composableBuilder(
     column: $table.xp,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get card => $composableBuilder(
+    column: $table.card,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1958,6 +2012,11 @@ class $$AnswersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get card => $composableBuilder(
+    column: $table.card,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$SessionsTableOrderingComposer get sessionId {
     final $$SessionsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2005,6 +2064,9 @@ class $$AnswersTableAnnotationComposer
 
   GeneratedColumn<int> get xp =>
       $composableBuilder(column: $table.xp, builder: (column) => column);
+
+  GeneratedColumn<String> get card =>
+      $composableBuilder(column: $table.card, builder: (column) => column);
 
   $$SessionsTableAnnotationComposer get sessionId {
     final $$SessionsTableAnnotationComposer composer = $composerBuilder(
@@ -2064,6 +2126,7 @@ class $$AnswersTableTableManager
                 Value<String> given = const Value.absent(),
                 Value<int> elapsedMs = const Value.absent(),
                 Value<int> xp = const Value.absent(),
+                Value<String?> card = const Value.absent(),
               }) => AnswersCompanion(
                 id: id,
                 sessionId: sessionId,
@@ -2071,6 +2134,7 @@ class $$AnswersTableTableManager
                 given: given,
                 elapsedMs: elapsedMs,
                 xp: xp,
+                card: card,
               ),
           createCompanionCallback:
               ({
@@ -2080,6 +2144,7 @@ class $$AnswersTableTableManager
                 required String given,
                 required int elapsedMs,
                 required int xp,
+                Value<String?> card = const Value.absent(),
               }) => AnswersCompanion.insert(
                 id: id,
                 sessionId: sessionId,
@@ -2087,6 +2152,7 @@ class $$AnswersTableTableManager
                 given: given,
                 elapsedMs: elapsedMs,
                 xp: xp,
+                card: card,
               ),
           withReferenceMapper: (p0) => p0
               .map(

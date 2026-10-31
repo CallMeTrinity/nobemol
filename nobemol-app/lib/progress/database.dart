@@ -34,6 +34,10 @@ class Answers extends Table {
   /// Temps de réponse, de l'affichage de la question au choix.
   IntColumn get elapsedMs => integer()();
   IntColumn get xp => integer()();
+
+  /// Carte de révision de la question (voir `lib/review/card.dart`).
+  /// `null` avant la v2 : ces réponses ne créent pas de carte.
+  TextColumn get card => text().nullable()();
 }
 
 /// Lecture de la théorie d'une leçon.
@@ -75,11 +79,15 @@ class NobemolDatabase extends _$NobemolDatabase {
   NobemolDatabase(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onUpgrade: stepByStep(),
+    onUpgrade: stepByStep(
+      from1To2: (m, schema) async {
+        await m.addColumn(schema.answers, schema.answers.card);
+      },
+    ),
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },

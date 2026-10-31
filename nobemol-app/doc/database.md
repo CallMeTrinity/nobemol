@@ -25,6 +25,12 @@ La bêta est installée : **une mise à jour de l'APK ne doit jamais perdre la p
 - `theory` : la dernière page ouverte de chaque leçon, et si la théorie est lue.
 - `mastered_skills` : les compétences maîtrisées, avec la date de la première fois.
 
+## Schéma v2
+
+- `answers.card` : la carte de révision de la question (`note:treble:fSharp5`, `duration:half+quarter`, `marking:above:rit.`). Format dans `lib/review/card.dart` : il est stocké, ne jamais le changer sans migration. `null` pour les réponses de la v1.
+
+Les cartes ne sont pas stockées : leur boîte et leur date de retour se rejouent depuis les réponses, dans l'ordre (`lib/review/leitner.dart`).
+
 Le **pourcentage** de maîtrise n'est pas stocké : il se calcule depuis les meilleurs scores des sessions (`lib/progress/course.dart`), et suit donc le contenu sans migration. Seul le **fait** d'avoir maîtrisé une compétence est gardé : ajouter une leçon baisse le pourcentage, mais ne reverrouille pas ce qui en dépend.
 
 ## Changer le schéma
