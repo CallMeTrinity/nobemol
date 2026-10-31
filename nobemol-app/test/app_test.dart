@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:drift/drift.dart' show driftRuntimeOptions;
@@ -8,6 +9,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:notation/notation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -51,6 +54,7 @@ import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/depth.dart';
 import 'package:nobemol/ui/glyph_view.dart';
 import 'package:nobemol/ui/note_keyboard.dart';
+import 'package:nobemol/update/update.dart';
 
 /// Exercices des leçons de lecture de notes : clé de sol, clé de fa,
 /// grande portée.
@@ -64,6 +68,9 @@ void main() {
   late NobemolDatabase db;
   late SharedPreferences prefs;
   late _Files files;
+
+  /// Tag de la dernière release sur GitHub, `null` : pas de réponse.
+  String? latestTag;
 
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
@@ -82,6 +89,7 @@ void main() {
     SharedPreferences.setMockInitialValues({'onboarded': true});
     prefs = await SharedPreferences.getInstance();
     files = _Files();
+    latestTag = null;
   });
   tearDown(() => db.close());
 
@@ -107,6 +115,24 @@ void main() {
           randomProvider.overrideWithValue(Random(1)),
           clockProvider.overrideWithValue(() => now),
           backupFilesProvider.overrideWithValue(files),
+          // Hors ligne par défaut : l'appli installée est la 1.0.0.
+          httpClientProvider.overrideWithValue(
+            MockClient(
+              (_) async => switch (latestTag) {
+                final tag? => http.Response(
+                  jsonEncode({
+                    'tag_name': tag,
+                    'html_url': 'https://github.com/r/releases/tag/$tag',
+                  }),
+                  200,
+                ),
+                null => http.Response('', 404),
+              },
+            ),
+          ),
+          installedVersionProvider.overrideWith(
+            (ref) async => const Version(1, 0, 0),
+          ),
         ],
         child: const NobemolApp(),
       ),
@@ -1550,6 +1576,23 @@ void main() {
         find.text('Sauvegarde importée : niveau 1, 10 XP.'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('nouvelle version : signalée, sauf réglage coupé', (
+      tester,
+    ) async {
+      latestTag = 'v1.0.0';
+      await openProfile(tester);
+      expect(find.byKey(const ValueKey('update')), findsNothing);
+
+      latestTag = 'v1.1.0';
+      await openProfile(tester);
+      expect(find.byKey(const ValueKey('update')), findsOneWidget);
+      expect(find.text('Nobémol 1.1.0'), findsOneWidget);
+
+      await prefs.setBool('updateCheck', false);
+      await openProfile(tester);
+      expect(find.byKey(const ValueKey('update')), findsNothing);
     });
 
     testWidgets('fichier étranger : refusé, rien ne change', (tester) async {

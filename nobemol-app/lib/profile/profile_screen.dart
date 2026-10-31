@@ -13,6 +13,7 @@ import 'package:nobemol/progress/xp.dart';
 import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/depth.dart';
 import 'package:nobemol/ui/level_header.dart';
+import 'package:nobemol/update/update_tile.dart';
 
 /// Onglet Profil : niveau, chiffres clés, puis statistiques, succès,
 /// sauvegarde et réglages.
@@ -47,6 +48,7 @@ class ProfileScreen extends ConsumerWidget {
         ),
         children: [
           LevelHeader(level: Level.of(progress.xp)),
+          const UpdateTile(),
           section(l10n.profileFigures),
           Row(
             children: [

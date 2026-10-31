@@ -122,6 +122,7 @@ class Backup {
         'goal': settings.goal.name,
         'haptics': settings.haptics,
         'theme': settings.theme.name,
+        'updateCheck': settings.updateCheck,
       },
       'progress': {
         'sessions': [
@@ -250,6 +251,7 @@ Settings _readSettings(Map<String, Object?> json, Settings current) {
     goal: named(DailyGoal.values, 'goal', current.goal),
     haptics: flag('haptics', current.haptics),
     theme: named(ThemeMode.values, 'theme', current.theme),
+    updateCheck: flag('updateCheck', current.updateCheck),
   );
 }
 

@@ -25,6 +25,7 @@ void main() {
       expect(settings.goal, DailyGoal.five);
       expect(settings.haptics, isTrue);
       expect(settings.theme, ThemeMode.system);
+      expect(settings.updateCheck, isTrue);
     });
 
     test('écrits puis relus', () async {
@@ -39,6 +40,7 @@ void main() {
           goal: DailyGoal.fifteen,
           haptics: false,
           theme: ThemeMode.dark,
+          updateCheck: false,
         ),
       );
       final settings = store.load();
@@ -49,6 +51,7 @@ void main() {
       expect(settings.goal, DailyGoal.fifteen);
       expect(settings.haptics, isFalse);
       expect(settings.theme, ThemeMode.dark);
+      expect(settings.updateCheck, isFalse);
     });
 
     test(

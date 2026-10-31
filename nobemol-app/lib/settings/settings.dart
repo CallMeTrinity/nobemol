@@ -19,6 +19,7 @@ class Settings {
     this.goal = DailyGoal.five,
     this.haptics = true,
     this.theme = ThemeMode.system,
+    this.updateCheck = true,
   });
 
   /// Le démarrage (bienvenue, point de départ, objectif) est passé.
@@ -34,6 +35,9 @@ class Settings {
   final bool haptics;
   final ThemeMode theme;
 
+  /// Interroger GitHub au lancement : une nouvelle version est-elle sortie ?
+  final bool updateCheck;
+
   Settings copyWith({
     bool? onboarded,
     NoteNaming? naming,
@@ -42,6 +46,7 @@ class Settings {
     DailyGoal? goal,
     bool? haptics,
     ThemeMode? theme,
+    bool? updateCheck,
   }) => Settings(
     onboarded: onboarded ?? this.onboarded,
     naming: naming ?? this.naming,
@@ -50,6 +55,7 @@ class Settings {
     goal: goal ?? this.goal,
     haptics: haptics ?? this.haptics,
     theme: theme ?? this.theme,
+    updateCheck: updateCheck ?? this.updateCheck,
   );
 }
 
@@ -67,6 +73,7 @@ class SettingsStore {
   static const _goal = 'goal';
   static const _haptics = 'haptics';
   static const _theme = 'theme';
+  static const _updateCheck = 'updateCheck';
 
   Settings load() {
     const defaults = Settings();
@@ -80,6 +87,7 @@ class SettingsStore {
       goal: named(DailyGoal.values, _goal) ?? defaults.goal,
       haptics: _prefs.getBool(_haptics) ?? defaults.haptics,
       theme: named(ThemeMode.values, _theme) ?? defaults.theme,
+      updateCheck: _prefs.getBool(_updateCheck) ?? defaults.updateCheck,
     );
   }
 
@@ -91,6 +99,7 @@ class SettingsStore {
     _prefs.setString(_goal, settings.goal.name),
     _prefs.setBool(_haptics, settings.haptics),
     _prefs.setString(_theme, settings.theme.name),
+    _prefs.setBool(_updateCheck, settings.updateCheck),
   ]);
 }
 

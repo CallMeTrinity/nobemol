@@ -698,6 +698,16 @@
   "themeDark": "Sombre",
   "settingsAbout": "À propos",
   "settingsVersion": "Version",
+  "settingsUpdateCheck": "Vérifier les mises à jour",
+  "settingsUpdateCheckHint": "Au lancement, auprès de GitHub. La seule connexion de l'appli : rien d'autre ne sort du téléphone.",
+  "updateAvailable": "Mise à jour disponible",
+  "updateVersion": "Nobémol {version}",
+  "@updateVersion": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "updateHint": "Ouvre la page de la version pour télécharger l'APK, puis installe-le par-dessus : ta progression reste.",
   "settingsLicenses": "Licences",
   "settingsLicensesHint": "Polices et bibliothèques"
 }
