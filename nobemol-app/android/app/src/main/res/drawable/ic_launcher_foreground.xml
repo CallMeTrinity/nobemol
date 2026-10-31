@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Avant-plan de l'icône adaptative, depuis nobemol-icone.svg (repère de
+     100 × 100). Les 512 px du SVG couvrent les 72 dp visibles du carré de
+     108 dp : x' = 0,4921875 x + 29,390625 et y' = 0,4921875 y + 28,8984375.
+     Le glyphe reste dans le cercle de 66 dp que toutes les formes gardent. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.4921875"
+        android:scaleY="0.4921875"
+        android:translateX="29.390625"
+        android:translateY="28.8984375">
+        <path
+            android:fillColor="#EF5B36"
+            android:pathData="M62,66L72,64V94H62Z" />
+        <path
+            android:fillColor="#F4EEE2"
+            android:fillType="evenOdd"
+            android:pathData="M28,8H38V36.182L72,30V70L28,78ZM38,46.182L62,41.818V61.818L38,66.182Z" />
+    </group>
+</vector>
