@@ -22,7 +22,7 @@ Les étapes 6 à 12 viennent du design « Touches » (Claude Design, tour 2) : t
 | 7 | | Progression persistée : XP, niveaux, parcours | 1.0.0 |
 | 8 | | Boucle d'exercice : feedback, combo, résultats | 1.0.0 |
 | 9 | | Démarrage et réglages | 1.0.0 |
-| 10 | | Révision espacée | |
+| 10 | | Révision espacée | Fait |
 | 11 | | Arcade | |
 | 12 | | Profil, statistiques, succès, sauvegarde | |
 | Plus tard | Accords, n-olets, liaisons d'expression | Au besoin | |
@@ -250,12 +250,32 @@ Tranché :
 
 ## Étape 10 : révision espacée
 
-- [ ] **Choisir l'algorithme avant le code** : celui de Recto, Leitner ou FSRS. Décision dans [IDEA.md](IDEA.md)
-- [ ] Cartes : une note dans une clé, une durée, un signe. Créées à la première erreur
-- [ ] Onglet Réviser : cartes dues aujourd'hui, nouvelles, acquises, session de révision (~3 min)
-- [ ] « Les plus difficiles » : les cartes les plus ratées
+- [x] **Choisir l'algorithme avant le code** : **Leitner**, 5 boîtes (1, 3, 7, 14, 30 jours). Décision dans [IDEA.md](IDEA.md)
+- [x] Cartes : une note dans une clé, une durée, un signe. Créées à la première erreur (`lib/review/card.dart`). Schéma v2 : chaque réponse garde sa carte (`answers.card`, [doc/database.md](nobemol-app/doc/database.md))
+- [x] Onglet Réviser : cartes dues aujourd'hui, nouvelles, acquises, session de révision (15 cartes, ~3 min)
+- [x] « Les plus difficiles » : les cartes ratées au moins deux fois, les plus ratées d'abord
 
 **Terminé quand** : une note ratée revient le lendemain, puis s'espace après des réponses justes.
+
+Tranché :
+
+- **Recto écarté** : il n'a pas d'algorithme d'espacement, seulement un tri par dernière note. **FSRS écarté** : il vise 4 notes auto-évaluées et des paramètres optimisés sur l'historique. Avec juste / faux et les paramètres par défaut, le gain est faible et les intervalles s'expliquent mal.
+- **Cartes recalculées, pas stockées** : chaque réponse garde sa carte, et l'état de Leitner se rejoue depuis ce journal (`lib/review/leitner.dart`). Comme la maîtrise : changer d'algorithme ne demande pas de migration. Le journal sert aussi l'étape 12 : la clé de chaque note y est enfin.
+- **Les réponses comptent partout** : la première bonne réponse du jour sur une carte due la fait monter d'une boîte, en leçon comme en révision. Une erreur, où qu'elle soit, la renvoie en boîte 1. Les bonnes réponses suivantes du même jour ne comptent pas : la carte n'est plus due.
+- Une réponse compte **le jour où sa session finit**, en jours de calendrier locaux : une carte ratée à 23 h revient à minuit. Les changements d'heure ne décalent rien.
+- **Une carte, c'est ce qui est écrit**, pas son sens : « rall. » et « rit. » font deux cartes, une blanche pointée et une blanche liée à une noire aussi. Une note garde l'altération lue (armure comprise) et s'affiche avec l'altération écrite.
+- Une carte s'affiche **seule sur sa portée** : la note dans sa clé (la grande portée se défait), la durée et le signe sur un si en clé de sol. Pas la phrase d'origine : la carte doit se lire sans la leçon, qui peut changer.
+- Réponses d'un signe en révision : celles de la **première leçon qui le demande**, choisies par son auteur. Un signe qu'aucune leçon ne demande plus est sauté.
+- Session : les 15 cartes les plus en retard, puis les plus fragiles, **rangées par sorte** (notes, durées, signes) pour que les réponses ne changent pas à chaque question. Les touches noires s'ouvrent pour toutes les notes dès qu'une est altérée : elles ne trahissent pas la réponse. Pas de « Recommencer » aux résultats : les cartes ne sont plus dues.
+- Une révision est gardée comme une lecture libre (`lessonId` vide) : de l'XP, pas de maîtrise.
+- Les réponses d'avant la v2 n'ont pas de carte : l'onglet part vide après la mise à jour. Les recréer était impossible en lecture libre, la clé n'était pas gardée.
+
+À vérifier :
+
+- Sur un vrai téléphone : `1.0.0` puis cette version **par-dessus** (migration v2), une note ratée, puis l'onglet Réviser le lendemain.
+- Le design « Touches » de l'onglet Réviser n'a pas pu être relu (pas d'accès au projet Claude Design) : construit avec les composants de l'étape 6, à comparer aux maquettes.
+- Taille d'un soufflet ou d'une liaison en révision : affichés en grand comme une note seule (`StaffSpaces.exercise`), réduits s'ils débordent.
+- Seuil des « plus difficiles » (2 erreurs) et durée d'une session (15 cartes) : à recaler avec l'usage.
 
 ## Étape 11 : arcade
 
