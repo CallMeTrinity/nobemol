@@ -6,6 +6,10 @@ Le workflow de release reprend la section de la version comme notes de release :
 
 ## [Non publié]
 
+## [1.1.0] - 2026-11-02
+
+Les étapes 10 à 13 de la [feuille de route](https://github.com/CallMeTrinity/nobemol/blob/main/ROADMAP.md) et ses éléments « En parallèle » : les quatre onglets sont complets. Une mise à jour depuis la `1.0.0` s'installe par-dessus et garde la progression.
+
 ### Ajouté
 
 - Onglet Réviser : chaque note, durée ou signe raté devient une carte. Elle revient le lendemain, puis dans 3, 7, 14 et 30 jours tant que la réponse est juste. Une erreur, et elle repart du début.
@@ -26,6 +30,11 @@ Le workflow de release reprend la section de la version comme notes de release :
 - L'arcade remplace la lecture libre en bas du Parcours.
 - Chaque réponse garde la carte de sa question. La mise à jour depuis la `1.0.0` garde toute la progression, mais les erreurs passées ne créent pas de cartes.
 - Les réglages passent dans le Profil, sous la sauvegarde. Les succès déjà mérités avant la mise à jour s'affichent tout de suite, et se fêtent à la session suivante.
+
+### Limites connues
+
+- Première version qui vérifie les mises à jour : la tuile du Profil apparaîtra à la release suivante.
+- Le son est synthétisé : moins réaliste qu'un vrai piano.
 
 ## [1.0.0] - 2026-10-30 (lancement)
 
@@ -92,6 +101,7 @@ Première bêta : le MVP, étapes 1 à 5 de la [feuille de route](https://github
 - Le moteur n'évite pas les chevauchements horizontaux entre signes voisins.
 - Icône d'appli par défaut.
 
-[Non publié]: https://github.com/CallMeTrinity/nobemol/compare/v1.0.0...HEAD
+[Non publié]: https://github.com/CallMeTrinity/nobemol/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/CallMeTrinity/nobemol/releases/tag/v1.1.0
 [1.0.0]: https://github.com/CallMeTrinity/nobemol/releases/tag/v1.0.0
 [0.0.1]: https://github.com/CallMeTrinity/nobemol/releases/tag/v0.0.1
