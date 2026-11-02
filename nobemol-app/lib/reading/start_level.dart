@@ -1,4 +1,5 @@
-/// Point de départ choisi à la main, en attendant le test de positionnement.
+/// Point de départ choisi à la main, à la place du test de positionnement
+/// (`lib/placement/`).
 enum StartLevel {
   beginner(),
   knowsTreble(acquired: {'note-reading.treble'}),

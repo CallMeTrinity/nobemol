@@ -14,6 +14,7 @@ Le workflow de release reprend la section de la version comme notes de release :
 - Rythme tapé : lire une phrase, puis la taper sur un grand bouton, avec un métronome et une mesure de décompte. Chaque touche vibre et fait entendre sa note. Chaque note est jugée : en place, en avance, en retard ou oubliée, avec une erreur permise par tranche de 5 notes. La phrase est rejouée à la correction.
 - Calage du rythme : 12 clics à taper pour mesurer le retard du son et du toucher de ton téléphone. Dans les réglages, ou sous le bouton du rythme tapé.
 - 4 leçons et 2 compétences de rythme tapé : noires et blanches, deux croches, croches en phrase, notes pointées et liées. Chaque leçon va de la phrase la plus simple à la plus longue.
+- Test de positionnement, au démarrage et dans les réglages : des questions de lecture, de plus en plus dures tant que tu réussis (clés, lignes supplémentaires, altérations, grande portée, rythme, signes, intervalles). Ce que tu sais déjà s'ouvre dans le parcours, en 3 minutes au plus. « Je ne sais pas » passe une question, et le choix à la main reste possible.
 
 ### Corrigé
 

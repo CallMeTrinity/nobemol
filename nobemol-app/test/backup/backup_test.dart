@@ -11,6 +11,7 @@ import 'package:nobemol/progress/database.dart';
 import 'package:nobemol/progress/progress.dart';
 import 'package:nobemol/progress/progress_provider.dart';
 import 'package:nobemol/progress/xp.dart';
+import 'package:nobemol/reading/start_level.dart';
 import 'package:nobemol/settings/settings.dart';
 
 void main() {
@@ -114,6 +115,32 @@ void main() {
       before.cardAnswers.map((a) => (a.card, a.correct, a.elapsed, a.timedOut)),
     );
     expect(after.cards.keys, before.cards.keys);
+  });
+
+  test('réglages : le résultat du test de positionnement', () {
+    String export(Settings settings) => Backup(
+      rows: const ProgressRows(),
+      settings: settings,
+      exportedAt: start,
+    ).encode();
+    const tested = {'note-reading.treble', 'note-reading.bass'};
+    const phone = Settings(placement: {'note-reading.treble'});
+
+    final read = Backup.decode(
+      export(const Settings(placement: tested)),
+      current: phone,
+    ).settings;
+    expect(read.placement, tested);
+    expect(read.acquired, tested);
+
+    // Pas de test dans le fichier : le point de départ, pas le test du
+    // téléphone. L'import remplace tout.
+    final manual = Backup.decode(
+      export(const Settings(start: StartLevel.knowsTreble)),
+      current: phone,
+    ).settings;
+    expect(manual.placement, isNull);
+    expect(manual.acquired, StartLevel.knowsTreble.acquired);
   });
 
   test('réglages : gardés, démarrage passé', () {

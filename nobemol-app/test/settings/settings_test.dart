@@ -27,6 +27,7 @@ void main() {
       expect(settings.theme, ThemeMode.system);
       expect(settings.updateCheck, isTrue);
       expect(settings.sound, isTrue);
+      expect(settings.placement, isNull);
     });
 
     test('écrits puis relus', () async {
@@ -55,6 +56,24 @@ void main() {
       expect(settings.theme, ThemeMode.dark);
       expect(settings.updateCheck, isFalse);
       expect(settings.sound, isFalse);
+      expect(settings.placement, isNull);
+    });
+
+    test('test de positionnement : gardé, puis effacé', () async {
+      SharedPreferences.setMockInitialValues({});
+      final store = SettingsStore(await SharedPreferences.getInstance());
+      const tested = Settings(
+        start: StartLevel.fluent,
+        placement: {'note-reading.treble'},
+      );
+      await store.save(tested);
+      expect(store.load().placement, {'note-reading.treble'});
+      // Le test passe avant le point de départ.
+      expect(store.load().acquired, {'note-reading.treble'});
+
+      await store.save(tested.copyWith(placement: () => null));
+      expect(store.load().placement, isNull);
+      expect(store.load().acquired, StartLevel.fluent.acquired);
     });
 
     test(

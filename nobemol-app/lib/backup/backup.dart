@@ -118,6 +118,8 @@ class Backup {
       'settings': {
         'naming': settings.naming.name,
         'start': settings.start.name,
+        if (settings.placement case final placement?)
+          'placement': placement.toList(),
         'keyLabels': settings.keyLabels,
         'goal': settings.goal.name,
         'haptics': settings.haptics,
@@ -248,6 +250,11 @@ Settings _readSettings(Map<String, Object?> json, Settings current) {
     onboarded: true,
     naming: named(NoteNaming.values, 'naming', current.naming),
     start: named(StartLevel.values, 'start', current.start),
+    // Absent : pas de test passé, le point de départ suffit.
+    placement: () => switch (json['placement']) {
+      final List<Object?> skills => skills.whereType<String>().toSet(),
+      _ => null,
+    },
     keyLabels: flag('keyLabels', current.keyLabels),
     goal: named(DailyGoal.values, 'goal', current.goal),
     haptics: flag('haptics', current.haptics),

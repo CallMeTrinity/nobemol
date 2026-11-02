@@ -38,6 +38,7 @@ import 'package:nobemol/lessons/lesson_screen.dart';
 import 'package:nobemol/reading/intervals.dart';
 import 'package:nobemol/main.dart';
 import 'package:nobemol/onboarding/onboarding_screen.dart';
+import 'package:nobemol/placement/placement_screen.dart';
 import 'package:nobemol/profile/profile_screen.dart';
 import 'package:nobemol/profile/stats_screen.dart';
 import 'package:nobemol/progress/course.dart';
@@ -52,6 +53,7 @@ import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/reading/calibration_screen.dart';
 import 'package:nobemol/reading/reading_screen.dart';
 import 'package:nobemol/reading/session.dart';
+import 'package:nobemol/reading/start_level.dart';
 import 'package:nobemol/reading/tapping.dart';
 import 'package:nobemol/review/card.dart';
 import 'package:nobemol/review/review_screen.dart';
@@ -1167,6 +1169,9 @@ void main() {
 
       await tester.tap(action);
       await tester.pumpAndSettle();
+      expect(find.text('Tu lis déjà la musique ?'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('start-choose')));
+      await tester.pumpAndSettle();
       expect(find.text('Où en es-tu ?'), findsOneWidget);
       // Rien de choisi : on ne passe pas.
       await tester.tap(action);
@@ -1210,6 +1215,8 @@ void main() {
       await launch(tester);
       await tester.tap(find.byKey(const ValueKey('onboarding-action')));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('start-choose')));
+      await tester.pumpAndSettle();
       expect(find.text('Où en es-tu ?'), findsOneWidget);
 
       final navigator = tester.state<NavigatorState>(
@@ -1217,7 +1224,133 @@ void main() {
       );
       await navigator.maybePop();
       await tester.pumpAndSettle();
+      expect(find.text('Tu lis déjà la musique ?'), findsOneWidget);
+      await navigator.maybePop();
+      await tester.pumpAndSettle();
       expect(find.text('Lire les notes sans y penser'), findsOneWidget);
+    });
+
+    /// Ouvre le test depuis le démarrage.
+    Future<void> openTest(WidgetTester tester) async {
+      await prefs.clear();
+      await launch(tester);
+      final action = find.byKey(const ValueKey('onboarding-action'));
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('start-test')));
+      await tester.pump();
+      expect(find.text('Commencer le test'), findsOneWidget);
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+      expect(find.byType(PlacementScreen), findsOneWidget);
+    }
+
+    /// Joue le test : la bonne réponse aux compétences que l'élève
+    /// [knows], « Je ne sais pas » aux autres. Rend le nombre de questions.
+    Future<int> takeTest(
+      WidgetTester tester,
+      bool Function(String skill) knows,
+    ) async {
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PlacementScreen)),
+      );
+      var asked = 0;
+      while (!container.read(placementProvider).finished) {
+        final state = container.read(placementProvider);
+        asked++;
+        if (knows(state.skill!.skill.id)) {
+          await give(tester, state.question!.answer);
+        } else {
+          await tester.tap(find.byKey(const ValueKey('placement-unknown')));
+          await tester.pump();
+        }
+        // La correction rapide, puis la question suivante.
+        await tester.pump(wrongFlash);
+      }
+      await tester.pumpAndSettle();
+      return asked;
+    }
+
+    /// Choisit l'objectif et termine le démarrage.
+    Future<void> finish(WidgetTester tester) async {
+      expect(find.text('Combien de temps par jour ?'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('goal-five')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('onboarding-action')));
+      await tester.pumpAndSettle();
+      expect(find.byType(HomeScreen), findsOneWidget);
+    }
+
+    testWidgets('test de positionnement : un débutant sort en deux '
+        'questions', (tester) async {
+      await openTest(tester);
+      expect(find.text('LIRE EN CLÉ DE SOL'), findsOneWidget);
+      expect(await takeTest(tester, (_) => false), 2);
+      expect(find.text('On commence au début'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('placement-done')));
+      await tester.pumpAndSettle();
+      await finish(tester);
+
+      final settings = SettingsStore(prefs).load();
+      expect(settings.placement, isEmpty);
+      expect(settings.acquired, isEmpty);
+      // Rien n'est gardé du test : ni session, ni XP, ni carte.
+      final progress = await ProgressStore(db).load();
+      expect(progress.xp, 0);
+      expect(progress.cards, isEmpty);
+    });
+
+    testWidgets('test de positionnement : un lecteur de notes ouvre la '
+        'suite du parcours', (tester) async {
+      await openTest(tester);
+      final asked = await takeTest(
+        tester,
+        (skill) => skill.startsWith('note-reading.'),
+      );
+      expect(find.text('7 compétences acquises'), findsOneWidget);
+      expect(find.text('Lire la grande portée'), findsOneWidget);
+      // Deux questions par compétence de lecture, puis deux pour le
+      // rythme, qui ferme la suite. Les termes demandent les phrases :
+      // leurs deux premières compétences sont posées aussi.
+      expect(asked, lessThan(30));
+      await tester.tap(find.byKey(const ValueKey('placement-done')));
+      await tester.pumpAndSettle();
+      await finish(tester);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(HomeScreen)),
+      );
+      final course = container.read(courseProvider);
+      expect(course.skill('rhythm.beats')!.state, SkillState.todo);
+      expect(course.skill('note-reading.grand')!.state, SkillState.todo);
+      // Acquises, pas maîtrisées : rien en base.
+      expect(container.read(progressProvider).mastered, isEmpty);
+      // « Commencer » propose d'abord ce qui n'est pas acquis.
+      expect(
+        course.resume!.lesson.skills.every(
+          (skill) => skill.startsWith('note-reading.'),
+        ),
+        isFalse,
+      );
+      expect(
+        SettingsStore(prefs).load().acquired,
+        contains('note-reading.key-signatures'),
+      );
+    });
+
+    testWidgets('quitter le test : le choix à la main', (tester) async {
+      await openTest(tester);
+      await tester.tap(find.byKey(const ValueKey('close')));
+      await tester.pumpAndSettle();
+      expect(find.text('Où en es-tu ?'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('start-knowsTreble')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('onboarding-action')));
+      await tester.pumpAndSettle();
+      await finish(tester);
+      final settings = SettingsStore(prefs).load();
+      expect(settings.start, StartLevel.knowsTreble);
+      expect(settings.placement, isNull);
     });
   });
 
@@ -1243,6 +1376,12 @@ void main() {
 
     Future<void> tapSetting(WidgetTester tester, String key) async {
       final finder = find.byKey(ValueKey(key)).hitTestable();
+      if (finder.evaluate().isEmpty &&
+          find.byKey(ValueKey(key)).evaluate().isNotEmpty) {
+        // Construit mais hors de l'écran, au-dessus comme au-dessous.
+        await tester.ensureVisible(find.byKey(ValueKey(key)));
+        await tester.pumpAndSettle();
+      }
       if (finder.evaluate().isEmpty) {
         await tester.dragUntilVisible(
           finder,
@@ -1289,6 +1428,54 @@ void main() {
       expect(bass(), SkillState.todo);
       await tapSetting(tester, 'start-beginner');
       expect(bass(), SkillState.locked);
+    });
+
+    testWidgets('test de positionnement : remplace le point de départ, '
+        'puis s’efface devant lui', (tester) async {
+      await openSettings(tester);
+      await tapSetting(tester, 'start-knowsTreble');
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(SettingsScreen)),
+      );
+      SkillState skill(String id) =>
+          container.read(courseProvider).skill(id)!.state;
+
+      await tapSetting(tester, 'placement');
+      expect(find.byType(PlacementScreen), findsOneWidget);
+      final test = ProviderScope.containerOf(
+        tester.element(find.byType(PlacementScreen)),
+      );
+      // Clé de sol et clé de fa, rien d'autre.
+      while (!test.read(placementProvider).finished) {
+        final state = test.read(placementProvider);
+        final knows = const {
+          'note-reading.treble',
+          'note-reading.bass',
+        }.contains(state.skill!.skill.id);
+        if (knows) {
+          await give(tester, state.question!.answer);
+        } else {
+          await tester.tap(find.byKey(const ValueKey('placement-unknown')));
+          await tester.pump();
+        }
+        await tester.pump(wrongFlash);
+      }
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('placement-done')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Test fait : 2 compétences acquises'), findsOneWidget);
+      expect(SettingsStore(prefs).load().placement, {
+        'note-reading.treble',
+        'note-reading.bass',
+      });
+      expect(skill('note-reading.ledger-lines'), SkillState.todo);
+      expect(skill('note-reading.grand'), SkillState.locked);
+
+      // Un point de départ choisi efface le test.
+      await tapSetting(tester, 'start-beginner');
+      expect(SettingsStore(prefs).load().placement, isNull);
+      expect(skill('note-reading.bass'), SkillState.locked);
     });
 
     testWidgets('licences des polices', (tester) async {

@@ -15,9 +15,12 @@ import 'package:nobemol/ui/depth.dart';
 import 'package:nobemol/ui/nobemol_icon.dart';
 import 'package:nobemol/ui/progress_bar.dart';
 
-/// Premier lancement : bienvenue, point de départ, objectif du jour. Les
-/// deux choix sont gardés à la fin seulement : un démarrage interrompu
-/// recommence. Avec une sauvegarde, rien à choisir : elle a ses réglages.
+/// Premier lancement : bienvenue, point de départ, objectif du jour.
+///
+/// Le point de départ se trouve par le test de positionnement, ou se
+/// choisit à la main. Les choix sont gardés à la fin seulement : un
+/// démarrage interrompu recommence. Avec une sauvegarde, rien à choisir :
+/// elle a ses réglages.
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -25,21 +28,85 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-/// Écrans après la bienvenue.
+/// Écrans après la bienvenue, dans la barre de progression.
 const _steps = 2;
 
+enum _Page {
+  welcome,
+
+  /// Débutant, ou le test.
+  start,
+
+  /// Les 4 points de départ, à la main.
+  manual,
+  goal,
+}
+
+/// Réponse à « Tu lis déjà la musique ? ».
+enum _Start { beginner, test }
+
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  /// 0 : bienvenue, puis les étapes de 1 à [_steps].
-  var _step = 0;
+  /// Pages ouvertes, la dernière à l'écran : le retour revient à celle
+  /// d'avant.
+  final _pages = [_Page.welcome];
+  _Start? _answer;
+
+  /// Point de départ choisi à la main.
   StartLevel? _start;
+
+  /// Compétences du test, une fois passé.
+  Set<String>? _placement;
   DailyGoal? _goal;
 
+  _Page get _page => _pages.last;
+
+  void _open(_Page page) => setState(() => _pages.add(page));
+
+  void _back() => setState(() => _pages.removeLast());
+
+  /// Le test, puis l'objectif. Quitté ou « Je préfère choisir » : le
+  /// choix à la main.
+  Future<void> _test() async {
+    final placement = await context.push<Set<String>>('/positionnement');
+    if (!mounted) return;
+    setState(() {
+      if (placement == null) {
+        _pages.add(_Page.manual);
+      } else {
+        _placement = placement;
+        _start = null;
+        _pages.add(_Page.goal);
+      }
+    });
+  }
+
+  void _next() {
+    switch (_answer) {
+      case _Start.beginner:
+        _start = StartLevel.beginner;
+        _placement = null;
+        _open(_Page.goal);
+      case _Start.test when _placement != null:
+        _start = null;
+        _open(_Page.goal);
+      case _Start.test:
+        unawaited(_test());
+      case null:
+    }
+  }
+
   Future<void> _finish() async {
+    // Le dernier choix fait foi : le test, ou un point de départ.
+    final placement = _start == null ? _placement : null;
     await ref
         .read(settingsProvider.notifier)
         .update(
-          (settings) =>
-              settings.copyWith(onboarded: true, start: _start, goal: _goal),
+          (settings) => settings.copyWith(
+            onboarded: true,
+            start: _start ?? StartLevel.beginner,
+            placement: () => placement,
+            goal: _goal,
+          ),
         );
     if (mounted) context.go('/');
   }
@@ -54,34 +121,79 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     return PopScope(
       // Retour du téléphone : l'écran d'avant, puis quitter l'appli.
-      canPop: _step == 0,
+      canPop: _pages.length == 1,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) setState(() => _step--);
+        if (!didPop) _back();
       },
       child: Scaffold(
         body: SafeArea(
-          child: switch (_step) {
-            0 => _Welcome(
-              onStart: () => setState(() => _step = 1),
+          child: switch (_page) {
+            _Page.welcome => _Welcome(
+              onStart: () => _open(_Page.start),
               onRestore: () => unawaited(_restore()),
             ),
-            1 => _Step(
+            _Page.start => _Step(
+              step: 1,
+              title: l10n.onboardingStartTitle,
+              body: l10n.onboardingStartBody,
+              onBack: _back,
+              action: _answer == _Start.test && _placement == null
+                  ? l10n.onboardingStartTest
+                  : l10n.onboardingNext,
+              onAction: _answer == null ? null : _next,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ChoiceTile(
+                    key: const ValueKey('start-new'),
+                    title: l10n.startBeginnerTitle,
+                    subtitle: l10n.startBeginnerDescription,
+                    selected: _answer == _Start.beginner,
+                    onTap: () => setState(() => _answer = _Start.beginner),
+                  ),
+                  ChoiceTile(
+                    key: const ValueKey('start-test'),
+                    title: l10n.startTestTitle,
+                    subtitle: switch (_placement) {
+                      final placement? => l10n.startTestDone(placement.length),
+                      null => l10n.startTestDescription,
+                    },
+                    selected: _answer == _Start.test,
+                    onTap: () => setState(() => _answer = _Start.test),
+                  ),
+                  const SizedBox(height: Space.s),
+                  Center(
+                    child: TextButton(
+                      key: const ValueKey('start-choose'),
+                      onPressed: () => _open(_Page.manual),
+                      child: Text(l10n.onboardingChoose),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _Page.manual => _Step(
               step: 1,
               title: l10n.onboardingLevelTitle,
               body: l10n.onboardingLevelBody,
-              onBack: () => setState(() => _step = 0),
+              onBack: _back,
               action: l10n.onboardingNext,
-              onAction: _start == null ? null : () => setState(() => _step = 2),
+              onAction: _start == null
+                  ? null
+                  : () {
+                      _placement = null;
+                      _open(_Page.goal);
+                    },
               child: StartLevelChoices(
                 selected: _start,
                 onSelect: (level) => setState(() => _start = level),
               ),
             ),
-            _ => _Step(
+            _Page.goal => _Step(
               step: 2,
               title: l10n.onboardingGoalTitle,
               body: l10n.onboardingGoalBody,
-              onBack: () => setState(() => _step = 1),
+              onBack: _back,
               action: l10n.onboardingDone,
               onAction: _goal == null ? null : () => unawaited(_finish()),
               child: DailyGoalChoices(

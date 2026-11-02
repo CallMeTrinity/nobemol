@@ -20,8 +20,8 @@ Application mobile pour apprendre et réviser le solfège. Le but n'est pas d'af
 
 **Tous les niveaux**, du débutant complet au musicien qui retravaille sa lecture.
 
-- **Test de positionnement** au premier lancement, façon Duolingo. **Pas au MVP**, mais à prévoir dans le modèle de données.
-- **Substitut au MVP** : un choix manuel du point de départ (« je débute », « je connais la clé de sol », « je lis les deux clés »...).
+- **Test de positionnement** au premier lancement, façon Duolingo (étape 16). Pas au MVP, mais prévu dès le modèle de données.
+- **Choix manuel** du point de départ (« je débute », « je connais la clé de sol », « je lis les deux clés »...) : le substitut du MVP, gardé à côté du test.
 
 ### Conséquences sur le design
 
@@ -60,6 +60,7 @@ Application mobile pour apprendre et réviser le solfège. Le but n'est pas d'af
 | Stockage des leçons (MVP) | Embarquées dans l'appli | Du texte : ~1000 leçons pèsent environ 100 à 200 Ko compressées. |
 | Noms des notes | Modèle en **lettres** (comme l'ABC), affichage **do-ré-mi** ou **C-D-E** (réglage) | Le réglage change les touches, les corrections et les noms sous la portée. Les textes des leçons restent en do-ré-mi. |
 | Point de départ | Compétences **acquises**, calculées depuis le réglage, pas stockées | Débloque ce qui suit sans marquer de maîtrise. Changer de point de départ est réversible, contrairement à une maîtrise en base. |
+| Test de positionnement | **Il suit l'arbre** : une compétence n'est posée que si ses prérequis sont réussis, et se décide en **deux sur trois** (deux justes la valident, deux fausses l'écartent avec ce qui la suit). Questions tirées de **l'exercice de sa première leçon**. Résultat : des compétences acquises, gardées dans les réglages. Ni XP ni révision | Un débutant sort en deux questions, un lecteur confirmé répond deux fois par compétence. Pas de contenu à écrire : une nouvelle leçon de lecture entre dans le test. Une branche ratée n'arrête pas les autres : un violoniste lit les lignes supplémentaires sans connaître la clé de fa. |
 | Objectif quotidien | 5 à 20 min, soit **300 à 1 200 XP** | Calé sur le rythme réel (environ 60 XP par minute, correction comprise). Les 20 à 150 XP du design tombaient en deux réponses. |
 | Révision espacée | **Leitner**, 5 boîtes : retour à 1, 3, 7, 14 et 30 jours, une erreur renvoie en boîte 1. **Recalculée** depuis le journal des réponses, pas stockée | Les réponses sont binaires (juste / faux) : FSRS vise 4 notes auto-évaluées et des paramètres optimisés sur l'historique de l'élève. Leitner se teste à l'horloge et s'explique à l'écran. Chaque réponse garde sa carte : passer à FSRS revient à rejouer le journal, sans migration. Recto écarté : il trie par dernière note, sans date de retour. |
 | Arcade | **Notes seulement**, dans les clés déjà apprises. Records **calculés** depuis les sessions (`sessions.arcade`, `sessions.score`). 3 XP par note juste. Un mode **Entraînement** sans record : tessiture et altérations au choix | La lecture rapide est l'automatisme visé. Une partie enchaîne une note toutes les 2 à 3 s : 3 XP gardent environ 60 XP par minute, le rythme de l'objectif du jour. Les réglages d'exercice vivent dans l'entraînement : un record ne se compare qu'à réglages égaux. |
