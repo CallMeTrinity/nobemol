@@ -1,0 +1,12 @@
+% attendu : {RH:treble 3/4(<E5 G5>:2 C5:4 |]) LH:bass 3/4(<C3 G3>:4 z:4 G2:4 |])}
+% Un accord s'aligne sur la note de l'autre portée qui commence en même
+% temps.
+X:1
+%%score {RH LH}
+M:3/4
+L:1/4
+K:C
+V:RH
+[eg]2 c |]
+V:LH clef=bass
+[C,G,] z G,, |]

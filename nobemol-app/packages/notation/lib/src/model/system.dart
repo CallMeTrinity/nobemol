@@ -37,8 +37,8 @@ enum NoteValue {
   };
 }
 
-/// Ce qui occupe du temps dans une mesure : une note ou un silence. Les
-/// accords viendront s'ajouter.
+/// Ce qui occupe du temps dans une mesure : une note, un accord ou un
+/// silence.
 sealed class Event {
   const new({
     required this.value,
@@ -58,6 +58,10 @@ sealed class Event {
   /// Durée, en rondes.
   Fraction get duration =>
       dotted ? value.duration * const Fraction(3, 2) : value.duration;
+
+  /// Hauteurs écrites, du grave à l'aigu : une pour une note, plusieurs
+  /// pour un accord, aucune pour un silence.
+  List<Pitch> get pitches;
 }
 
 /// Note : une hauteur et une figure.
@@ -82,6 +86,27 @@ class Note extends Event {
   /// Vrai si une ligature la relie à la note suivante de la mesure. Seules
   /// les croches et les valeurs plus courtes en ont une.
   final bool beamedToNext;
+
+  @override
+  List<Pitch> get pitches => [pitch];
+}
+
+/// Accord : plusieurs hauteurs sur une même hampe, une figure commune.
+///
+/// Ni liaison de prolongation ni ligature pour l'instant : le parser les
+/// refuse.
+class Chord extends Event {
+  /// Crée un accord, ronde par défaut. [pitches] va du grave à l'aigu, sur
+  /// des degrés différents.
+  const new(
+    this.pitches, {
+    super.value = NoteValue.whole,
+    super.dotted = false,
+    super.decorations,
+  });
+
+  @override
+  final List<Pitch> pitches;
 }
 
 /// Silence : une figure, sans hauteur.
@@ -92,6 +117,9 @@ class Rest extends Event {
     super.dotted = false,
     super.decorations,
   });
+
+  @override
+  List<Pitch> get pitches => const [];
 }
 
 /// Barre de mesure, nommée comme en MusicXML.
@@ -258,12 +286,12 @@ class System {
 
   /// Notes liées par des liaisons de prolongation à la note désignée par
   /// [ref], elle comprise, de gauche à droite. Un seul élément pour une note
-  /// sans liaison ou un silence, vide si [ref] n'existe pas.
+  /// sans liaison, un accord ou un silence, vide si [ref] n'existe pas.
   List<EventRef> tieChain(EventRef ref) {
     switch (event(ref)) {
       case null:
         return const [];
-      case Rest():
+      case Rest() || Chord():
         return [ref];
       case Note():
     }
@@ -275,7 +303,7 @@ class System {
     final events = staff.events.map((entry) => entry.value).toList();
     bool tied(int index) => switch (events[index]) {
       Note(:final tiedToNext) => tiedToNext,
-      Rest() => false,
+      Rest() || Chord() => false,
     };
 
     var first = refs.indexOf(ref);
