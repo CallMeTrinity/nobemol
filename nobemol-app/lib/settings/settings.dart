@@ -21,6 +21,7 @@ class Settings {
     this.sound = true,
     this.theme = ThemeMode.system,
     this.updateCheck = true,
+    this.tapLatency,
   });
 
   /// Le démarrage (bienvenue, point de départ, objectif) est passé.
@@ -42,6 +43,11 @@ class Settings {
   /// Interroger GitHub au lancement : une nouvelle version est-elle sortie ?
   final bool updateCheck;
 
+  /// Calage du rythme tapé, en millisecondes : le retard mesuré entre un
+  /// clic et la touche qui l'accompagne. `null` tant qu'il n'est pas fait.
+  /// Propre au téléphone : il ne part pas dans la sauvegarde.
+  final int? tapLatency;
+
   Settings copyWith({
     bool? onboarded,
     NoteNaming? naming,
@@ -52,6 +58,7 @@ class Settings {
     bool? sound,
     ThemeMode? theme,
     bool? updateCheck,
+    int? tapLatency,
   }) => Settings(
     onboarded: onboarded ?? this.onboarded,
     naming: naming ?? this.naming,
@@ -62,6 +69,7 @@ class Settings {
     sound: sound ?? this.sound,
     theme: theme ?? this.theme,
     updateCheck: updateCheck ?? this.updateCheck,
+    tapLatency: tapLatency ?? this.tapLatency,
   );
 }
 
@@ -81,6 +89,7 @@ class SettingsStore {
   static const _sound = 'sound';
   static const _theme = 'theme';
   static const _updateCheck = 'updateCheck';
+  static const _tapLatency = 'tapLatency';
 
   Settings load() {
     const defaults = Settings();
@@ -96,6 +105,7 @@ class SettingsStore {
       sound: _prefs.getBool(_sound) ?? defaults.sound,
       theme: named(ThemeMode.values, _theme) ?? defaults.theme,
       updateCheck: _prefs.getBool(_updateCheck) ?? defaults.updateCheck,
+      tapLatency: _prefs.getInt(_tapLatency),
     );
   }
 
@@ -109,6 +119,8 @@ class SettingsStore {
     _prefs.setBool(_sound, settings.sound),
     _prefs.setString(_theme, settings.theme.name),
     _prefs.setBool(_updateCheck, settings.updateCheck),
+    if (settings.tapLatency case final latency?)
+      _prefs.setInt(_tapLatency, latency),
   ]);
 }
 

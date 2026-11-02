@@ -27,7 +27,7 @@ nobemol-app/
 │   ├── progress/         base Drift, XP et niveaux, maîtrise et déblocage
 │   ├── lessons/          lecture du contenu (Dart pur) et écran de théorie
 │   ├── reading/          lecture de notes : générateur, session, écran
-│   ├── audio/            son des notes : piano enregistré, lecteur SoLoud
+│   ├── audio/            son des notes : piano enregistré, métronome, SoLoud
 │   ├── review/           révision espacée (Leitner) et onglet Réviser
 │   ├── arcade/           onglet Arcade : modes, partie, records
 │   ├── profile/          onglet Profil : chiffres clés, statistiques

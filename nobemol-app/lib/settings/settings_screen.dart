@@ -132,6 +132,21 @@ class SettingsScreen extends ConsumerWidget {
                               update((s) => s.copyWith(sound: value)),
                         ),
                       ),
+                      _Row(
+                        key: const ValueKey('calibration'),
+                        title: l10n.settingsCalibration,
+                        hint: switch (settings.tapLatency) {
+                          final latency? => l10n.settingsCalibrationHint(
+                            latency,
+                          ),
+                          null => l10n.settingsCalibrationNone,
+                        },
+                        trailing: Icon(
+                          Icons.chevron_right_rounded,
+                          color: c.inkMuted,
+                        ),
+                        onTap: () => context.push('/calage'),
+                      ),
                       // Hors release : pas traduit, jamais livré.
                       if (listeningAvailable)
                         _Row(

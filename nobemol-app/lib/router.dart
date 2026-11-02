@@ -16,6 +16,7 @@ import 'package:nobemol/lessons/lesson_screen.dart';
 import 'package:nobemol/onboarding/onboarding_screen.dart';
 import 'package:nobemol/profile/profile_screen.dart';
 import 'package:nobemol/profile/stats_screen.dart';
+import 'package:nobemol/reading/calibration_screen.dart';
 import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/reading/reading_screen.dart';
 import 'package:nobemol/review/review_screen.dart';
@@ -45,6 +46,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/reglages',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/calage',
+        builder: (context, state) => const CalibrationScreen(),
       ),
       if (listeningAvailable)
         GoRoute(

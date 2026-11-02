@@ -8,6 +8,7 @@ import 'package:nobemol/reading/intervals.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/start_level.dart';
+import 'package:nobemol/reading/tapping.dart';
 import 'package:nobemol/settings/settings.dart';
 
 /// Libellés des types du modèle et de l'appli.
@@ -50,8 +51,27 @@ extension Labels on AppLocalizations {
         Beats() => beatsLabel(answer),
         Marking() => markingLabel(answer),
         IntervalNumber() => intervalLabel(answer),
+        TapVerdict() => verdictLabel(answer),
         _ => throw ArgumentError.value(answer, 'answer', 'réponse inconnue'),
       };
+
+  /// Bilan d'une phrase tapée : « en retard ».
+  String verdictLabel(TapVerdict verdict) => switch (verdict) {
+    TapVerdict.inTime => verdictInTime,
+    TapVerdict.early => verdictEarly,
+    TapVerdict.late => verdictLate,
+    TapVerdict.missed => verdictMissed,
+    TapVerdict.extra => verdictExtra,
+  };
+
+  /// Sous une note tapée hors de sa place : « tôt », « tard », « oubli ».
+  /// `null` pour une note en place.
+  String? timingLabel(TapTiming timing) => switch (timing) {
+    TapTiming.inTime => null,
+    TapTiming.early => tapEarly,
+    TapTiming.late => tapLate,
+    TapTiming.missed => tapMissed,
+  };
 
   /// Durée en temps. Des nombres : rien à traduire.
   String beatsLabel(Beats beats) => switch (beats) {

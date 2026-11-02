@@ -18,6 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nobemol/achievements/achievements_screen.dart';
 import 'package:nobemol/arcade/arcade.dart';
 import 'package:nobemol/audio/listening_screen.dart';
+import 'package:nobemol/audio/metronome.dart';
 import 'package:nobemol/audio/note_player.dart';
 import 'package:nobemol/audio/piano.dart';
 import 'package:nobemol/arcade/arcade_screen.dart';
@@ -48,8 +49,10 @@ import 'package:nobemol/reading/beats.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
+import 'package:nobemol/reading/calibration_screen.dart';
 import 'package:nobemol/reading/reading_screen.dart';
 import 'package:nobemol/reading/session.dart';
+import 'package:nobemol/reading/tapping.dart';
 import 'package:nobemol/review/card.dart';
 import 'package:nobemol/review/review_screen.dart';
 import 'package:nobemol/settings/settings.dart';
@@ -73,6 +76,7 @@ void main() {
   late SharedPreferences prefs;
   late _Files files;
   late _Sounds sounds;
+  late _Clicks clicks;
 
   /// Tag de la dernière release sur GitHub, `null` : pas de réponse.
   String? latestTag;
@@ -95,6 +99,7 @@ void main() {
     prefs = await SharedPreferences.getInstance();
     files = _Files();
     sounds = _Sounds();
+    clicks = _Clicks();
     latestTag = null;
   });
   tearDown(() => db.close());
@@ -122,6 +127,7 @@ void main() {
           clockProvider.overrideWithValue(() => now),
           backupFilesProvider.overrideWithValue(files),
           notePlayerProvider.overrideWithValue(sounds),
+          metronomeProvider.overrideWithValue(clicks),
           // Hors ligne par défaut : l'appli installée est la 1.0.0.
           httpClientProvider.overrideWithValue(
             MockClient(
@@ -1418,6 +1424,164 @@ void main() {
     });
   });
 
+  group('rythme tapé', () {
+    const pad = ValueKey('tap-pad');
+
+    /// Ouvre l'exercice de la leçon [id], lance le décompte, et rend la
+    /// première phrase. Le métronome part à `now`.
+    Future<(ProviderContainer, TapQuestion)> start(
+      WidgetTester tester,
+      String id,
+    ) async {
+      final container = await startSession(tester, id);
+      final exercise = container.read(contentProvider).lesson(id)!.exercise;
+      final question =
+          container.read(sessionProvider(exercise)).question as TapQuestion;
+      expect(find.text('Tape ce rythme'), findsOneWidget);
+      expect(clicks.prepared, contains(question.track));
+      await tester.tap(find.byKey(pad));
+      await tester.pump();
+      expect(clicks.played, [question.track]);
+      return (container, question);
+    }
+
+    /// Tape à chaque instant de [times] (depuis le premier clic), puis
+    /// attend la fin de la phrase.
+    Future<void> tapAt(
+      WidgetTester tester,
+      TapQuestion question,
+      List<Duration> times,
+    ) async {
+      final origin = now;
+      for (final time in times) {
+        now = origin.add(time);
+        await tester.tap(find.byKey(pad));
+        await tester.pump();
+      }
+      final track = question.track;
+      await tester.pump(track.length + track.beat);
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+
+    NotationView staff(WidgetTester tester) =>
+        tester.widget<NotationView>(find.byType(NotationView));
+
+    testWidgets('en place, calage compris : juste, et la phrase rejouée', (
+      tester,
+    ) async {
+      // Ce téléphone a 100 ms de retard entre le clic et la touche.
+      await prefs.setInt('tapLatency', 100);
+      final (_, question) = await start(tester, 'tap-beats');
+      await tapAt(tester, question, [
+        for (final time in question.expected)
+          time + const Duration(milliseconds: 130),
+      ]);
+
+      expect(find.text('Juste, en rythme'), findsOneWidget);
+      expect(find.textContaining('à 30 ms près en moyenne'), findsOneWidget);
+      // Toute la phrase en vert, sans un mot dessous.
+      final colors = staff(tester).highlights;
+      final c = tester.element(find.byType(NotationView)).colors;
+      for (final attack in question.attacks) {
+        expect(colors[attack.ref], c.success);
+      }
+      expect(staff(tester).labels.values, everyElement(''));
+
+      // Chaque touche s'est entendue : la note de la phrase.
+      expect(sounds.played, hasLength(question.attacks.length));
+      // Rejouée à la correction : le décompte, puis les notes.
+      expect(clicks.played, [question.track, question.track]);
+      await tester.pump(question.track.length);
+      expect(sounds.played, hasLength(question.attacks.length * 2));
+
+      // « Continuer » arrête ce qui sonne encore.
+      await tester.tap(find.byKey(const ValueKey('replay')));
+      await tester.pump();
+      final stops = clicks.stops;
+      await tester.tap(find.byKey(const ValueKey('continue')));
+      await tester.pump();
+      expect(clicks.stops, greaterThan(stops));
+      expect(find.text('Juste, en rythme'), findsNothing);
+    });
+
+    testWidgets('une attaque en retard est signalée à sa note', (tester) async {
+      final (container, question) = await start(tester, 'tap-beats');
+      final late = question.attacks[1];
+      // Deux notes en retard : une seule erreur est permise.
+      await tapAt(tester, question, [
+        for (final (index, time) in question.expected.indexed)
+          time + Duration(milliseconds: index == 1 || index == 3 ? 250 : 0),
+      ]);
+
+      expect(find.text('Pas tout à fait en rythme'), findsOneWidget);
+      expect(find.textContaining('2 en retard'), findsOneWidget);
+      expect(find.textContaining('1 erreur permise'), findsOneWidget);
+      final c = tester.element(find.byType(NotationView)).colors;
+      expect(staff(tester).highlights[late.ref], c.warningInk);
+      expect(staff(tester).labels[late.ref], 'tard');
+      expect(staff(tester).labels[question.attacks[0].ref], '');
+
+      final session = container.read(
+        sessionProvider(
+          container.read(contentProvider).lesson('tap-beats')!.exercise,
+        ),
+      );
+      expect(session.answers.single.given, TapVerdict.late);
+      // Pas de carte : une phrase ne se révise pas seule.
+      expect(session.answers.single.card, isNull);
+    });
+
+    testWidgets('calage : 12 clics, le retard médian enregistré', (
+      tester,
+    ) async {
+      await launch(tester);
+      unawaited(
+        GoRouter.of(tester.element(find.byType(HomeScreen))).push('/calage'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(CalibrationScreen), findsOneWidget);
+
+      await tester.tap(find.byKey(pad));
+      await tester.pump();
+      expect(clicks.played, [calibrationTrack]);
+      final origin = now;
+      for (var i = 4; i < calibrationTrack.beats; i++) {
+        now = origin.add(
+          calibrationTrack.click(i) +
+              Duration(milliseconds: i.isEven ? 70 : 90),
+        );
+        await tester.tap(find.byKey(pad));
+        await tester.pump();
+      }
+      await tester.pump(calibrationTrack.length + calibrationTrack.beat);
+      expect(find.text('80 ms'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('calibration-save')));
+      await tester.pumpAndSettle();
+      expect(find.byType(CalibrationScreen), findsNothing);
+      expect(prefs.getInt('tapLatency'), 80);
+    });
+
+    testWidgets('calage raté : trop peu de touches, on recommence', (
+      tester,
+    ) async {
+      await launch(tester);
+      unawaited(
+        GoRouter.of(tester.element(find.byType(HomeScreen))).push('/calage'),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(pad));
+      await tester.pump();
+      await tester.pump(calibrationTrack.length + calibrationTrack.beat);
+      expect(find.byKey(const ValueKey('calibration-failed')), findsOneWidget);
+      expect(find.byKey(const ValueKey('calibration-save')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('calibration-retry')));
+      await tester.pump();
+      expect(find.byKey(pad), findsOneWidget);
+      expect(prefs.getInt('tapLatency'), isNull);
+    });
+  });
+
   group('intervalles et oreille', () {
     /// Ouvre l'exercice de la leçon [id] et rend sa session.
     Future<(ProviderContainer, ReadingExercise)> open(
@@ -1781,6 +1945,25 @@ class _Files implements BackupFiles {
 
   @override
   Future<String?> pick() async => toPick;
+}
+
+/// Le métronome, sans haut-parleur : les pistes lancées.
+class _Clicks implements Metronome {
+  final prepared = <ClickTrack>{};
+  final played = <ClickTrack>[];
+  var stops = 0;
+
+  @override
+  Future<void> prepare(ClickTrack track) async => prepared.add(track);
+
+  @override
+  Future<Duration> play(ClickTrack track) async {
+    played.add(track);
+    return Duration.zero;
+  }
+
+  @override
+  Future<void> stop() async => stops++;
 }
 
 /// Le lecteur de notes, sans haut-parleur : ce qui aurait sonné.

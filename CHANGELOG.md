@@ -11,6 +11,9 @@ Le workflow de release reprend la section de la version comme notes de release :
 - Intervalles : nommer l'écart entre deux notes, à la suite ou jouées ensemble (en accord), de l'unisson à l'octave. On l'entend à la correction.
 - Oreille : reconnaître une note après le do, puis un intervalle, à la suite ou ensemble. La portée reste cachée jusqu'à la correction, « Réécouter » rejoue la question.
 - 7 leçons et 5 compétences (intervalles, oreille). Les intervalles ratés partent en révision.
+- Rythme tapé : lire une phrase, puis la taper sur un grand bouton, avec un métronome et une mesure de décompte. Chaque touche vibre et fait entendre sa note. Chaque note est jugée : en place, en avance, en retard ou oubliée, avec une erreur permise par tranche de 5 notes. La phrase est rejouée à la correction.
+- Calage du rythme : 12 clics à taper pour mesurer le retard du son et du toucher de ton téléphone. Dans les réglages, ou sous le bouton du rythme tapé.
+- 4 leçons et 2 compétences de rythme tapé : noires et blanches, deux croches, croches en phrase, notes pointées et liées. Chaque leçon va de la phrase la plus simple à la plus longue.
 
 ### Corrigé
 

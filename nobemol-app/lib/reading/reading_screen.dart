@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:notation/notation.dart';
 
+import 'package:nobemol/audio/metronome.dart';
 import 'package:nobemol/audio/note_player.dart';
+import 'package:nobemol/audio/piano.dart';
 import 'package:nobemol/clock.dart';
 import 'package:nobemol/l10n/app_localizations.dart';
 import 'package:nobemol/l10n/explanations.dart';
@@ -19,7 +21,9 @@ import 'package:nobemol/reading/intervals.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
+import 'package:nobemol/reading/rhythm_tapper.dart';
 import 'package:nobemol/reading/session.dart';
+import 'package:nobemol/reading/tapping.dart';
 import 'package:nobemol/review/card.dart';
 import 'package:nobemol/review/card_tile.dart';
 import 'package:nobemol/settings/settings.dart';
@@ -61,11 +65,13 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   /// Les notes encore à venir d'une question ou d'une correction : elles
   /// s'arrêtent avec l'écran.
   late final SoundSequence _sequence;
+  late final Metronome _metronome;
 
   @override
   void initState() {
     super.initState();
     _sequence = ref.read(soundSequenceProvider);
+    _metronome = ref.read(metronomeProvider);
     // Un exercice d'oreille joue ses questions, son des notes coupé ou non.
     ref.loadNotes(always: _hasHeard(_exercise));
   }
@@ -73,6 +79,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   @override
   void dispose() {
     _sequence.cancel();
+    unawaited(Future.sync(_metronome.stop).catchError((Object _) {}));
     super.dispose();
   }
 
@@ -109,6 +116,12 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   Widget build(BuildContext context) {
     final session = ref.watch(sessionProvider(_exercise));
     ref.listen(sessionProvider(_exercise), (previous, next) {
+      // Une phrase rejouée s'arrête avec sa correction.
+      if (previous?.phase == SessionPhase.feedback &&
+          next.phase != SessionPhase.feedback &&
+          next.question is TapQuestion) {
+        ref.stopSounds();
+      }
       if (previous?.phase == SessionPhase.asking &&
           next.phase == SessionPhase.feedback) {
         ref.playNote(next.question);
@@ -166,9 +179,10 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   }
 }
 
-/// Vrai si [exercise] pose des questions d'oreille.
+/// Vrai si [exercise] pose des questions d'oreille, ou fait entendre ses
+/// phrases (« Réécouter » d'un rythme tapé).
 bool _hasHeard(ReadingExercise exercise) => switch (exercise) {
-  EarNoteParams() || EarIntervalParams() => true,
+  EarNoteParams() || EarIntervalParams() || TapRhythmExercise() => true,
   ReviewExercise(:final cards) => cards.any((card) => card.heard),
   _ => false,
 };
@@ -202,7 +216,35 @@ class _Exercise extends ConsumerWidget {
       MarkingQuestion() => null,
       IntervalQuestion() => l10n.intervalsHint,
       EarNoteQuestion() => l10n.keyboardNaturals,
+      TapQuestion(:final tempo) => l10n.tapHint(tempo),
     };
+    final (taps, tapLabels) = _tapMarks(session, c, l10n);
+
+    // Le calage : le retard du son et du toucher sur ce téléphone.
+    final latency = Duration(milliseconds: settings.tapLatency ?? 0);
+
+    /// Chaque touche se sent et s'entend tout de suite : la note la plus
+    /// proche de la phrase, si le son des notes est actif.
+    void tapFeedback(Duration received) {
+      if (settings.haptics) unawaited(HapticFeedback.lightImpact());
+      if (!settings.sound) return;
+      final tap = question as TapQuestion;
+      final midis = tapSound(tap, received - latency);
+      unawaited(
+        Future.sync(() => ref.read(notePlayerProvider).play(midis))
+            .catchError((Object _) {}),
+      );
+    }
+
+    void tapped(List<Duration> times) {
+      final tap = question as TapQuestion;
+      final grade = gradeTaps(
+        expected: tap.expected,
+        taps: [for (final time in times) time - latency],
+        beat: tap.track.beat,
+      );
+      notifier.answer(grade.verdict, taps: grade);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -235,6 +277,7 @@ class _Exercise extends ConsumerWidget {
                 IntervalQuestion(heard: true) => l10n.earIntervalQuestion,
                 IntervalQuestion() => l10n.intervalQuestion,
                 EarNoteQuestion() => l10n.earNoteQuestion,
+                TapQuestion() => l10n.tapQuestion,
               }, style: AppText.titlePrompt.copyWith(color: c.ink)),
             ],
           ),
@@ -270,7 +313,10 @@ class _Exercise extends ConsumerWidget {
                     color: c.ink,
                     highlights: {
                       for (final ref in question.targets) ref: target,
+                      ...taps,
                     },
+                    labels: tapLabels,
+                    labelStyle: AppText.staffLabel.copyWith(color: c.inkMuted),
                     halos: {for (final ref in question.targets) ref: halo},
                     decorationHighlights: {
                       for (final ref in question.decorationTargets) ref: target,
@@ -296,6 +342,9 @@ class _Exercise extends ConsumerWidget {
                 naming: settings.naming,
                 keyLabels: settings.keyLabels,
                 onAnswer: notifier.answer,
+                onTapped: tapped,
+                onTap: tapFeedback,
+                latency: latency,
               ),
             ),
             if (feedback)
@@ -306,6 +355,9 @@ class _Exercise extends ConsumerWidget {
                   session: session,
                   naming: settings.naming,
                   onContinue: notifier.next,
+                  onReplay: question is TapQuestion
+                      ? () => ref.playRhythm(question)
+                      : null,
                 ),
               ),
           ],
@@ -313,6 +365,37 @@ class _Exercise extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// Correction d'une phrase tapée : chaque note colorée selon sa touche
+/// (verte en place, orange en avance ou en retard, rouge oubliée), et
+/// « tôt », « tard » ou « oubli » dessous. Un nom vide sous chaque autre
+/// attaque, dès la question : la ligne des noms garde sa place, la portée
+/// ne bouge pas à la correction.
+(Map<EventRef, Color>, Map<EventRef, String>) _tapMarks(
+  SessionState session,
+  NobemolColors c,
+  AppLocalizations l10n,
+) {
+  final question = session.question;
+  if (question is! TapQuestion) return (const {}, const {});
+  final taps = session.phase == SessionPhase.feedback ? session.taps : null;
+  final colors = <EventRef, Color>{};
+  final labels = <EventRef, String>{};
+  for (final (index, attack) in question.attacks.indexed) {
+    final timing = taps?.timings[index];
+    labels[attack.ref] = timing == null ? '' : l10n.timingLabel(timing) ?? '';
+    if (timing == null) continue;
+    final color = switch (timing) {
+      TapTiming.inTime => c.success,
+      TapTiming.early || TapTiming.late => c.warningInk,
+      TapTiming.missed => c.danger,
+    };
+    for (final ref in attack.chain) {
+      colors[ref] = color;
+    }
+  }
+  return (colors, labels);
 }
 
 /// [child] à sa place, invisible si [hidden], avec [prompt] par-dessus.
@@ -516,6 +599,9 @@ class _Answers extends StatelessWidget {
     required this.naming,
     required this.keyLabels,
     required this.onAnswer,
+    required this.onTapped,
+    required this.onTap,
+    required this.latency,
   });
 
   final ReadingExercise exercise;
@@ -525,6 +611,15 @@ class _Answers extends StatelessWidget {
   /// Noms sur les touches blanches.
   final bool keyLabels;
   final ValueChanged<Enum> onAnswer;
+
+  /// Les touches d'une phrase tapée, depuis le premier clic.
+  final ValueChanged<List<Duration>> onTapped;
+
+  /// Une touche d'une phrase tapée, à sa réception : le retour.
+  final ValueChanged<Duration> onTap;
+
+  /// Le calage du téléphone.
+  final Duration latency;
 
   AnswerTone _tone(Enum choice) {
     if (session.phase != SessionPhase.feedback) return AnswerTone.rest;
@@ -580,6 +675,30 @@ class _Answers extends StatelessWidget {
                 style: AppText.labelCard,
               ),
             ),
+        ],
+      ),
+      TapQuestion(:final track) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          RhythmTapper(
+            // Un bouton neuf par phrase.
+            key: ValueKey('tapper-${session.answered}'),
+            track: track,
+            idleLabel: l10n.tapStart,
+            tapLabel: l10n.tapGo,
+            onDone: onTapped,
+            onTap: onTap,
+            latency: latency,
+          ),
+          const SizedBox(height: Space.xs),
+          Center(
+            child: TextButton(
+              key: const ValueKey('calibrate'),
+              onPressed: () => context.push('/calage'),
+              child: Text(l10n.tapCalibrate),
+            ),
+          ),
         ],
       ),
       MarkingQuestion() => _Grid(
@@ -683,11 +802,15 @@ class _FeedbackSheet extends StatefulWidget {
     required this.session,
     required this.naming,
     required this.onContinue,
+    this.onReplay,
   });
 
   final SessionState session;
   final NoteNaming naming;
   final VoidCallback onContinue;
+
+  /// Rejoue la phrase d'un rythme tapé, `null` pour les autres questions.
+  final VoidCallback? onReplay;
 
   @override
   State<_FeedbackSheet> createState() => _FeedbackSheetState();
@@ -793,7 +916,8 @@ class _FeedbackSheetState extends State<_FeedbackSheet>
                       ],
                     ],
                   ),
-                  if (!right) ...[
+                  // Une phrase tapée : sa portée montre déjà chaque touche.
+                  if (!right && question is! TapQuestion) ...[
                     const SizedBox(height: Space.xs),
                     Text(
                       l10n.feedbackGiven(
@@ -807,7 +931,11 @@ class _FeedbackSheetState extends State<_FeedbackSheet>
                   // la portée.
                   Expanded(
                     child: Text(
-                      l10n.explain(question, naming: naming),
+                      l10n.explain(
+                        question,
+                        naming: naming,
+                        taps: session.taps,
+                      ),
                       maxLines: 4,
                       overflow: TextOverflow.ellipsis,
                       style: AppText.body.copyWith(
@@ -816,14 +944,29 @@ class _FeedbackSheetState extends State<_FeedbackSheet>
                       ),
                     ),
                   ),
-                  DepthButton(
-                    key: const ValueKey('continue'),
-                    label: l10n.resultContinue,
-                    variant: ButtonVariant.ink,
-                    onPressed: () {
-                      if (_ready) widget.onContinue();
-                    },
-                    expand: true,
+                  Row(
+                    children: [
+                      if (widget.onReplay case final replay?) ...[
+                        DepthButton(
+                          key: const ValueKey('replay'),
+                          label: l10n.earReplay,
+                          variant: ButtonVariant.outline,
+                          onPressed: replay,
+                        ),
+                        const SizedBox(width: Space.s),
+                      ],
+                      Expanded(
+                        child: DepthButton(
+                          key: const ValueKey('continue'),
+                          label: l10n.resultContinue,
+                          variant: ButtonVariant.ink,
+                          onPressed: () {
+                            if (_ready) widget.onContinue();
+                          },
+                          expand: true,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -941,41 +1084,44 @@ class _Results extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: Space.xl),
-              Text(
-                l10n.resultReview,
-                style: AppText.titleCard.copyWith(color: c.ink),
-              ),
-              const SizedBox(height: Space.m),
-              if (misses.isEmpty)
+              // Une phrase tapée ne se revoit pas seule : pas de carte.
+              if (exercise is! TapRhythmExercise) ...[
+                const SizedBox(height: Space.xl),
                 Text(
-                  l10n.resultNoMistake,
-                  style: AppText.body.copyWith(color: c.inkMuted),
-                )
-              else
-                Wrap(
-                  spacing: Space.s,
-                  runSpacing: Space.s,
-                  children: [
-                    for (final (question, given) in misses)
-                      CardTile(
-                        question: question,
-                        // Une phrase entière serait trop large : seulement
-                        // une note ou un intervalle seul.
-                        staff: question.system.staves.every(
-                          (staff) => switch (question) {
-                            NoteQuestion() => staff.notes.length <= 1,
-                            IntervalQuestion() ||
-                            EarNoteQuestion() => staff.events.length <= 2,
-                            _ => false,
-                          },
-                        ),
-                        caption: l10n.resultReviewGiven(
-                          l10n.answerLabel(given, naming: naming),
-                        ),
-                      ),
-                  ],
+                  l10n.resultReview,
+                  style: AppText.titleCard.copyWith(color: c.ink),
                 ),
+                const SizedBox(height: Space.m),
+                if (misses.isEmpty)
+                  Text(
+                    l10n.resultNoMistake,
+                    style: AppText.body.copyWith(color: c.inkMuted),
+                  )
+                else
+                  Wrap(
+                    spacing: Space.s,
+                    runSpacing: Space.s,
+                    children: [
+                      for (final (question, given) in misses)
+                        CardTile(
+                          question: question,
+                          // Une phrase entière serait trop large : seulement
+                          // une note ou un intervalle seul.
+                          staff: question.system.staves.every(
+                            (staff) => switch (question) {
+                              NoteQuestion() => staff.notes.length <= 1,
+                              IntervalQuestion() ||
+                              EarNoteQuestion() => staff.events.length <= 2,
+                              _ => false,
+                            },
+                          ),
+                          caption: l10n.resultReviewGiven(
+                            l10n.answerLabel(given, naming: naming),
+                          ),
+                        ),
+                    ],
+                  ),
+              ],
             ],
           ),
         ),
@@ -1026,7 +1172,7 @@ List<(Question, Enum)> _misses(SessionState session) {
   final seen = <Object>{};
   return [
     for (final (index, answer) in session.answers.indexed)
-      if (!answer.correct)
+      if (!answer.correct && session.asked[index] is! TapQuestion)
         if (seen.add(_reviewKey(session.asked[index])))
           (session.asked[index], answer.given),
   ];
@@ -1038,7 +1184,7 @@ Object _reviewKey(Question question) => switch (question) {
     pitch.diatonic,
     answer,
   ),
-  IntervalQuestion() || EarNoteQuestion() => cardOf(question),
+  IntervalQuestion() || EarNoteQuestion() => cardOf(question)!,
   _ => question.answer,
 };
 

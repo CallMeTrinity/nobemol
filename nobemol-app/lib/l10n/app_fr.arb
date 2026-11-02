@@ -766,5 +766,98 @@
   },
   "updateHint": "Ouvre la page de la version pour télécharger l'APK, puis installe-le par-dessus : ta progression reste.",
   "settingsLicenses": "Licences",
-  "settingsLicensesHint": "Polices et bibliothèques"
+  "settingsLicensesHint": "Polices et bibliothèques",
+  "tapQuestion": "Tape ce rythme",
+  "tapHint": "Noire à {tempo} · une mesure de décompte",
+  "@tapHint": {
+    "placeholders": {
+      "tempo": { "type": "int" }
+    }
+  },
+  "tapStart": "Touche pour lancer le décompte",
+  "tapGo": "Tape à chaque note",
+  "tapCalibrate": "Caler le rythme",
+  "tapEarly": "tôt",
+  "tapLate": "tard",
+  "tapMissed": "oubli",
+  "feedbackRightTaps": "Juste, en rythme",
+  "feedbackWrongTaps": "Pas tout à fait en rythme",
+  "verdictInTime": "en rythme",
+  "verdictEarly": "en avance",
+  "verdictLate": "en retard",
+  "verdictMissed": "note oubliée",
+  "verdictExtra": "touche en trop",
+  "explainTapsInPlace": "En place : {inTime} sur {total}",
+  "@explainTapsInPlace": {
+    "placeholders": {
+      "inTime": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "explainTapsMean": "{inPlace}, à {ms} ms près en moyenne.",
+  "@explainTapsMean": {
+    "placeholders": {
+      "inPlace": { "type": "String" },
+      "ms": { "type": "int" }
+    }
+  },
+  "explainTapsEarly": "{count} en avance",
+  "@explainTapsEarly": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "explainTapsLate": "{count} en retard",
+  "@explainTapsLate": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "explainTapsMissed": "{count, plural, =1{1 oubliée} other{{count} oubliées}}",
+  "@explainTapsMissed": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "explainTapsExtra": "{count, plural, =1{1 touche en trop} other{{count} touches en trop}}",
+  "@explainTapsExtra": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "explainTapsTolerance": "Une note est en place à {ms} ms près.",
+  "explainTapsAllowed": "{count, plural, =1{1 erreur permise} other{{count} erreurs permises}} sur cette phrase.",
+  "@explainTapsAllowed": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "@explainTapsTolerance": {
+    "placeholders": {
+      "ms": { "type": "int" }
+    }
+  },
+  "calibrationTitle": "Calage du rythme",
+  "calibrationIntro": "Entre le clic et le doigt, chaque téléphone a son petit retard. On le mesure une fois, et le rythme tapé en tient compte.",
+  "calibrationHow": "Une mesure de décompte, puis tape en même temps que chaque clic, 12 fois.",
+  "calibrationStart": "Touche pour commencer",
+  "calibrationTap": "Tape sur chaque clic",
+  "calibrationResult": "{ms} ms",
+  "@calibrationResult": {
+    "placeholders": {
+      "ms": { "type": "int" }
+    }
+  },
+  "calibrationResultHint": "Tes touches seront avancées d'autant avant d'être jugées.",
+  "calibrationFailed": "Pas assez de touches près des clics. On recommence ?",
+  "calibrationSave": "Enregistrer",
+  "calibrationRetry": "Recommencer",
+  "settingsCalibration": "Calage du rythme tapé",
+  "settingsCalibrationHint": "{ms} ms de décalage, propre à ce téléphone",
+  "@settingsCalibrationHint": {
+    "placeholders": {
+      "ms": { "type": "int" }
+    }
+  },
+  "settingsCalibrationNone": "Pas encore fait : à faire avant de taper un rythme"
 }

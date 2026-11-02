@@ -71,6 +71,7 @@ Tout champ inconnu est une erreur : une faute de frappe (`ledger_lines`) ne pass
 | `identify-interval` | `abc`, `targets` | Même principe, mais la cible est un intervalle : un accord de deux notes, ou deux notes. Il faut donner son numéro, de l'unisson à l'octave. |
 | `ear-note` | `notes` | Oreille : le do central, puis une note à nommer au clavier. 12 questions tirées au hasard. |
 | `ear-interval` | `intervals`, `harmonic` | Oreille : deux notes, l'une après l'autre ou ensemble. Il faut donner le numéro de l'intervalle. 12 questions tirées au hasard. |
+| `tap-rhythm` | `tempo`, `phrases` | Rythme tapé : des phrases en ABC, à taper l'une après l'autre sur un métronome. Une question par phrase, dans l'ordre. |
 
 ### `identify-note`
 
@@ -236,6 +237,35 @@ exercise:
 - La question **se joue** à l'ouverture, même si l'élève a coupé le son des notes : c'est elle qu'il faut nommer. « Réécouter » la rejoue. La portée est cachée, à sa place, et apparaît à la correction.
 - `ear-note` : le do central, puis la note. Réponse au clavier, touches blanches seulement : à l'oreille, un fa dièse et un sol bémol ne se distinguent pas.
 - `ear-interval` : la note du bas va de do4 à do5, en touches blanches. En mélodique, la seconde note monte. Les réponses proposées sont les intervalles de `intervals`, dans l'ordre : le niveau devient un jeu de paramètres. Jamais de triton (fa-si, si-fa) : quarte ou quinte, son numéro ne s'entend pas. Pas d'unisson en harmonique.
+
+### `tap-rhythm`
+
+```yaml
+exercise:
+  type: tap-rhythm
+  tempo: 72                       # noires par minute, de 40 à 160
+  phrases:                        # une question par phrase, dans l'ordre
+    - |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      B B B2 | B z B2 |]
+    - |
+      X:1
+      M:2/4
+      L:1/8
+      K:C
+      BB B2 | B4 |]
+```
+
+- Chaque phrase est un bloc ABC complet. Une **seule portée**, chiffrage en **x/4** : le métronome bat les noires. Au moins une note.
+- Une mesure de **décompte**, puis la phrase, sur le métronome. On tape **au début de chaque note** (ou accord) : un silence ne se tape pas, la note d'arrivée d'une liaison non plus.
+- Une touche est **en place** à **160 ms** près de sa note. Au-delà : en avance ou en retard. Une note sans touche est oubliée, une touche sans note est en trop. La phrase est juste avec **une erreur au plus par tranche de 5 notes** (une sur 6 notes, deux sur 10) : une note pas en place, ou une touche en trop.
+- Le validateur refuse deux attaques à moins de **320 ms** l'une de l'autre au tempo choisi : leurs tolérances se toucheraient. Des croches passent jusqu'à la noire à 93, des doubles croches demanderaient la noire à 46.
+- La hauteur des notes ne compte pas pour la réponse. Elle s'entend quand la phrase est rejouée : une seule hauteur (`B`, sur la 3e ligne) garde l'attention sur le rythme.
+- À la correction, chaque note est colorée (verte en place, orange en avance ou en retard, rouge oubliée), avec « tôt », « tard » ou « oubli » dessous, et la phrase est rejouée sur le métronome. Pas d'`explain` : l'explication vient des touches.
+- Pas de carte de révision : une phrase ne se lit pas sans la leçon.
 
 ## Conventions
 

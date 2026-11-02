@@ -7,6 +7,7 @@ import 'package:nobemol/reading/intervals.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
+import 'package:nobemol/reading/tapping.dart';
 import 'package:nobemol/settings/settings.dart';
 
 /// Textes de la correction : le titre (« Juste, c'est un ré »), et
@@ -38,10 +39,16 @@ extension Explanations on AppLocalizations {
       right
           ? feedbackRightNote(noteFullName(answer, naming: naming))
           : feedbackWrongNote(noteFullName(answer, naming: naming)),
+    TapQuestion() => right ? feedbackRightTaps : feedbackWrongTaps,
   };
 
-  /// Explication de [question] : celle de l'auteur, sinon générée.
-  String explain(Question question, {required NoteNaming naming}) =>
+  /// Explication de [question] : celle de l'auteur, sinon générée. Une
+  /// phrase tapée s'explique par ses touches, [taps].
+  String explain(
+    Question question, {
+    required NoteNaming naming,
+    TapGrade? taps,
+  }) =>
       question.explanation ??
       switch (question) {
         NoteQuestion() => _explainNote(question, naming),
@@ -52,7 +59,41 @@ extension Explanations on AppLocalizations {
         MarkingQuestion(:final answer) => _explainMarking(answer),
         IntervalQuestion() => _explainInterval(question, naming),
         EarNoteQuestion(:final pitch) => _explainEarNote(pitch, naming),
+        TapQuestion() => taps == null ? '' : explainTaps(taps),
       };
+
+  /// « En place : 4 sur 6. 1 en retard, 1 oubliée. Une note est en place à
+  /// 160 ms près. 1 erreur permise sur cette phrase. » Juste : « En place :
+  /// 5 sur 6, à 40 ms près en moyenne. 1 en retard. »
+  String explainTaps(TapGrade taps) {
+    final inPlace = explainTapsInPlace(
+      taps.count(TapTiming.inTime),
+      taps.timings.length,
+    );
+    final faults = [
+      if (taps.count(TapTiming.early) case final n when n > 0)
+        explainTapsEarly(n),
+      if (taps.count(TapTiming.late) case final n when n > 0)
+        explainTapsLate(n),
+      if (taps.count(TapTiming.missed) case final n when n > 0)
+        explainTapsMissed(n),
+      if (taps.extra > 0) explainTapsExtra(taps.extra),
+    ];
+    final detail = faults.isEmpty ? '' : ' ${_capitalize(faults.join(', '))}.';
+    if (taps.verdict == TapVerdict.inTime) {
+      final mean = taps.meanInTime;
+      final head = mean == null
+          ? '$inPlace.'
+          : explainTapsMean(inPlace, mean.inMilliseconds);
+      return '$head$detail';
+    }
+    return '$inPlace.$detail '
+        '${explainTapsTolerance(tapTolerance.inMilliseconds)} '
+        '${explainTapsAllowed(taps.allowedFaults)}';
+  }
+
+  String _capitalize(String text) =>
+      text.isEmpty ? text : text[0].toUpperCase() + text.substring(1);
 
   String clefName(Clef clef) => switch (clef) {
     Clef.bass => clefBass,

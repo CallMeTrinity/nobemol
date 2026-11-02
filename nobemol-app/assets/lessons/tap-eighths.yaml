@@ -1,0 +1,66 @@
+id: tap-eighths
+title: Taper deux croches
+skills: [rhythm.tap]
+level: 2
+theory:
+  - text: >-
+      Deux croches tiennent dans un temps : une touche sur le clic, une
+      autre au milieu, avant le clic suivant.
+    abc: |
+      X:1
+      M:4/4
+      L:1/8
+      K:C
+      B2 B2 BB B2 |]
+  - text: >-
+      Pour placer la seconde croche, on compte « 1 et 2 et ». Le chiffre
+      tombe sur le clic, le « et » entre deux clics.
+    abc: |
+      X:1
+      M:4/4
+      L:1/8
+      K:C
+      BB B2 B2 B2 |]
+  - text: >-
+      On commence par une seule paire de croches dans la mesure, puis deux,
+      puis sur deux mesures. Le tempo est lent : on a le temps de compter.
+exercise:
+  type: tap-rhythm
+  tempo: 60
+  phrases:
+    - |
+      X:1
+      M:4/4
+      L:1/8
+      K:C
+      B2 B2 BB B2 |]
+    - |
+      X:1
+      M:4/4
+      L:1/8
+      K:C
+      BB B2 B2 B2 |]
+    - |
+      X:1
+      M:4/4
+      L:1/8
+      K:C
+      B2 BB B2 BB |]
+    - |
+      X:1
+      M:4/4
+      L:1/8
+      K:C
+      BB B2 BB B2 |]
+    - |
+      X:1
+      M:4/4
+      L:1/8
+      K:C
+      B2 BB B2 B2 | BB B2 B4 |]
+    - |
+      X:1
+      M:4/4
+      L:1/8
+      K:C
+      BB BB B2 B2 | B2 BB B4 |]

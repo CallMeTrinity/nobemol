@@ -7,6 +7,7 @@ import 'package:nobemol/reading/intervals.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
+import 'package:nobemol/reading/tapping.dart';
 
 /// Page de théorie : un texte, et de la musique si besoin.
 class TheoryPage {
@@ -137,16 +138,23 @@ TheoryPage _theoryPage(YamlNode node, String path, String source) {
 }
 
 /// Lit le champ `abc` de [fields] et situe ses erreurs dans le fichier YAML.
-System _abc(YamlFields fields, String source) {
-  final node = fields.node('abc')!;
-  final abc = fields.string('abc');
+System _abc(YamlFields fields, String source) =>
+    _abcAt(fields.node('abc')!, fields.name('abc'), source);
+
+/// Lit l'ABC du texte [node], nommé [name] dans les erreurs, et situe ses
+/// erreurs dans le fichier YAML.
+System _abcAt(YamlNode node, String name, String source) {
+  final abc = switch (node) {
+    YamlScalar(:final String value) => value,
+    _ => throw ContentException.at(node, '$name : texte ABC attendu'),
+  };
   try {
     return parseAbc(abc);
   } on AbcException catch (e) {
-    final message = '${fields.name('abc')} : ${e.message}';
+    final message = '$name : ${e.message}';
     // Bloc `|` : la ligne ABC n commence n lignes sous l'indicateur, après
     // l'indentation du bloc.
-    if (node is YamlScalar && node.style == ScalarStyle.LITERAL) {
+    if (node.style == ScalarStyle.LITERAL) {
       final line = node.span.start.line + e.line;
       final text = source.split('\n')[line];
       final indent = text.length - text.trimLeft().length;
@@ -181,6 +189,7 @@ const _exerciseFields = {
   ),
   'ear-note': (required: {'type', 'notes'}, optional: <String>{}),
   'ear-interval': (required: {'type', 'intervals'}, optional: {'harmonic'}),
+  'tap-rhythm': (required: {'type', 'tempo', 'phrases'}, optional: <String>{}),
 };
 
 ReadingExercise _exercise(YamlNode node, String source) {
@@ -217,6 +226,7 @@ ReadingExercise _exercise(YamlNode node, String source) {
     'identify-interval' => _identifyInterval(fields, source),
     'ear-note' => _earNote(fields),
     'ear-interval' => _earInterval(fields),
+    'tap-rhythm' => _tapRhythm(fields, source),
     _ => _noteReading(fields),
   };
 }
@@ -454,6 +464,42 @@ EarIntervalParams _earInterval(YamlFields fields) {
     intervals: intervals..sort((a, b) => a.index - b.index),
     harmonic: harmonic,
   );
+}
+
+TapRhythmExercise _tapRhythm(YamlFields fields, String source) {
+  final tempo = fields.integer('tempo', min: minTempo, max: maxTempo);
+  final phrases = <System>[];
+  for (final (index, node) in fields.list('phrases').nodes.indexed) {
+    final name = 'exercise.phrases[${index + 1}]';
+    final system = _abcAt(node, name, source);
+    if (_checkPhrase(system, tempo) case final message?) {
+      throw ContentException.at(node, '$name : $message');
+    }
+    phrases.add(system);
+  }
+  return TapRhythmExercise(phrases: phrases, tempo: tempo);
+}
+
+/// Message d'erreur si [system] ne se tape pas à [tempo] : une portée, en
+/// x/4 (le métronome bat les noires), et des attaques assez espacées pour
+/// que leurs tolérances ne se touchent pas.
+String? _checkPhrase(System system, int tempo) {
+  if (system.staves.length != 1) {
+    return '${system.staves.length} portées, une seule se tape';
+  }
+  final time = system.staves.single.time;
+  if (time == null || time.beatUnit != 4) {
+    return 'chiffrage en x/4 attendu (M:4/4), le métronome bat les noires';
+  }
+  if (attacksOf(system).isEmpty) return 'aucune note à taper';
+  final shortest = shortestGap(system, tempo);
+  final needed = tapTolerance * 2;
+  if (shortest != null && shortest < needed) {
+    return 'deux attaques à ${shortest.inMilliseconds} ms à la noire à '
+        '$tempo, ${needed.inMilliseconds} ms au moins : ralentir le tempo '
+        'ou allonger les notes';
+  }
+  return null;
 }
 
 /// Lit les réponses proposées : de 2 à 8 sens, rangés dans l'ordre de

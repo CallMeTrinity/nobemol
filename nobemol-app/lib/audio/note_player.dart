@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 
+import 'package:nobemol/audio/metronome.dart';
 import 'package:nobemol/audio/piano.dart';
 import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/settings/settings.dart';
@@ -50,7 +51,7 @@ class PianoNotePlayer implements NotePlayer {
   }
 
   Future<Map<int, AudioSource>> _load() async {
-    if (!_soloud.isInitialized) await _soloud.init();
+    await initSoloud();
     final sources = await Future.wait([
       for (final sample in pianoSamples) _soloud.loadAsset(pianoAsset(sample)),
     ]);
@@ -87,6 +88,17 @@ class PianoNotePlayer implements NotePlayer {
   }
 }
 
+Future<void>? _initializing;
+
+/// Démarre SoLoud, une fois pour le piano et le métronome.
+Future<void> initSoloud() {
+  final soloud = SoLoud.instance;
+  if (soloud.isInitialized) return Future.value();
+  return _initializing ??= soloud.init().whenComplete(
+    () => _initializing = null,
+  );
+}
+
 final notePlayerProvider = Provider<NotePlayer>((ref) {
   final player = PianoNotePlayer();
   ref.onDispose(player.dispose);
@@ -102,22 +114,34 @@ const soundGap = Duration(milliseconds: 800);
 class SoundSequence {
   final _timers = <Timer>[];
 
+  /// Change à chaque arrêt : une suite qui attendait son départ (le
+  /// métronome) sait qu'elle a été arrêtée entre-temps.
+  int get generation => _generation;
+  var _generation = 0;
+
   /// Joue [steps] (chacun : des notes ensemble) espacés de [soundGap].
-  void start(NotePlayer player, List<List<int>> steps) {
+  void start(NotePlayer player, List<List<int>> steps) => startTimed(player, [
+    for (final (index, midis) in steps.indexed) (soundGap * index, midis),
+  ]);
+
+  /// Joue chaque étape de [steps] à son instant. Une étape sans note éteint
+  /// la précédente : un silence.
+  void startTimed(NotePlayer player, List<(Duration, List<int>)> steps) {
     cancel();
-    for (final (index, midis) in steps.indexed) {
+    for (final (at, midis) in steps) {
       void play() =>
           unawaited(Future.sync(() => player.play(midis)).catchError((_) {}));
-      if (index == 0) {
+      if (at == Duration.zero) {
         play();
       } else {
-        _timers.add(Timer(soundGap * index, play));
+        _timers.add(Timer(at, play));
       }
     }
   }
 
   /// Arrête les notes pas encore jouées.
   void cancel() {
+    _generation++;
     for (final timer in _timers) {
       timer.cancel();
     }
@@ -157,8 +181,45 @@ extension NoteSound on WidgetRef {
   /// Sans attendre, et sans jamais faire échouer l'exercice : un son raté
   /// ne se voit pas.
   void _play(Question question) {
+    if (question is TapQuestion) {
+      unawaited(_playRhythm(question));
+      return;
+    }
     final steps = soundOf(question);
     if (steps.isEmpty) return;
     read(soundSequenceProvider).start(read(notePlayerProvider), steps);
+  }
+
+  /// Rejoue la phrase d'un rythme tapé, même son des notes coupé : le
+  /// décompte, puis ses notes sur le métronome.
+  void playRhythm(TapQuestion question) => unawaited(_playRhythm(question));
+
+  Future<void> _playRhythm(TapQuestion question) async {
+    final sequence = read(soundSequenceProvider);
+    final player = read(notePlayerProvider);
+    final metronome = read(metronomeProvider);
+    sequence.cancel();
+    final generation = sequence.generation;
+    // Le métronome a déjà joué ce temps-là : les notes le rattrapent.
+    var started = Duration.zero;
+    try {
+      started = await metronome.play(question.track);
+    } catch (_) {
+      // Sans clics, les notes restent.
+    }
+    // Arrêtée pendant que le métronome partait.
+    if (sequence.generation != generation) return;
+    sequence.startTimed(player, [
+      for (final (at, midis) in rhythmSound(question))
+        (at > started ? at - started : Duration.zero, midis),
+    ]);
+  }
+
+  /// Arrête le son en cours : notes à venir et métronome.
+  void stopSounds() {
+    read(soundSequenceProvider).cancel();
+    unawaited(
+      Future.sync(() => read(metronomeProvider).stop()).catchError((_) {}),
+    );
   }
 }
