@@ -1,0 +1,18 @@
+id: ear-intervals-all
+title: Tous les intervalles à l'oreille
+skills: [ear.intervals]
+level: 4
+theory:
+  - text: >-
+      La seconde est une marche, presque collée. La quarte s'ouvre un peu
+      moins que la quinte. La sixte et la septième sont de grands sauts, la
+      septième tire vers l'octave.
+    names: true
+    abc: |
+      X:1
+      L:1/1
+      K:C
+      C D C F C A C B
+exercise:
+  type: ear-interval
+  intervals: [2, 3, 4, 5, 6, 7, 8]

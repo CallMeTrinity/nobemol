@@ -796,4 +796,148 @@ void main() {
       expect(labels(plain), isEmpty);
     });
   });
+
+  group('accords', () {
+    Iterable<LineCommand> stems(SystemLayout layout) => layout.commands
+        .whereType<LineCommand>()
+        .where((c) => c.thickness == EngravingDefaults.stemThickness);
+
+    test('une seule hampe, de la tête du pied à la tête du bout', () {
+      // Do4, mi4, sol4 : tous sous la ligne du milieu, hampe vers le haut.
+      final layout = layoutSystem(parse('L:1/4\nK:C\n[CEG]\n'));
+      final heads = glyphs(layout, Glyph.noteheadBlack).toList();
+      expect(heads.map((h) => h.y), [5, 4, 3]);
+      final stem = stems(layout).single;
+      expect(stem.y2, lessThan(stem.y1));
+      expect(stem.y1, closeTo(5, 0.2));
+      expect(stem.y1 - stem.y2, greaterThan(2 + 3.5 - 0.2));
+      // Les têtes sont alignées, la hampe à leur droite.
+      expect(heads.map((h) => h.x).toSet(), hasLength(1));
+      expect(stem.x1, closeTo(heads.first.bounds.right, 0.1));
+    });
+
+    test('la tête la plus éloignée de la ligne du milieu fixe le sens', () {
+      // Sol4 (2 positions sous le milieu) et fa5 (4 au-dessus) : vers le bas.
+      final down = stems(layoutSystem(parse('L:1/4\nK:C\n[Gf]\n'))).single;
+      expect(down.y2, greaterThan(down.y1));
+      // Do4 (5 sous le milieu) et la5 (5 au-dessus) : égalité, vers le bas.
+      final tie = stems(layoutSystem(parse('L:1/4\nK:C\n[Ca]\n'))).single;
+      expect(tie.y2, greaterThan(tie.y1));
+      // Do4 et ré5 : vers le haut.
+      final up = stems(layoutSystem(parse('L:1/4\nK:C\n[Cd]\n'))).single;
+      expect(up.y2, lessThan(up.y1));
+    });
+
+    test('seconde, hampe vers le haut : la tête du dessus passe à droite', () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\n[EF]\n'));
+      final heads = glyphs(layout, Glyph.noteheadBlack).toList();
+      final stem = stems(layout).single;
+      final (low, high) = (heads[0], heads[1]);
+      expect(high.y, lessThan(low.y));
+      expect(low.bounds.right, closeTo(stem.x1, 0.1));
+      expect(high.bounds.left, closeTo(stem.x1, 0.1));
+    });
+
+    test('seconde, hampe vers le bas : la tête du dessous passe à gauche', () {
+      final layout = layoutSystem(parse('L:1/4\nK:C\n[de]\n'));
+      final heads = glyphs(layout, Glyph.noteheadBlack).toList();
+      final stem = stems(layout).single;
+      final (low, high) = (heads[0], heads[1]);
+      expect(high.bounds.left, closeTo(stem.x1, 0.1));
+      expect(low.bounds.right, closeTo(stem.x1, 0.1));
+    });
+
+    test('seconde en rondes : la tête du dessus à droite', () {
+      final layout = layoutSystem(parse('L:1/1\nK:C\n[Bc]\n'));
+      final heads = glyphs(layout, Glyph.noteheadWhole).toList();
+      expect(heads[1].x, greaterThan(heads[0].x));
+    });
+
+    test('la colonne de l’autre portée suit la place prise à gauche', () {
+      // Hampe vers le bas : la tête du dessous passe à gauche, la note de la
+      // portée du bas reste alignée sur les têtes de la colonne.
+      final layout = layoutSystem(
+        parse(
+          '%%score {RH LH}\nL:1/4\nK:C\nV:RH\n[de] c\n'
+          'V:LH clef=bass\nC, C,\n',
+        ),
+      );
+      final heads = glyphs(layout, Glyph.noteheadBlack).toList();
+      final lowerFirst = heads.firstWhere((h) => h.y > 6);
+      final upperNormal = heads.firstWhere((h) => h.y == 0.5);
+      final upperShifted = heads.firstWhere((h) => h.y == 1);
+      expect(upperNormal.x, lowerFirst.x);
+      expect(upperShifted.x, lessThan(upperNormal.x));
+      expect(upperShifted.bounds.left, greaterThan(1));
+    });
+
+    test('altérations proches : échelonnées en deux colonnes', () {
+      // Fa#4 et la#4, une tierce : les dièses se toucheraient.
+      final layout = layoutSystem(parse('L:1/1\nK:C\n[^F^A]\n'));
+      final sharps = glyphs(layout, Glyph.accidentalSharp).toList();
+      final head = glyphs(layout, Glyph.noteheadWhole).first;
+      expect(sharps.map((g) => g.x).toSet(), hasLength(2));
+      // La plus haute contre la tête, la plus basse à sa gauche.
+      final high = sharps.firstWhere((g) => g.y == 2.5);
+      final low = sharps.firstWhere((g) => g.y == 3.5);
+      expect(high.bounds.right, lessThan(head.bounds.left));
+      expect(low.bounds.right, lessThan(high.bounds.left));
+    });
+
+    test('altérations à l’octave : une seule colonne', () {
+      final layout = layoutSystem(parse('L:1/1\nK:C\n[^F^f]\n'));
+      final sharps = glyphs(layout, Glyph.accidentalSharp).toList();
+      expect(sharps.map((g) => g.x).toSet(), hasLength(1));
+    });
+
+    test('les altérations poussent la colonne entière', () {
+      final plain = layoutSystem(parse('L:1/8\nK:C\nC [FA]\n'));
+      final altered = layoutSystem(parse('L:1/8\nK:C\nC [^F^A]\n'));
+      double second(SystemLayout layout) =>
+          glyphs(layout, Glyph.noteheadBlack).elementAt(1).x;
+      expect(second(altered), greaterThan(second(plain)));
+    });
+
+    test('points : un par interligne, alignés après les têtes', () {
+      // Si4 (3e ligne) et do5 (3e interligne) : le point du si descend.
+      final layout = layoutSystem(parse('L:1/4\nK:C\n[Bc]3/2\n'));
+      final dots = glyphs(layout, Glyph.augmentationDot).toList();
+      expect(dots.map((d) => d.y).toSet(), {1.5, 2.5});
+      expect(dots.map((d) => d.x).toSet(), hasLength(1));
+      final heads = glyphs(layout, Glyph.noteheadBlack);
+      final right = heads.map((h) => h.bounds.right).reduce(math.max);
+      expect(dots.first.x, greaterThan(right));
+    });
+
+    test('lignes supplémentaires sous les deux têtes d’une seconde', () {
+      // La5 et si5 au-dessus de la portée, en seconde : la ligne du la5
+      // passe sous les deux têtes.
+      final layout = layoutSystem(parse('L:1/1\nK:C\n[ab]\n'));
+      final heads = glyphs(layout, Glyph.noteheadWhole).toList();
+      final line = ledgers(layout).single;
+      expect(line.x1, lessThan(heads[0].bounds.left));
+      expect(line.x2, greaterThan(heads[1].bounds.right));
+    });
+
+    test('toutes les têtes désignent l’accord, le halo les couvre', () {
+      final layout = layoutSystem(parse('L:1/1\nK:C\n[C^G]\n'));
+      const ref = EventRef(staff: 0, measure: 0, event: 0);
+      final mine = layout.commands.whereType<GlyphCommand>().where(
+        (c) => c.event == ref,
+      );
+      expect(mine, hasLength(3));
+      final box = layout.heads[ref]!;
+      for (final glyph in mine) {
+        expect(box.left, lessThanOrEqualTo(glyph.bounds.left));
+        expect(box.bottom, greaterThanOrEqualTo(glyph.bounds.bottom));
+      }
+    });
+
+    test('staccato contre la tête opposée à la hampe', () {
+      // Hampe vers le haut : sous la tête la plus basse.
+      final layout = layoutSystem(parse('L:1/4\nK:C\n.[EG]\n'));
+      final dot = glyphs(layout, Glyph.articStaccatoBelow).single;
+      expect(dot.bounds.top, greaterThan(4));
+    });
+  });
 }

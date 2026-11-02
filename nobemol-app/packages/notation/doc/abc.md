@@ -47,6 +47,16 @@ K:C
 !p! C D !crescendo(! E F | G A B !crescendo)! !f! c | .c .G !tenuto!E "_dim." C | !fermata!C4 |]
 ```
 
+Des accords, du grave à l'aigu, avec leur durée après le crochet :
+
+```abc
+X:1
+M:4/4
+L:1/4
+K:C
+[CE] [CG] [Ec]2 | [^FA]3 [Bd] |]
+```
+
 Une grande portée en mesures :
 
 ```abc
@@ -61,7 +71,7 @@ V:LH clef=bass
 C, G, | C,2 |]
 ```
 
-## Grammaire (étape 5)
+## Grammaire (étape 14)
 
 ```ebnf
 morceau      = { ligne-vide | commentaire } , en-tête , corps ;
@@ -82,7 +92,7 @@ lettre-note  = "C" | "D" | "E" | "F" | "G" | "A" | "B" ;
 corps        = { champ-V | ligne-musique | commentaire } ;
 ligne-musique = { espace } , { ( événement | barre ) , { espace } } ;
 événement    = { annotation , { espace } } , { décoration , { espace } } ,
-               ( note | silence ) ;
+               ( note | accord | silence ) ;
 
 annotation   = '"' , ( "^" | "_" ) , texte , '"' ;
 texte        = caractère-texte , { caractère-texte } ;
@@ -93,6 +103,8 @@ nuance       = "ppp" | "pp" | "p" | "mp" | "mf" | "f" | "ff" | "fff" ;
 
 note         = [ altération ] , ( grave , { "," } | aiguë , { "'" } ) ,
                [ durée ] , [ "-" ] ;
+accord       = "[" , hauteur , hauteur , { hauteur } , "]" , [ durée ] ;
+hauteur      = [ altération ] , ( grave , { "," } | aiguë , { "'" } ) ;
 silence      = "z" , [ durée ] ;
 altération   = "^^" | "^" | "=" | "_" | "__" ;
 grave        = lettre-note ;
@@ -154,6 +166,15 @@ Les espaces sont libres autour des notes, des silences, des barres et des élém
 - La liaison peut traverser une barre et une fin de ligne. Elle ne traverse pas un silence.
 - Les deux notes ont la même hauteur. La note d'arrivée s'écrit **sans altération** : `^F2-F`, comme sur la partition, où l'altération ne se répète pas. Deux hauteurs différentes, c'est une liaison d'expression (plus tard).
 - Refusé : `-` sans note d'arrivée (fin du morceau), `-` après un silence.
+
+### Accords
+
+- `[CEG]` : les notes d'un accord se jouent ensemble, sur une seule hampe. Elles s'écrivent **collées**, **du grave à l'aigu**, sur des degrés différents : `[GEC]` et `[C^C]` sont refusés.
+- La durée est commune et s'écrit **après** le crochet : `[CEG]2`, `[CE]3/2`. Pas de durée dans l'accord (`[C2E2]`, refusé).
+- Chaque note garde son altération : `[^F_B]`, `[d=f]`.
+- Les décorations et les annotations se placent **devant** le crochet : `!p![CEG]`, `.[CE]`. Une articulation va contre la tête opposée à la hampe.
+- Hampe : dans le sens donné par la note la plus éloignée de la ligne du milieu, vers le bas à égalité. Une **seconde** pose ses deux têtes de part et d'autre de la hampe. Les altérations trop proches s'échelonnent en colonnes, la plus haute contre les têtes.
+- Refusé pour l'instant (au besoin) : un accord lié (`[CE]2-`), une liaison vers un accord, un accord de croches collé à une autre croche (ligature d'accords), l'unisson dans un accord. Une croche en accord, seule, porte son crochet.
 
 ### Décorations
 
@@ -244,7 +265,8 @@ Une voix ABC = une portée du modèle (`Staff.id` = identifiant de la voix).
 | Ligature à travers un silence | `CzD` avec `L:1/8` | non prévu |
 | Autres décorations | `!trill!`, `!sfz!`, `!segno!`, `!wedge!` | au besoin |
 | Plusieurs articulations sur une note | `.!accent!C` | au besoin |
-| Accords, n-olets, liaisons | `[CEG]`, `(3`, `(CD)` | plus tard |
+| Accords liés ou ligaturés, unisson dans un accord | `[CE]2-`, `[CE][DF]` avec `L:1/8`, `[C^C]` | au besoin |
+| N-olets, liaisons d'expression | `(3`, `(CD)` | plus tard |
 | Levée (première mesure incomplète) | `C \| D E F G \|` | plus tard |
 | Reprises, fins alternatives | `\|:`, `:\|`, `\|1` | non prévu |
 | Chiffrages symboliques | `M:C`, `M:C\|` | non prévu |

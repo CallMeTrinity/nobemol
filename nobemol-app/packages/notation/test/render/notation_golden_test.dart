@@ -243,6 +243,33 @@ void main() {
     );
   });
 
+  testWidgets(
+    'accords : secondes, altérations échelonnées, points',
+    skip: _skip,
+    (tester) async {
+      await expectGolden(
+        tester,
+        parseAbc(
+          'X:1\nM:4/4\nL:1/4\nK:C\n'
+          '[CEG] [EF] [de] [^F^A] | [Bc]3/2 [_E_G]/ [Cc]2 | [ab]4 |]\n',
+        ),
+        'chords_treble',
+      );
+    },
+  );
+
+  testWidgets('accords sur la grande portée', skip: _skip, (tester) async {
+    await expectGolden(
+      tester,
+      parseAbc(
+        'X:1\n%%score {RH LH}\nM:3/4\nL:1/4\nK:G\n'
+        'V:RH\n!p! [GB]2 [Ad] | [^ce]3 |]\n'
+        'V:LH clef=bass\n[G,,D,] [B,,G,] [C,E,] | [A,,=F,]3 |]\n',
+      ),
+      'chords_grand_staff',
+    );
+  });
+
   group('cibles', () {
     const accent = Color(0xFFEF5B36);
     const soft = Color(0xFFFFE7DF);
@@ -272,6 +299,19 @@ void main() {
         'halo_markings',
         decorationHighlights: {ref(0, 0): accent, ref(0, 2): accent},
         decorationHalos: {ref(0, 0): soft, ref(0, 2): soft},
+      );
+    });
+
+    testWidgets('halo : accord et intervalle mélodique', skip: _skip, (
+      tester,
+    ) async {
+      final targets = [ref(0, 0), ref(0, 2), ref(0, 3)];
+      await expectGolden(
+        tester,
+        parseAbc('X:1\nM:4/4\nL:1/4\nK:C\n[C^G]2 E c |]\n'),
+        'halo_chord',
+        highlights: {for (final target in targets) target: accent},
+        halos: {for (final target in targets) target: soft},
       );
     });
 

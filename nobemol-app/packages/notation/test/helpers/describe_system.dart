@@ -8,7 +8,8 @@ import 'package:notation/notation.dart';
 /// Une note est suivie de sa figure (`:2` blanche, `:4` noire, `:8`
 /// croche), sauf la ronde, puis de `.` si elle est pointée et de `-` si elle
 /// est liée à la suivante. Un silence s'écrit `z`, avec sa figure. Les notes
-/// ligaturées sont entre crochets. Les décorations précèdent leur note,
+/// ligaturées sont entre crochets,
+/// les notes d'un accord entre `< >`. Les décorations précèdent leur note,
 /// écrites comme en ABC (`!p!`, `.`, `"_dolce"`). Chaque mesure est suivie
 /// de sa barre, s'il y en a une.
 String describeSystem(System system) => system.groups
@@ -38,6 +39,7 @@ String _describeMeasure(Measure measure) {
     var text = switch (event) {
       Note(:final pitch, :final tiedToNext) =>
         '$decorations$pitch$value$dot${tiedToNext ? '-' : ''}',
+      Chord(:final pitches) => '$decorations<${pitches.join(' ')}>$value$dot',
       Rest() => '${decorations}z$value$dot',
     };
     final beamed = event is Note && event.beamedToNext;

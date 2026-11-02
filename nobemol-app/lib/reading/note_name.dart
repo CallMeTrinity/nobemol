@@ -73,12 +73,15 @@ enum AccidentalSource {
 /// Altération de la note [ref] de [system] telle qu'on la lit : écrite,
 /// sinon reprise plus tôt dans la mesure, sinon prolongée par une liaison,
 /// sinon l'armure. `null` pour une note naturelle sans rien de tout cela.
+///
+/// Pour un accord, [pitch] désigne l'une de ses notes.
 ({Accidental accidental, AccidentalSource source})? soundingAccidental(
   System system,
-  EventRef ref,
-) {
-  final note = system.event(ref)! as Note;
-  final pitch = note.pitch;
+  EventRef ref, {
+  Pitch? pitch,
+}) {
+  final event = system.event(ref)!;
+  pitch ??= (event as Note).pitch;
   if (pitch.accidental case final written?) {
     return (accidental: written, source: AccidentalSource.written);
   }
@@ -88,17 +91,21 @@ enum AccidentalSource {
   final staff = system.staves.elementAt(ref.staff);
   final events = staff.measures[ref.measure].events;
   for (var i = ref.event - 1; i >= 0; i--) {
-    if (events[i] case Note(pitch: final before)
-        when before.step == pitch.step &&
-            before.octave == pitch.octave &&
-            before.accidental != null) {
-      return (accidental: before.accidental!, source: AccidentalSource.measure);
+    for (final before in events[i].pitches.reversed) {
+      if (before.step == pitch.step &&
+          before.octave == pitch.octave &&
+          before.accidental != null) {
+        return (
+          accidental: before.accidental!,
+          source: AccidentalSource.measure,
+        );
+      }
     }
   }
 
   // Liée depuis la mesure d'avant : la note garde l'altération du début.
   final first = system.tieChain(ref).first;
-  if (first.measure != ref.measure) {
+  if (event is Note && first.measure != ref.measure) {
     if (soundingAccidental(system, first)
         case (:final accidental, :final source)
         when source != AccidentalSource.key) {
@@ -113,13 +120,21 @@ enum AccidentalSource {
 }
 
 /// Nom de la note [ref] de [system], altération comprise. `null` hors du
-/// clavier (mi dièse).
-NoteName? noteNameAt(System system, EventRef ref) {
-  final note = system.event(ref)! as Note;
+/// clavier (mi dièse). Pour un accord, [pitch] désigne l'une de ses notes.
+NoteName? noteNameAt(System system, EventRef ref, {Pitch? pitch}) {
+  pitch ??= (system.event(ref)! as Note).pitch;
   return NoteName.of(
-    note.pitch.step,
-    soundingAccidental(system, ref)?.accidental,
+    pitch.step,
+    soundingAccidental(system, ref, pitch: pitch)?.accidental,
   );
+}
+
+/// La note [pitch] de l'événement [ref] telle qu'on la lit : son nom au
+/// clavier et son octave. `null` hors du clavier.
+Pitch? soundingPitch(System system, EventRef ref, Pitch pitch) {
+  final name = noteNameAt(system, ref, pitch: pitch);
+  if (name == null) return null;
+  return Pitch(name.step, pitch.octave, accidental: name.accidental);
 }
 
 /// Vrai si une note de [system] porte une altération, écrite ou par
@@ -127,5 +142,8 @@ NoteName? noteNameAt(System system, EventRef ref) {
 bool hasAccidentals(System system) => system.staves.any(
   (staff) =>
       staff.key.fifths != 0 ||
-      staff.notes.any((note) => note.pitch.accidental != null),
+      staff.measures
+          .expand((measure) => measure.events)
+          .expand((event) => event.pitches)
+          .any((pitch) => pitch.accidental != null),
 );

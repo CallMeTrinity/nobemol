@@ -1,0 +1,30 @@
+id: ear-notes
+title: Le do, puis une note
+skills: [ear.notes]
+level: 2
+theory:
+  - text: >-
+      Pour reconnaître une note à l'oreille, on part d'un repère : le do.
+      Tu entends d'abord le do, puis la note à trouver.
+    names: true
+    abc: |
+      X:1
+      L:1/1
+      K:C
+      C E
+  - text: >-
+      Écoute la distance. Juste au-dessus du do, le ré. Puis mi, fa et sol.
+      Chante la gamme dans ta tête depuis le do : la note tombe sur une
+      marche.
+    names: true
+    abc: |
+      X:1
+      L:1/1
+      K:C
+      C D E F G
+  - text: >-
+      « Réécouter » rejoue le do et la note autant de fois que tu veux. La
+      portée apparaît à la correction.
+exercise:
+  type: ear-note
+  notes: [c, d, e, f, g]

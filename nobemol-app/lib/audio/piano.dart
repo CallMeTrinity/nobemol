@@ -26,6 +26,29 @@ int midiOfQuestion(NoteQuestion question) => midiOf(
   question.answer.accidental,
 );
 
+/// Ce qu'on entend pour [question], étape par étape (chaque étape : des
+/// notes ensemble). Vide pour une durée ou un signe : pas de hauteur.
+List<List<int>> soundOf(Question question) => switch (question) {
+  NoteQuestion() => [
+    [midiOfQuestion(question)],
+  ],
+  IntervalQuestion(:final pitches, harmonic: true) => [
+    [for (final pitch in pitches) midiOfPitch(pitch)],
+  ],
+  IntervalQuestion(:final pitches) => [
+    for (final pitch in pitches) [midiOfPitch(pitch)],
+  ],
+  EarNoteQuestion(:final pitch) => [
+    [midiOfPitch(referencePitch)],
+    [midiOfPitch(pitch)],
+  ],
+  DurationQuestion() || MarkingQuestion() => const [],
+};
+
+/// Numéro MIDI d'une hauteur telle qu'on la lit.
+int midiOfPitch(Pitch pitch) =>
+    midiOf(pitch.step, pitch.octave, pitch.accidental);
+
 /// Notes enregistrées du piano (Salamander Grand Piano, préparées par
 /// `tool/piano_samples.sh`) : toutes les tierces mineures, du la0 (21) au
 /// do8 (108). Tout le clavier.

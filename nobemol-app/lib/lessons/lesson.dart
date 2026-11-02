@@ -3,6 +3,7 @@ import 'package:yaml/yaml.dart';
 
 import 'package:nobemol/lessons/yaml_fields.dart';
 import 'package:nobemol/reading/beats.dart';
+import 'package:nobemol/reading/intervals.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
@@ -174,6 +175,12 @@ const _exerciseFields = {
     required: {'type', 'abc', 'targets', 'choices'},
     optional: <String>{},
   ),
+  'identify-interval': (
+    required: {'type', 'abc', 'targets'},
+    optional: <String>{},
+  ),
+  'ear-note': (required: {'type', 'notes'}, optional: <String>{}),
+  'ear-interval': (required: {'type', 'intervals'}, optional: {'harmonic'}),
 };
 
 ReadingExercise _exercise(YamlNode node, String source) {
@@ -207,6 +214,9 @@ ReadingExercise _exercise(YamlNode node, String source) {
     'identify-note' => _identifyNote(fields, source),
     'identify-duration' => _identifyDuration(fields, source),
     'identify-marking' => _identifyMarking(fields, source),
+    'identify-interval' => _identifyInterval(fields, source),
+    'ear-note' => _earNote(fields),
+    'ear-interval' => _earInterval(fields),
     _ => _noteReading(fields),
   };
 }
@@ -309,6 +319,143 @@ IdentifyMarkingExercise _identifyMarking(YamlFields fields, String source) {
   );
 }
 
+IdentifyIntervalExercise _identifyInterval(YamlFields fields, String source) {
+  final system = _abc(fields, source);
+  final targets = <IntervalTarget>[];
+  final explanations = <EventRef, String>{};
+  for (final (index, node) in fields.list('targets').nodes.indexed) {
+    final path = 'exercise.targets[${index + 1}]';
+    final (from, explain) = _target(node, path, system, interval: true);
+    final toNode = (node as YamlMap).nodes['to'];
+    final to = toNode == null ? null : _to(toNode, '$path.to', system, from);
+    final target = IntervalTarget(from, to);
+    if (targets.contains(target)) {
+      throw fields.error(node, '$path : en double');
+    }
+    if (_checkInterval(system, target, path) case final message?) {
+      throw fields.error(node, message);
+    }
+    targets.add(target);
+    if (explain != null) explanations[from] = explain;
+  }
+  return IdentifyIntervalExercise(
+    system: system,
+    targets: targets,
+    explanations: explanations,
+  );
+}
+
+/// Lit la seconde note `to: { measure, event }` d'un intervalle mélodique,
+/// sur la portée de la première.
+EventRef _to(YamlNode node, String path, System system, EventRef from) {
+  final fields = YamlFields.read(
+    node,
+    path: path,
+    required: {'measure', 'event'},
+  );
+  final measures = system.staves.elementAt(from.staff).measures;
+  final measure = fields.integer('measure', min: 1, max: measures.length) - 1;
+  final events = measures[measure].events;
+  final event = fields.integer('event', min: 1, max: events.length) - 1;
+  return EventRef(staff: from.staff, measure: measure, event: event);
+}
+
+/// Message d'erreur si [target] n'est pas un intervalle à nommer : un
+/// accord de deux notes, ou deux notes dans l'ordre, une octave au plus,
+/// chacune sur une touche.
+String? _checkInterval(System system, IntervalTarget target, String path) {
+  final from = system.event(target.from)!;
+  switch ((from, target.to)) {
+    case (Rest(), _):
+      return '$path : un silence n’a pas de hauteur';
+    case (Chord(:final pitches), null) when pitches.length != 2:
+      return '$path : accord de ${pitches.length} notes, un intervalle en '
+          'a deux';
+    case (Chord(), _?):
+      return '$path : un accord donne déjà l’intervalle, « to » en trop';
+    case (Note(), null):
+      return '$path : une note seule, « to » attendu (la seconde note)';
+    case (Note(), final to?):
+      if (system.event(to) is! Note) {
+        return '$path.to : une note attendue';
+      }
+      if (to.measure < target.from.measure ||
+          (to.measure == target.from.measure &&
+              to.event <= target.from.event)) {
+        return '$path.to : la seconde note vient après la première';
+      }
+    case (Chord(), null):
+      break;
+  }
+  final pitches = intervalPitches(system, target);
+  if (pitches == null) {
+    return '$path : pas de touche pour une des notes (mi dièse, do bémol, '
+        'double altération)';
+  }
+  if (intervalBetween(pitches[0], pitches[1]) == null) {
+    return '$path : au-delà de l’octave (plus tard)';
+  }
+  return null;
+}
+
+EarNoteParams _earNote(YamlFields fields) {
+  final nodes = fields.list('notes').nodes;
+  final notes = <NoteName>[];
+  for (final (index, name) in fields.strings('notes').indexed) {
+    final note = NoteName.naturals.where((n) => n.name == name).firstOrNull;
+    if (note == null) {
+      throw fields.error(
+        nodes[index],
+        '${fields.name('notes')} : « $name » n’est pas une touche blanche '
+        '(c, d, e, f, g, a, b)',
+      );
+    }
+    notes.add(note);
+  }
+  if (notes.length < 2) {
+    throw fields.error(
+      fields.node('notes')!,
+      '${fields.name('notes')} : deux notes au moins',
+    );
+  }
+  return EarNoteParams(notes: notes..sort((a, b) => a.index - b.index));
+}
+
+EarIntervalParams _earInterval(YamlFields fields) {
+  final harmonic = fields.boolean('harmonic', or: false);
+  final intervals = <IntervalNumber>[];
+  for (final node in fields.list('intervals').nodes) {
+    final interval = switch (node.value) {
+      final int size => IntervalNumber.of(size),
+      _ => null,
+    };
+    if (interval == null || interval == IntervalNumber.unison && harmonic) {
+      throw fields.error(
+        node,
+        '${fields.name('intervals')} : numéro de '
+        '${harmonic ? 2 : 1} à 8 attendu',
+      );
+    }
+    if (intervals.contains(interval)) {
+      throw fields.error(
+        node,
+        '${fields.name('intervals')} : ${interval.size} en double',
+      );
+    }
+    intervals.add(interval);
+  }
+  if (intervals.length < 2) {
+    throw fields.error(
+      fields.node('intervals')!,
+      '${fields.name('intervals')} : deux intervalles au moins',
+    );
+  }
+  return EarIntervalParams(
+    intervals: intervals..sort((a, b) => a.index - b.index),
+    harmonic: harmonic,
+  );
+}
+
 /// Lit les réponses proposées : de 2 à 8 sens, rangés dans l'ordre de
 /// [Marking] quel que soit l'ordre d'écriture.
 List<Marking> _choices(YamlFields fields) {
@@ -360,13 +507,19 @@ List<Marking> _choices(YamlFields fields) {
 }
 
 /// Lit une cible `{ staff, measure, event }`, écrite en base 1 (« mesure 1,
-/// 2e note ») et convertie ici en index du code, une fois pour toutes.
-(EventRef, String?) _target(YamlNode node, String path, System system) {
+/// 2e note ») et convertie ici en index du code, une fois pour toutes. Une
+/// cible d'[interval] peut nommer sa seconde note (`to`), lue à part.
+(EventRef, String?) _target(
+  YamlNode node,
+  String path,
+  System system, {
+  bool interval = false,
+}) {
   final fields = YamlFields.read(
     node,
     path: path,
     required: {'measure', 'event'},
-    optional: {'staff', 'explain'},
+    optional: {'staff', 'explain', if (interval) 'to'},
   );
   final explain = fields.node('explain') == null
       ? null

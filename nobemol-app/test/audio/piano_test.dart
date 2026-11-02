@@ -23,6 +23,21 @@ void main() {
     expect(midiOfQuestion(question), 54);
   });
 
+  test('intervalle : deux notes à la suite, ou ensemble', () {
+    expect(soundOf(questionOf('interval:melodic:treble:c4+e4')!), [
+      [60],
+      [64],
+    ]);
+    expect(soundOf(questionOf('interval:harmonic:bass:g2+bFlat2')!), [
+      [43, 46],
+    ]);
+    // Oreille : le do de référence, puis la note.
+    expect(soundOf(questionOf('ear:note:a4')!), [
+      [60],
+      [69],
+    ]);
+  });
+
   group('piano enregistré', () {
     final semitone = pow(2, 1 / 12).toDouble();
 

@@ -27,7 +27,7 @@ La bêta est installée : **une mise à jour de l'APK ne doit jamais perdre la p
 
 ## Schéma v2
 
-- `answers.card` : la carte de révision de la question (`note:treble:fSharp5`, `duration:half+quarter`, `marking:above:rit.`). Format dans `lib/review/card.dart` : il est stocké, ne jamais le changer sans migration. `null` pour les réponses de la v1.
+- `answers.card` : la carte de révision de la question (`note:treble:fSharp5`, `duration:half+quarter`, `marking:above:rit.`, `interval:melodic:treble:c4+e4`, `ear:note:e4`). Format dans `lib/review/card.dart` : il est stocké, ne jamais le changer sans migration. `null` pour les réponses de la v1.
 
 ## Schéma v3
 

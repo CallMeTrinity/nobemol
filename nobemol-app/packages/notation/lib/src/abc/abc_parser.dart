@@ -571,6 +571,13 @@ class _Parser {
         continue;
       }
 
+      if (char == '[' && !_isBracketSyntax(content, index)) {
+        index = _chord(voice, content, index, glued: glued, prefixes: prefixes);
+        prefixes.clear();
+        glued = true;
+        continue;
+      }
+
       final noteColumn = index + 1;
       final (accidental, length) = _accidental(content, index);
       index += length;
@@ -581,41 +588,23 @@ class _Parser {
         throw _error(_unexpected(content, index), index + 1);
       }
 
-      final letter = content[index];
-      final upper = letter.toUpperCase();
-      final lowercase = letter != upper;
-      var octave = lowercase ? 5 : 4;
-      index++;
-
-      while (index < content.length &&
-          (content[index] == ',' || content[index] == "'")) {
-        final mark = content[index];
-        if (lowercase && mark == ',') {
-          throw _error("« $letter, » s'écrit « $upper »", index + 1);
-        }
-        if (!lowercase && mark == "'") {
-          throw _error(
-            "« $letter' » s'écrit « ${letter.toLowerCase()} »",
-            index + 1,
-          );
-        }
-        octave += mark == ',' ? -1 : 1;
-        index++;
-      }
-
-      final (multiplier, end) = _duration(content, index);
+      final (pitch, afterPitch) = _pitch(content, index, accidental);
+      final (multiplier, end) = _duration(content, afterPitch);
       index = end;
-      final pitch = Pitch(_steps[upper]!, octave, accidental: accidental);
       final (:value, :dotted) = _noteValue(multiplier, noteColumn);
       _arriveTie(voice, pitch, noteColumn);
 
       final previous = voice.lastEvent;
-      if (glued && value.flags > 0) {
-        if (previous is Rest && previous.value.flags > 0) {
-          throw _restInBeam(noteColumn);
-        }
-        if (previous is Note && previous.value.flags > 0) {
-          voice.updateLastNote(beamedToNext: true);
+      if (glued && value.flags > 0 && previous != null) {
+        if (previous.value.flags > 0) {
+          switch (previous) {
+            case Rest():
+              throw _restInBeam(noteColumn);
+            case Chord():
+              throw _chordInBeam(noteColumn);
+            case Note():
+              voice.updateLastNote(beamedToNext: true);
+          }
         }
       }
       final decorations = _decorate(voice, prefixes, rest: false);
@@ -643,6 +632,128 @@ class _Parser {
         prefixes.first.column,
       );
     }
+  }
+
+  /// Lit la hauteur dont la lettre est à [index] (l'altération [accidental]
+  /// est déjà lue) et renvoie l'index qui la suit.
+  (Pitch, int) _pitch(String content, int index, Accidental? accidental) {
+    final letter = content[index];
+    final upper = letter.toUpperCase();
+    final lowercase = letter != upper;
+    var octave = lowercase ? 5 : 4;
+    var end = index + 1;
+
+    while (end < content.length &&
+        (content[end] == ',' || content[end] == "'")) {
+      final mark = content[end];
+      if (lowercase && mark == ',') {
+        throw _error("« $letter, » s'écrit « $upper »", end + 1);
+      }
+      if (!lowercase && mark == "'") {
+        throw _error(
+          "« $letter' » s'écrit « ${letter.toLowerCase()} »",
+          end + 1,
+        );
+      }
+      octave += mark == ',' ? -1 : 1;
+      end++;
+    }
+    return (Pitch(_steps[upper]!, octave, accidental: accidental), end);
+  }
+
+  /// Lit l'accord `[CEG]` qui commence à [index], suivi de sa durée, et
+  /// renvoie l'index qui le suit.
+  int _chord(
+    _Voice voice,
+    String content,
+    int index, {
+    required bool glued,
+    required List<_Prefix> prefixes,
+  }) {
+    final column = index + 1;
+    if (voice.tie case final tie?) {
+      throw AbcException(
+        'liaison de prolongation vers un accord (au besoin)',
+        line: tie.line,
+        column: tie.column,
+      );
+    }
+
+    final pitches = <Pitch>[];
+    var end = index + 1;
+    while (true) {
+      if (end >= content.length) {
+        throw _error('accord non fermé : « ] » attendu', column);
+      }
+      final char = content[end];
+      if (char == ']') break;
+      final noteColumn = end + 1;
+      final (accidental, length) = _accidental(content, end);
+      end += length;
+      if (end >= content.length || !_isNote(content[end])) {
+        if (accidental != null) {
+          throw _error("note attendue après l'altération", end + 1);
+        }
+        throw _error(_unexpectedInChord(content[end]), end + 1);
+      }
+      final (pitch, afterPitch) = _pitch(content, end, accidental);
+      end = afterPitch;
+
+      if (pitches.lastOrNull case final below?) {
+        if (pitch.diatonic == below.diatonic) {
+          throw _error(
+            'même degré deux fois dans un accord (unisson : au besoin)',
+            noteColumn,
+          );
+        }
+        if (pitch.diatonic < below.diatonic) {
+          throw _error(
+            "notes d'un accord du grave à l'aigu : [CEG], pas [GEC]",
+            noteColumn,
+          );
+        }
+      }
+      pitches.add(pitch);
+    }
+    if (pitches.length < 2) {
+      throw _error(
+        pitches.isEmpty
+            ? 'accord vide'
+            : "accord d'une seule note : écrire la note sans crochets",
+        column,
+      );
+    }
+
+    final (multiplier, afterDuration) = _duration(content, end + 1);
+    final (:value, :dotted) = _noteValue(multiplier, column);
+    if (afterDuration < content.length && content[afterDuration] == '-') {
+      throw _error(
+        'liaison de prolongation sur un accord (au besoin)',
+        afterDuration + 1,
+      );
+    }
+
+    final previous = voice.lastEvent;
+    if (glued &&
+        value.flags > 0 &&
+        previous != null &&
+        previous is! Rest &&
+        previous.value.flags > 0) {
+      throw _chordInBeam(column);
+    }
+    final decorations = _decorate(voice, prefixes, rest: false);
+    voice
+      ..events.add(
+        Chord(
+          List.unmodifiable(pitches),
+          value: value,
+          dotted: dotted,
+          decorations: decorations,
+        ),
+      )
+      ..lastLine = _line
+      ..lastColumn = column;
+    return afterDuration;
   }
 
   /// Lit l'annotation `"^texte"` ou `"_texte"` qui commence à [index],
@@ -852,7 +963,8 @@ class _Parser {
     final previous = voice.lastEvent;
     if (glued &&
         value.flags > 0 &&
-        previous is Note &&
+        previous != null &&
+        previous is! Rest &&
         previous.value.flags > 0) {
       throw _restInBeam(column);
     }
@@ -870,6 +982,12 @@ class _Parser {
   AbcException _restInBeam(int column) => _error(
     'silence collé à une croche : séparer par une espace, '
     'une ligature ne traverse pas un silence',
+    column,
+  );
+
+  AbcException _chordInBeam(int column) => _error(
+    'accord collé à une croche : séparer par une espace, '
+    "pas encore de ligature d'accords (au besoin)",
     column,
   );
 
@@ -1132,6 +1250,28 @@ String _stripComment(String text) {
 
 bool _isNote(String char) => _steps.containsKey(char.toUpperCase());
 
+/// Vrai si le `[` à [index] ouvre autre chose qu'un accord : `[|` ou un
+/// champ dans la ligne (`[V:RH]`), refusés ensuite.
+bool _isBracketSyntax(String content, int index) {
+  final next = index + 1 < content.length ? content[index + 1] : '';
+  return next == '|' || _field.hasMatch(content.substring(index + 1));
+}
+
+/// Message pour un caractère inattendu entre les crochets d'un accord.
+String _unexpectedInChord(String char) => switch (char) {
+  ' ' || '\t' => 'espace dans un accord : écrire les notes collées ([CEG])',
+  '!' ||
+  '.' ||
+  '"' => 'décoration dans un accord : la placer devant « [ » (!p![CEG])',
+  '-' => 'liaison de prolongation dans un accord (au besoin)',
+  '/' => "durée dans un accord : l'écrire après « ] » ([CEG]2)",
+  'z' => 'silence dans un accord',
+  '[' => 'accords imbriqués',
+  _ when int.tryParse(char) != null =>
+    "durée dans un accord : l'écrire après « ] » ([CEG]2)",
+  _ => 'caractère inattendu « $char » dans un accord',
+};
+
 /// Altération écrite à [index] et nombre de caractères lus.
 (Accidental?, int) _accidental(String content, int index) {
   if (content.startsWith('^^', index)) return (Accidental.doubleSharp, 2);
@@ -1161,7 +1301,6 @@ String _unexpected(String content, int index) {
     '[' when next == '|' => 'barre « [| » non supportée',
     '[' when _field.hasMatch(content.substring(index + 1)) =>
       'champ dans la ligne non supporté',
-    '[' => 'accord non supporté (plus tard)',
     ']' => 'caractère inattendu « ] »',
     '/' => 'durée sans note : pas d’espace entre une note et sa durée',
     'Z' => 'silence de plusieurs mesures non supporté : écrire z et sa durée',

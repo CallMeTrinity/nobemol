@@ -64,7 +64,7 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
   static String nameOf(int midi) => '${_names[midi % 12]}${midi ~/ 12 - 1}';
 
   void _play(int midi) {
-    unawaited(_player.play(midi).catchError((Object _) {}));
+    unawaited(_player.play([midi]).catchError((Object _) {}));
     setState(() => _sounding = midi);
   }
 

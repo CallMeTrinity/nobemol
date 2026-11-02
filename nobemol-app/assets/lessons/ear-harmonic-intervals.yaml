@@ -1,0 +1,25 @@
+id: ear-harmonic-intervals
+title: Les intervalles en accords, à l'oreille
+skills: [ear.harmonic]
+level: 5
+theory:
+  - text: >-
+      Jouées ensemble, deux notes se fondent. La tierce sonne douce et
+      pleine. La quinte, creuse. L'octave, presque une seule note.
+    abc: |
+      X:1
+      L:1/1
+      K:C
+      [CE] [CG] [Cc]
+  - text: >-
+      La seconde frotte, les deux notes se gênent. La sixte est plus large
+      que la quinte, mais douce comme la tierce.
+    abc: |
+      X:1
+      L:1/1
+      K:C
+      [CD] [CA]
+exercise:
+  type: ear-interval
+  harmonic: true
+  intervals: [2, 3, 5, 6, 8]

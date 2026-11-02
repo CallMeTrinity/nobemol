@@ -4,6 +4,7 @@ import 'package:notation/notation.dart';
 import 'package:nobemol/l10n/app_localizations.dart';
 import 'package:nobemol/progress/xp.dart';
 import 'package:nobemol/reading/beats.dart';
+import 'package:nobemol/reading/intervals.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/start_level.dart';
@@ -48,6 +49,7 @@ extension Labels on AppLocalizations {
         NoteName() => noteFullName(answer, naming: naming),
         Beats() => beatsLabel(answer),
         Marking() => markingLabel(answer),
+        IntervalNumber() => intervalLabel(answer),
         _ => throw ArgumentError.value(answer, 'answer', 'réponse inconnue'),
       };
 
@@ -61,6 +63,18 @@ extension Labels on AppLocalizations {
     Beats.two => '2',
     Beats.three => '3',
     Beats.four => '4',
+  };
+
+  /// Intervalle, sur une tuile : « Tierce ».
+  String intervalLabel(IntervalNumber interval) => switch (interval) {
+    IntervalNumber.unison => intervalUnison,
+    IntervalNumber.second => intervalSecond,
+    IntervalNumber.third => intervalThird,
+    IntervalNumber.fourth => intervalFourth,
+    IntervalNumber.fifth => intervalFifth,
+    IntervalNumber.sixth => intervalSixth,
+    IntervalNumber.seventh => intervalSeventh,
+    IntervalNumber.octave => intervalOctave,
   };
 
   /// Sens d'un signe ou d'un terme, en français.
@@ -95,6 +109,8 @@ extension Labels on AppLocalizations {
     'rhythm' => branchRhythm,
     'terms' => branchTerms,
     'symbols' => branchSymbols,
+    'intervals' => branchIntervals,
+    'ear' => branchEar,
     _ => branch,
   };
 

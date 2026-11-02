@@ -3,11 +3,19 @@ import 'dart:math';
 import 'package:notation/core.dart';
 
 import 'package:nobemol/reading/beats.dart';
+import 'package:nobemol/reading/intervals.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 
 /// Nombre de notes d'une session de lecture paramétrique.
 const sessionLength = 20;
+
+/// Nombre de questions d'une session d'oreille : chacune s'écoute, parfois
+/// deux fois.
+const earSessionLength = 12;
+
+/// La note de référence des exercices d'oreille : le do central.
+const referencePitch = Pitch(DiatonicStep.c, 4);
 
 /// Exercice de lecture : des questions une par une, une réponse à choisir
 /// parmi des boutons (nom de note, durée).
@@ -203,6 +211,155 @@ class IdentifyMarkingExercise extends ReadingExercise {
   QuestionSource questions(Random random) => _MarkingQuestions(this);
 }
 
+/// Un intervalle visé dans une phrase : un accord de deux notes (intervalle
+/// harmonique), ou deux notes de la même portée, la seconde après la
+/// première (intervalle mélodique).
+class IntervalTarget {
+  const IntervalTarget(this.from, [this.to]);
+
+  /// L'accord, ou la première note.
+  final EventRef from;
+
+  /// La seconde note, `null` pour un accord.
+  final EventRef? to;
+
+  bool get harmonic => to == null;
+
+  /// Événements à colorer.
+  List<EventRef> get refs => [from, ?to];
+
+  @override
+  bool operator ==(Object other) =>
+      other is IntervalTarget && other.from == from && other.to == to;
+
+  @override
+  int get hashCode => Object.hash(from, to);
+}
+
+/// Notes de [target] dans [system] telles qu'on les lit (altérations
+/// comprises), dans l'ordre de lecture : du grave à l'aigu pour un accord.
+/// `null` si l'une n'a pas de touche (mi dièse).
+List<Pitch>? intervalPitches(System system, IntervalTarget target) {
+  final refs = switch (target.to) {
+    null => [
+      for (final pitch in system.event(target.from)!.pitches)
+        (target.from, pitch),
+    ],
+    final to => [
+      for (final ref in [target.from, to])
+        (ref, system.event(ref)!.pitches.single),
+    ],
+  };
+  final pitches = [
+    for (final (ref, pitch) in refs) soundingPitch(system, ref, pitch),
+  ];
+  return pitches.contains(null) ? null : pitches.nonNulls.toList();
+}
+
+/// Intervalles ciblés dans une phrase écrite en ABC : donner leur numéro,
+/// dans l'ordre.
+///
+/// Clé de la session comparée par identité : la leçon est chargée une fois.
+class IdentifyIntervalExercise extends ReadingExercise {
+  const IdentifyIntervalExercise({
+    required this.system,
+    required this.targets,
+    this.explanations = const {},
+  });
+
+  final System system;
+
+  /// Intervalles à nommer, dans l'ordre. Vérifié au chargement de la leçon :
+  /// deux notes d'une touche, une octave au plus.
+  final List<IntervalTarget> targets;
+
+  /// Explications écrites par l'auteur, par première note de la cible.
+  final Map<EventRef, String> explanations;
+
+  @override
+  int get length => targets.length;
+
+  @override
+  List<Enum> choicesFor(Question question) => IntervalNumber.values;
+
+  @override
+  LayoutOptions get layoutOptions => const LayoutOptions();
+
+  @override
+  QuestionSource questions(Random random) => _IntervalQuestions(this);
+}
+
+/// Réserve la place d'une ligne supplémentaire sous la portée (do4) et de
+/// deux au-dessus (do6) : la portée ne bouge pas d'une question d'oreille à
+/// l'autre.
+const _earLayout = LayoutOptions(reserveAbove: 4.5, reserveBelow: 3.5);
+
+/// Oreille : le do central, puis une note de do4 à si4 à nommer au clavier.
+class EarNoteParams extends ReadingExercise {
+  const EarNoteParams({required this.notes});
+
+  /// Notes possibles, touches blanches : par l'oreille, un fa dièse et un
+  /// sol bémol ne se distinguent pas.
+  final List<NoteName> notes;
+
+  @override
+  int get length => earSessionLength;
+
+  @override
+  List<Enum> choicesFor(Question question) => NoteName.naturals;
+
+  @override
+  LayoutOptions get layoutOptions => _earLayout;
+
+  @override
+  QuestionSource questions(Random random) => _EarNotes(this, random);
+
+  @override
+  bool operator ==(Object other) =>
+      other is EarNoteParams && _sameList(other.notes, notes);
+
+  @override
+  int get hashCode => Object.hashAll(notes);
+}
+
+/// Oreille : deux notes entendues, l'une après l'autre en montant, ou
+/// ensemble ([harmonic]). Nommer l'intervalle.
+class EarIntervalParams extends ReadingExercise {
+  const EarIntervalParams({required this.intervals, this.harmonic = false});
+
+  /// Intervalles possibles, et les réponses proposées, du plus petit au plus
+  /// grand.
+  final List<IntervalNumber> intervals;
+
+  /// Les deux notes ensemble.
+  final bool harmonic;
+
+  @override
+  int get length => earSessionLength;
+
+  @override
+  List<Enum> choicesFor(Question question) => intervals;
+
+  @override
+  LayoutOptions get layoutOptions => _earLayout;
+
+  @override
+  QuestionSource questions(Random random) => _EarIntervals(this, random);
+
+  @override
+  bool operator ==(Object other) =>
+      other is EarIntervalParams &&
+      other.harmonic == harmonic &&
+      _sameList(other.intervals, intervals);
+
+  @override
+  int get hashCode => Object.hash(harmonic, Object.hashAll(intervals));
+}
+
+bool _sameList<T>(List<T> a, List<T> b) =>
+    a.length == b.length &&
+    [for (var i = 0; i < a.length; i++) a[i] == b[i]].every((same) => same);
+
 /// Révision : des cartes, chacune seule sur sa portée (voir
 /// `lib/review/card.dart`). Notes, durées et signes s'y mélangent : les
 /// réponses dépendent de la question.
@@ -233,6 +390,8 @@ class ReviewExercise extends ReadingExercise {
           : NoteName.naturals,
     DurationQuestion() => Beats.values,
     MarkingQuestion(:final answer) => markingChoices[answer] ?? [answer],
+    IntervalQuestion() => IntervalNumber.values,
+    EarNoteQuestion() => NoteName.naturals,
   };
 
   /// La place de deux lignes supplémentaires, au-dessus et au-dessous : la
@@ -265,6 +424,10 @@ sealed class Question {
 
   /// Bonne réponse.
   Enum get answer;
+
+  /// Vrai pour une question d'oreille : la portée est cachée jusqu'à la
+  /// correction.
+  bool get heard => false;
 }
 
 /// Une note à nommer.
@@ -330,6 +493,113 @@ class MarkingQuestion extends Question {
 
   @override
   final Marking answer;
+}
+
+/// Un intervalle à nommer par son numéro : lu sur la portée, ou entendu.
+class IntervalQuestion extends Question {
+  const IntervalQuestion({
+    required super.system,
+    required this.targets,
+    required this.pitches,
+    required this.harmonic,
+    required this.answer,
+    this.heard = false,
+    super.explanation,
+  });
+
+  /// L'accord, ou les deux notes.
+  @override
+  final List<EventRef> targets;
+
+  /// Les deux notes telles qu'on les lit, dans l'ordre de lecture : du
+  /// grave à l'aigu pour un accord.
+  final List<Pitch> pitches;
+
+  /// Les deux notes ensemble (un accord).
+  final bool harmonic;
+
+  @override
+  final bool heard;
+
+  @override
+  final IntervalNumber answer;
+}
+
+/// Oreille : le do central, puis une note à nommer.
+class EarNoteQuestion extends Question {
+  const EarNoteQuestion({
+    required super.system,
+    required this.pitch,
+    required this.answer,
+  });
+
+  /// La note entendue.
+  final Pitch pitch;
+
+  /// Le do, puis la note.
+  @override
+  List<EventRef> get targets => const [
+    EventRef(staff: 0, measure: 0, event: 1),
+  ];
+
+  @override
+  bool get heard => true;
+
+  @override
+  final NoteName answer;
+}
+
+/// Le do de référence puis [pitch], en rondes sur la clé de sol.
+EarNoteQuestion earNoteQuestion(Pitch pitch) => EarNoteQuestion(
+  system: System.single(
+    Staff(
+      clef: Clef.treble,
+      measures: [
+        Measure([const Note(referencePitch), Note(pitch)]),
+      ],
+    ),
+  ),
+  pitch: pitch,
+  answer: NoteName.of(pitch.step, pitch.accidental)!,
+);
+
+/// Intervalle seul sur sa portée : deux rondes, ou un accord si
+/// [harmonic]. `null` au-delà de l'octave, ou pour un unisson en accord.
+IntervalQuestion? intervalQuestion(
+  Clef clef,
+  Pitch first,
+  Pitch second, {
+  required bool harmonic,
+  bool heard = false,
+}) {
+  final answer = intervalBetween(first, second);
+  if (answer == null || (harmonic && answer == IntervalNumber.unison)) {
+    return null;
+  }
+  final ordered = harmonic && first.diatonic > second.diatonic
+      ? [second, first]
+      : [first, second];
+  final system = System.single(
+    Staff(
+      clef: clef,
+      measures: [
+        Measure(
+          harmonic ? [Chord(ordered)] : [Note(ordered[0]), Note(ordered[1])],
+        ),
+      ],
+    ),
+  );
+  return IntervalQuestion(
+    system: system,
+    targets: [
+      const EventRef(staff: 0, measure: 0, event: 0),
+      if (!harmonic) const EventRef(staff: 0, measure: 0, event: 1),
+    ],
+    pitches: ordered,
+    harmonic: harmonic,
+    answer: answer,
+    heard: heard,
+  );
 }
 
 /// Fournit les questions d'une session, une par une.
@@ -469,6 +739,80 @@ class _MarkingQuestions implements QuestionSource {
       answer: markingOf(sign)!,
       explanation: exercise.explanations[target],
     );
+  }
+}
+
+/// Les cibles d'un [IdentifyIntervalExercise], dans l'ordre.
+class _IntervalQuestions implements QuestionSource {
+  _IntervalQuestions(this.exercise);
+
+  final IdentifyIntervalExercise exercise;
+  var _index = 0;
+
+  @override
+  IntervalQuestion next({Question? previous}) {
+    final system = exercise.system;
+    final target = exercise.targets[_index++];
+    // Le chargement de la leçon a vérifié les notes et l'écart.
+    final pitches = intervalPitches(system, target)!;
+    return IntervalQuestion(
+      system: system,
+      targets: target.refs,
+      pitches: pitches,
+      harmonic: target.harmonic,
+      answer: intervalBetween(pitches[0], pitches[1])!,
+      explanation: exercise.explanations[target.from],
+    );
+  }
+}
+
+/// Tire les notes d'un [EarNoteParams], jamais deux fois la même d'affilée.
+class _EarNotes implements QuestionSource {
+  _EarNotes(this.params, this.random);
+
+  final EarNoteParams params;
+  final Random random;
+
+  @override
+  EarNoteQuestion next({Question? previous}) {
+    final last = previous is EarNoteQuestion ? previous.answer : null;
+    final notes = params.notes.length > 1
+        ? params.notes.where((note) => note != last).toList()
+        : params.notes;
+    final name = notes[random.nextInt(notes.length)];
+    return earNoteQuestion(Pitch(name.step, referencePitch.octave));
+  }
+}
+
+/// Tire les intervalles d'un [EarIntervalParams] sur les touches blanches,
+/// la note du bas de do4 à do5. Jamais de triton : quarte augmentée ou
+/// quinte diminuée, son numéro ne s'entend pas. Jamais deux fois la même
+/// paire d'affilée.
+class _EarIntervals implements QuestionSource {
+  _EarIntervals(this.params, this.random);
+
+  final EarIntervalParams params;
+  final Random random;
+
+  @override
+  IntervalQuestion next({Question? previous}) {
+    final last = previous is IntervalQuestion ? previous.pitches : null;
+    while (true) {
+      final number = params.intervals[random.nextInt(params.intervals.length)];
+      final low = referencePitch.diatonic + random.nextInt(8);
+      final first = Pitch.fromDiatonic(low);
+      final second = Pitch.fromDiatonic(low + number.size - 1);
+      if (semitonesBetween(first, second) == 6) continue;
+      if (last != null && last[0] == first && last[1] == second) continue;
+      final question = intervalQuestion(
+        Clef.treble,
+        first,
+        second,
+        harmonic: params.harmonic,
+        heard: true,
+      );
+      if (question != null) return question;
+    }
   }
 }
 

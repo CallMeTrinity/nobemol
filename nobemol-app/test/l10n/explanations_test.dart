@@ -7,6 +7,7 @@ import 'package:nobemol/reading/beats.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
+import 'package:nobemol/review/card.dart';
 import 'package:nobemol/settings/settings.dart';
 
 void main() {
@@ -160,5 +161,68 @@ void main() {
     expect(formatBeats(const Fraction(1, 2)), '½');
     expect(formatBeats(const Fraction(6, 4)), '1½');
     expect(formatBeats(const Fraction(3, 8)), '⅜');
+  });
+
+  group('intervalles', () {
+    IntervalQuestion interval(
+      String first,
+      String second, {
+      bool harmonic = false,
+    }) =>
+        questionOf(
+              'interval:${harmonic ? 'harmonic' : 'melodic'}:treble:$first+$second',
+            )!
+            as IntervalQuestion;
+
+    test('les notes comptées d’un bout à l’autre', () {
+      expect(
+        l10n.explain(interval('c4', 'e4'), naming: solfege),
+        "Do, ré, mi : 3 notes, c'est une tierce.",
+      );
+      // En descendant, dans l'ordre de lecture.
+      expect(
+        l10n.explain(interval('g4', 'e4'), naming: solfege),
+        "Sol, fa, mi : 3 notes, c'est une tierce.",
+      );
+      expect(
+        l10n.explain(interval('c4', 'c5'), naming: NoteNaming.letters),
+        "C, D, E, F, G, A, B, C : 8 notes, c'est une octave.",
+      );
+    });
+
+    test('unisson, et altérations qui ne changent rien', () {
+      expect(
+        l10n.explain(interval('f4', 'f4'), naming: solfege),
+        "Deux fois le même fa : c'est un unisson.",
+      );
+      expect(
+        l10n.explain(interval('c4', 'eFlat4', harmonic: true), naming: solfege),
+        "Do, ré, mi : 3 notes, c'est une tierce. "
+        'Les altérations ne changent pas le numéro.',
+      );
+    });
+
+    test('titre de la correction', () {
+      final question = interval('c4', 'g4');
+      expect(
+        l10n.feedbackTitle(question, right: true, naming: solfege),
+        "Juste, c'est une quinte",
+      );
+      expect(
+        l10n.feedbackTitle(question, right: false, naming: solfege),
+        "C'est une quinte",
+      );
+    });
+
+    test('oreille : l’écart au do de référence', () {
+      expect(
+        l10n.explain(questionOf('ear:note:f4')!, naming: solfege),
+        'Après le do, un fa : une quarte au-dessus.',
+      );
+      expect(
+        l10n.explain(questionOf('ear:note:c4')!, naming: solfege),
+        'Le do de référence, joué une deuxième fois.',
+      );
+    });
   });
 }

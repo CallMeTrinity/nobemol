@@ -1,0 +1,62 @@
+id: melodic-intervals
+title: Les intervalles
+skills: [intervals.melodic]
+level: 3
+theory:
+  - text: >-
+      Un intervalle est l'écart entre deux notes. On compte les notes de la
+      première à la deuxième, les deux comprises. Do, ré, mi : trois notes,
+      c'est une tierce.
+    names: true
+    abc: |
+      X:1
+      L:1/1
+      K:C
+      C D E
+  - text: >-
+      Chaque écart a son nom. Deux notes : une seconde. Puis la tierce, la
+      quarte, la quinte, la sixte et la septième. À huit notes, l'octave
+      retombe sur le même nom.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      C D C E | C F C G | C A C B | C2 c2 |]
+  - text: >-
+      Sur la portée, ça va vite. Une tierce saute d'une ligne à la ligne
+      suivante, ou d'un interligne au suivant. Une seconde passe d'une
+      ligne à l'interligne qui la touche.
+    names: true
+    abc: |
+      X:1
+      L:1/1
+      K:C
+      E G F A E F
+  - text: >-
+      En descendant, on compte pareil. De sol à mi : sol, fa, mi. C'est
+      encore une tierce.
+    names: true
+    abc: |
+      X:1
+      L:1/1
+      K:C
+      G E
+exercise:
+  type: identify-interval
+  abc: |
+    X:1
+    M:4/4
+    L:1/4
+    K:C
+    C E D G | D c B G | A D F2 | C c G2 |]
+  targets:
+    - { measure: 1, event: 1, to: { measure: 1, event: 2 } }
+    - { measure: 1, event: 3, to: { measure: 1, event: 4 } }
+    - { measure: 2, event: 1, to: { measure: 2, event: 2 } }
+    - { measure: 2, event: 2, to: { measure: 2, event: 3 } }
+    - { measure: 2, event: 4, to: { measure: 3, event: 1 } }
+    - { measure: 3, event: 1, to: { measure: 3, event: 2 } }
+    - { measure: 3, event: 2, to: { measure: 3, event: 3 } }
+    - { measure: 4, event: 1, to: { measure: 4, event: 2 } }
+    - { measure: 4, event: 2, to: { measure: 4, event: 3 } }

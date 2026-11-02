@@ -53,8 +53,8 @@ class SystemLayout {
   /// Rectangle à afficher, marge comprise.
   final Box bounds;
 
-  /// Tête de chaque note, altération comprise, ou glyphe de chaque silence.
-  /// Sans hampe ni crochet : c'est là que se pose un halo.
+  /// Têtes de chaque note ou accord, altérations comprises, ou glyphe de
+  /// chaque silence. Sans hampe ni crochet : c'est là que se pose un halo.
   final Map<EventRef, Box> heads;
 }
 
@@ -92,6 +92,9 @@ const _trailing = 3.0;
 
 /// Distance entre une altération et sa tête de note.
 const _accidentalGap = 0.25;
+
+/// Distance entre deux colonnes d'altérations d'un accord.
+const _accidentalColumnGap = 0.15;
 
 /// Distance entre l'accolade et la barre initiale.
 const _braceGap = 0.25;
@@ -280,20 +283,15 @@ class _Timeline {
         for (final event in measure.events) {
           final column = columns[time] ??= _Column(time);
           switch (event) {
-            case Note(:final pitch):
-              final accidental = pitch.accidental;
-              if (accidental != null) {
-                column.left = math.max(
-                  column.left,
-                  _width(_accidentalGlyph(accidental)) + _accidentalGap,
-                );
-              }
+            case Note() || Chord():
+              final shape = _Shape(event, staff.clef);
+              column.left = math.max(column.left, shape.left);
               final beamed =
-                  event.beamedToNext ||
+                  (event is Note && event.beamedToNext) ||
                   (previous is Note && previous.beamedToNext);
               column.right = math.max(
                 column.right,
-                _noteRight(event, staff.clef, beamed: beamed),
+                _noteRight(event, shape, beamed: beamed),
               );
             case Rest(:final value, :final dotted):
               column.right = math.max(
@@ -394,17 +392,16 @@ class _Timeline {
   }
 }
 
-/// Place prise à droite du début d'une tête : la tête, son point et son
-/// crochet, s'il est à droite (hampe vers le haut).
-double _noteRight(Note note, Clef clef, {required bool beamed}) {
-  final head = _notehead(note.value);
-  final right = _dotRight(_width(head), dotted: note.dotted);
-  if (note.value.flags == 0 ||
-      beamed ||
-      !_stemUp(clef.staffPosition(note.pitch))) {
+/// Place prise à droite du début d'une tête : les têtes (celle d'une
+/// seconde passe à droite de la hampe), leur point et le crochet, s'il est
+/// à droite (hampe vers le haut).
+double _noteRight(Event event, _Shape shape, {required bool beamed}) {
+  final head = _notehead(event.value);
+  final right = _dotRight(shape.headsRight, dotted: event.dotted);
+  if (event.value.flags == 0 || beamed || !shape.up) {
     return right;
   }
-  final flag = _flagGlyph(note.value, up: true);
+  final flag = _flagGlyph(event.value, up: true);
   return math.max(
     right,
     head.stemUpSE!.$1 - EngravingDefaults.stemThickness + _width(flag),
@@ -471,7 +468,7 @@ void _layoutStaff(
       );
       final x = timeline.columnX(time);
       switch (event) {
-        case Note(:final value):
+        case Note(:final value) || Chord(:final value):
           final head = _layoutHead(
             commands,
             headBoxes,
@@ -483,12 +480,12 @@ void _layoutStaff(
           );
           heads.add(head);
           placed.add(_Placed(event, ref, head.glyph, x: x, head: head));
-          if (beamOpen && value.flags > 0) {
+          if (beamOpen && event is Note && value.flags > 0) {
             groups.last.add(head);
           } else {
             groups.add([head]);
           }
-          beamOpen = event.beamedToNext && value.flags > 0;
+          beamOpen = event is Note && event.beamedToNext && value.flags > 0;
         case Rest(:final value, :final dotted):
           // Silence d'une mesure entière : centré dans la mesure.
           final alone = staff.time != null && measure.events.length == 1;
@@ -510,7 +507,7 @@ void _layoutStaff(
 
   for (final group in groups) {
     if (group.length == 1) {
-      if (group.single.note.value != NoteValue.whole) {
+      if (group.single.event.value != NoteValue.whole) {
         _layoutStem(commands, group.single);
       }
     } else {
@@ -520,7 +517,7 @@ void _layoutStaff(
 
   // Après les hampes : le sens de la hampe fixe le côté de la liaison.
   for (final (index, head) in heads.indexed) {
-    if (head.note.tiedToNext && index + 1 < heads.length) {
+    if (head.event case Note(tiedToNext: true) when index + 1 < heads.length) {
       _layoutTie(commands, head, heads[index + 1]);
     }
   }
@@ -588,33 +585,37 @@ class _Placed {
   double get center => (left + right) / 2;
 }
 
-/// Tête de note placée, avec le sens de sa hampe.
+/// Note ou accord placé, avec le sens de sa hampe.
 class _Head {
-  new(
-    this.note,
-    this.ref, {
-    required this.x,
-    required this.y,
-    required this.position,
-  });
+  new(this.event, this.ref, this.shape, {required this.x, required this.top});
 
-  final Note note;
+  /// Note ou accord.
+  final Event event;
   final EventRef ref;
+  final _Shape shape;
 
-  /// Abscisse de la tête.
+  /// Abscisse des têtes, hors tête de seconde décalée.
   final double x;
 
-  /// Ordonnée du centre de la tête.
-  final double y;
+  /// Ligne du haut de la portée.
+  final double top;
 
-  /// Position sur la portée.
-  final int position;
+  /// Positions de la tête la plus basse et de la plus haute.
+  int get low => shape.positions.first;
+  int get high => shape.positions.last;
 
-  /// Sens de la hampe : selon la position, sauf dans une ligature, où le
-  /// groupe impose le sien.
-  late bool up = _stemUp(position);
+  /// Ordonnée du centre de la tête, pour une note seule.
+  double get y => _y(top, low);
 
-  Glyph get glyph => _notehead(note.value);
+  /// Sens de la hampe : selon les positions, sauf dans une ligature, où le
+  /// groupe impose le sien. Un accord n'est jamais ligaturé.
+  late bool up = shape.up;
+
+  /// Ordonnée de la tête du côté du bout de la hampe : la plus haute si
+  /// elle monte.
+  double get tipY => _y(top, up ? high : low);
+
+  Glyph get glyph => _notehead(event.value);
 
   /// Ancre SMuFL de la hampe sur la tête. Axe y vers le haut.
   (double, double) get _anchor => up ? glyph.stemUpSE! : glyph.stemDownNW!;
@@ -625,11 +626,150 @@ class _Head {
     return x + _anchor.$1 + (up ? -thickness / 2 : thickness / 2);
   }
 
-  /// Ordonnée du pied de la hampe, sur la tête.
-  double get stemStartY => y - _anchor.$2;
+  /// Ordonnée du pied de la hampe, sur la tête opposée au bout.
+  double get stemStartY => _y(top, up ? low : high) - _anchor.$2;
 }
 
-bool _stemUp(int position) => position < _middleLine;
+/// Hampe vers le haut si la tête la plus basse est plus loin de la ligne du
+/// milieu que la plus haute. À égalité (une note sur la ligne du milieu),
+/// vers le bas.
+bool _stemUp(int low, int high) => _middleLine - low > high - _middleLine;
+
+/// Têtes d'une note ou d'un accord, leurs altérations et leurs points,
+/// placés par rapport à l'abscisse de la colonne. Calculé une fois pour la
+/// colonne temporelle, une fois pour le dessin.
+class _Shape {
+  new(Event event, Clef clef) {
+    pitches = [...event.pitches]
+      ..sort((a, b) => a.diatonic.compareTo(b.diatonic));
+    positions = [for (final pitch in pitches) clef.staffPosition(pitch)];
+    up = _stemUp(positions.first, positions.last);
+    final width = _width(_notehead(event.value));
+    headsDx = _seconds(event.value, width);
+    headsRight = headsDx.reduce(math.max) + width;
+    accidentals = _accidentals(headsDx.reduce(math.min));
+    left = -[
+      headsDx.reduce(math.min),
+      for (final accidental in accidentals) accidental.dx,
+    ].reduce(math.min);
+    dots = event.dotted ? _dots() : const [];
+  }
+
+  /// Hauteurs, du grave à l'aigu, et leurs positions sur la portée.
+  late final List<Pitch> pitches;
+  late final List<int> positions;
+
+  /// Sens de la hampe.
+  late final bool up;
+
+  /// Décalage de chaque tête : 0, sauf pour une tête de seconde, de l'autre
+  /// côté de la hampe.
+  late final List<double> headsDx;
+
+  /// Bord droit des têtes.
+  late final double headsRight;
+
+  /// Altérations : origine du glyphe et position de leur tête.
+  late final List<({Glyph glyph, double dx, int position})> accidentals;
+
+  /// Place prise à gauche : altérations et tête décalée.
+  late final double left;
+
+  /// Positions des points, une par tête.
+  late final List<int> dots;
+
+  /// Secondes : deux têtes voisines ne peuvent pas se poser du même côté.
+  /// Hampe vers le haut (ou ronde), la tête du dessus passe à droite ; vers
+  /// le bas, celle du dessous passe à gauche. Les deux têtes se touchent sur
+  /// la hampe.
+  List<double> _seconds(NoteValue value, double width) {
+    final shift = width - EngravingDefaults.stemThickness;
+    final dx = List<double>.filled(positions.length, 0);
+    if (up || value == NoteValue.whole) {
+      for (var i = 1; i < positions.length; i++) {
+        if (positions[i] - positions[i - 1] == 1 && dx[i - 1] == 0) {
+          dx[i] = shift;
+        }
+      }
+    } else {
+      for (var i = positions.length - 2; i >= 0; i--) {
+        if (positions[i + 1] - positions[i] == 1 && dx[i + 1] == 0) {
+          dx[i] = -shift;
+        }
+      }
+    }
+    return dx;
+  }
+
+  /// Altérations échelonnées en colonnes, à gauche des têtes. Dans l'ordre
+  /// de la plus haute, de la plus basse, de la deuxième plus haute..., chacune
+  /// va dans la première colonne où elle ne touche aucune autre.
+  List<({Glyph glyph, double dx, int position})> _accidentals(
+    double headsLeft,
+  ) {
+    final altered = [
+      for (var i = pitches.length - 1; i >= 0; i--)
+        if (pitches[i].accidental != null) i,
+    ];
+    final order = <int>[];
+    for (var a = 0, b = altered.length - 1; a <= b; a++, b--) {
+      order.add(altered[a]);
+      if (a < b) order.add(altered[b]);
+    }
+
+    Glyph glyphOf(int i) => _accidentalGlyph(pitches[i].accidental!);
+    // Étendue verticale du glyphe, en interlignes, axe y vers le bas.
+    (double, double) span(int i) {
+      final glyph = glyphOf(i);
+      final y = -positions[i] / 2;
+      return (y - glyph.bBoxNE.$2, y - glyph.bBoxSW.$2);
+    }
+
+    final columns = <List<int>>[];
+    for (final i in order) {
+      final (top, bottom) = span(i);
+      final free = columns.indexWhere(
+        (column) => column.every((other) {
+          final (otherTop, otherBottom) = span(other);
+          return bottom <= otherTop || top >= otherBottom;
+        }),
+      );
+      if (free < 0) {
+        columns.add([i]);
+      } else {
+        columns[free].add(i);
+      }
+    }
+
+    final placed = <({Glyph glyph, double dx, int position})>[];
+    var right = headsLeft - _accidentalGap;
+    for (final column in columns) {
+      final width = column.map((i) => _width(glyphOf(i))).reduce(math.max);
+      for (final i in column) {
+        final glyph = glyphOf(i);
+        placed.add((
+          glyph: glyph,
+          dx: right - _width(glyph),
+          position: positions[i],
+        ));
+      }
+      right -= width + _accidentalColumnGap;
+    }
+    return placed;
+  }
+
+  /// Le point d'une tête sur une ligne monte dans l'interligne du dessus. Si
+  /// cet interligne a déjà le sien (seconde), il descend dans celui du
+  /// dessous.
+  List<int> _dots() {
+    final taken = <int>{};
+    for (final position in positions.reversed) {
+      final above = position.isEven ? position + 1 : position;
+      taken.add(taken.contains(above) ? above - 2 : above);
+    }
+    return taken.toList();
+  }
+}
 
 void _layoutKeySignature(
   List<DrawCommand> commands,
@@ -714,71 +854,88 @@ List<Glyph> _digits(int value) => [
 double _digitsWidth(List<Glyph> glyphs) =>
     glyphs.fold(0, (width, glyph) => width + _width(glyph));
 
-/// Tête, altération, lignes supplémentaires et point d'une note. Les
-/// hampes et les liaisons viennent ensuite, groupe par groupe.
+/// Têtes, altérations, lignes supplémentaires et points d'une note ou d'un
+/// accord. Les hampes et les liaisons viennent ensuite, groupe par groupe.
 _Head _layoutHead(
   List<DrawCommand> commands,
   Map<EventRef, Box> heads,
-  Note note,
+  Event event,
   Clef clef,
   EventRef ref, {
   required double top,
   required double x,
 }) {
-  final position = clef.staffPosition(note.pitch);
-  final y = _y(top, position);
-  final accidental = note.pitch.accidental;
-  final head = _notehead(note.value);
+  final shape = _Shape(event, clef);
+  final positions = shape.positions;
+  final head = _notehead(event.value);
+  final width = _width(head);
 
-  // Lignes supplémentaires, raccourcies à gauche devant une altération.
+  // Lignes supplémentaires, sous les têtes qui en ont besoin, raccourcies à
+  // gauche devant une altération.
   const extension = EngravingDefaults.legerLineExtension;
-  final left = x - (accidental == null ? extension : extension / 2);
-  final right = x + _width(head) + extension;
   final ledgers = [
-    for (var p = -2; p >= position; p -= 2) p,
-    for (var p = 10; p <= position; p += 2) p,
+    for (var p = -2; p >= positions.first; p -= 2) p,
+    for (var p = 10; p <= positions.last; p += 2) p,
   ];
   for (final p in ledgers) {
+    final needing = [
+      for (final (i, position) in positions.indexed)
+        if (p < 0 ? position <= p : position >= p) i,
+    ];
+    final first = needing.reduce(
+      (a, b) => shape.headsDx[a] <= shape.headsDx[b] ? a : b,
+    );
+    final left =
+        x +
+        shape.headsDx[first] -
+        (shape.pitches[first].accidental == null ? extension : extension / 2);
+    final right =
+        x + needing.map((i) => shape.headsDx[i]).reduce(math.max) + width;
     final ledgerY = _y(top, p);
     commands.add(
       LineCommand(
         left,
         ledgerY,
-        right,
+        right + extension,
         ledgerY,
         EngravingDefaults.legerLineThickness,
       ),
     );
   }
 
-  final headCommand = GlyphCommand(head, x, y, event: ref);
-  var headBox = headCommand.bounds;
-  if (accidental != null) {
-    final glyph = _accidentalGlyph(accidental);
-    final command = GlyphCommand(
-      glyph,
-      x - _accidentalGap - _width(glyph),
-      y,
-      event: ref,
-    );
+  Box? box;
+  void add(GlyphCommand command) {
     commands.add(command);
-    headBox = headBox.union(command.bounds);
+    box = box?.union(command.bounds) ?? command.bounds;
   }
-  commands.add(headCommand);
-  heads[ref] = headBox;
-  if (note.dotted) {
-    // Sur une ligne, le point monte dans l'interligne du dessus.
-    final dotPosition = position.isEven ? position + 1 : position;
-    commands.add(
+
+  for (final accidental in shape.accidentals) {
+    add(
       GlyphCommand(
-        Glyph.augmentationDot,
-        x + _width(head) + _dotGap,
-        _y(top, dotPosition),
+        accidental.glyph,
+        x + accidental.dx,
+        _y(top, accidental.position),
         event: ref,
       ),
     );
   }
-  return _Head(note, ref, x: x, y: y, position: position);
+  for (final (i, position) in positions.indexed) {
+    add(
+      GlyphCommand(head, x + shape.headsDx[i], _y(top, position), event: ref),
+    );
+  }
+  heads[ref] = box!;
+  for (final position in shape.dots) {
+    commands.add(
+      GlyphCommand(
+        Glyph.augmentationDot,
+        x + shape.headsRight + _dotGap,
+        _y(top, position),
+        event: ref,
+      ),
+    );
+  }
+  return _Head(event, ref, shape, x: x, top: top);
 }
 
 /// Silence : la pause pend sous la 4e ligne, la demi-pause est posée sur la
@@ -809,20 +966,23 @@ void _layoutRest(
   }
 }
 
-/// Hampe d'une note seule : vers le haut sous la ligne du milieu, vers le
-/// bas à partir d'elle. Une octave de long, et jamais moins que jusqu'à la
-/// ligne du milieu. Crochet au bout pour une croche ou une double croche.
+/// Hampe d'une note ou d'un accord hors ligature : vers le haut sous la
+/// ligne du milieu, vers le bas à partir d'elle (pour un accord, selon la
+/// tête la plus éloignée). Une octave de long depuis la tête du bout, et
+/// jamais moins que jusqu'à la ligne du milieu. Crochet au bout pour une
+/// croche ou une double croche.
 void _layoutStem(List<DrawCommand> commands, _Head head) {
   const thickness = EngravingDefaults.stemThickness;
-  final length = math.max(_stemLength, (head.position - _middleLine).abs() / 2);
   final up = head.up;
-  final tip = up ? head.y - length : head.y + length;
+  final tipPosition = up ? head.high : head.low;
+  final length = math.max(_stemLength, (tipPosition - _middleLine).abs() / 2);
+  final tip = up ? head.tipY - length : head.tipY + length;
   final stemX = head.stemX;
   commands.add(
     LineCommand(stemX, head.stemStartY, stemX, tip, thickness, event: head.ref),
   );
 
-  final value = head.note.value;
+  final value = head.event.value;
   if (value.flags == 0) return;
   // Ancres SMuFL : le coin de la hampe, côté gauche, axe y vers le haut.
   final flag = _flagGlyph(value, up: up);
@@ -849,8 +1009,8 @@ void _layoutBeamGroup(
   List<_Head> group, {
   required double top,
 }) {
-  final above = group.map((h) => h.position - _middleLine).reduce(math.max);
-  final below = group.map((h) => _middleLine - h.position).reduce(math.max);
+  final above = group.map((h) => h.high - _middleLine).reduce(math.max);
+  final below = group.map((h) => _middleLine - h.low).reduce(math.max);
   final up = below > above;
   for (final head in group) {
     head.up = up;
@@ -862,12 +1022,12 @@ void _layoutBeamGroup(
   final width = last.stemX - x0;
   final inner = group.sublist(1, group.length - 1);
   final flat = up
-      ? inner.any((h) => h.y < math.min(first.y, last.y))
-      : inner.any((h) => h.y > math.max(first.y, last.y));
+      ? inner.any((h) => h.tipY < math.min(first.tipY, last.tipY))
+      : inner.any((h) => h.tipY > math.max(first.tipY, last.tipY));
   final maxRise = math.min(_beamMaxRise, width * _beamMaxSlope);
   final slope = flat
       ? 0.0
-      : (last.y - first.y).clamp(-maxRise, maxRise) / width;
+      : (last.tipY - first.tipY).clamp(-maxRise, maxRise) / width;
 
   // Ordonnée de la ligature au droit de la hampe de chaque note, si elle
   // passait par 0 en x0. On la décale ensuite d'un seul bloc.
@@ -875,7 +1035,7 @@ void _layoutBeamGroup(
   final middle = top + _staffHeight - _middleLine / 2;
   final offsets = [
     for (final head in group) ...[
-      (up ? head.y - _stemLength : head.y + _stemLength) - rise(head),
+      (up ? head.tipY - _stemLength : head.tipY + _stemLength) - rise(head),
       middle - rise(head),
     ],
   ];
@@ -915,12 +1075,12 @@ void _layoutBeamGroup(
   // sinon.
   var index = 0;
   while (index < group.length) {
-    if (group[index].note.value.flags < 2) {
+    if (group[index].event.value.flags < 2) {
       index++;
       continue;
     }
     var end = index;
-    while (end + 1 < group.length && group[end + 1].note.value.flags > 1) {
+    while (end + 1 < group.length && group[end + 1].event.value.flags > 1) {
       end++;
     }
     final x = group[index].stemX;
@@ -944,7 +1104,7 @@ void _layoutBeamGroup(
 void _layoutTie(List<DrawCommand> commands, _Head from, _Head to) {
   final sign = from.up ? 1 : -1;
   final headWidth = _width(from.glyph);
-  final x1 = from.note.dotted
+  final x1 = from.event.dotted
       ? from.x + _dotRight(headWidth, dotted: true) + _dotGap / 2
       : from.x + headWidth * 0.75;
   final x2 = to.x + _width(to.glyph) * 0.25;
@@ -1111,7 +1271,8 @@ void _layoutDecorations(
 }
 
 /// Articulation de [item] : le point d'orgue au-dessus de la portée, les
-/// autres côté tête, à l'opposé de la hampe. Centrée sur la tête.
+/// autres côté tête, à l'opposé de la hampe (pour un accord, contre la tête
+/// du bout opposé). Centrée sur la tête.
 void _layoutArticulation(
   List<DrawCommand> commands,
   _Placed item,
@@ -1142,14 +1303,16 @@ void _layoutArticulation(
     case Articulation.staccato || Articulation.tenuto:
       // Dans l'interligne voisin de la tête, jamais sur une ligne.
       final step = below ? -1 : 1;
-      var position = head.position + 2 * step;
+      var position = (below ? head.low : head.high) + 2 * step;
       if (position >= 0 && position <= 8 && position.isEven) position += step;
       y = _y(top, position) + (sw.$2 + ne.$2) / 2;
     case Articulation.accent:
       // Hors de la portée.
       y = below
-          ? math.max(head.y + 0.5, top + _staffHeight) + _accentGap + ne.$2
-          : math.min(head.y - 0.5, top) - _accentGap + sw.$2;
+          ? math.max(_y(top, head.low) + 0.5, top + _staffHeight) +
+                _accentGap +
+                ne.$2
+          : math.min(_y(top, head.high) - 0.5, top) - _accentGap + sw.$2;
   }
   commands.add(
     GlyphCommand(

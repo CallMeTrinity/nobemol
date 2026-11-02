@@ -62,7 +62,7 @@ class Deck {
       );
 
   /// Session de révision : les [reviewLength] premières cartes dues, puis
-  /// rangées par sorte (notes, durées, signes) pour que les réponses ne
+  /// rangées par sorte (notes, durées, signes, intervalles, oreille) pour que les réponses ne
   /// changent pas à chaque question. `null` si rien n'est dû.
   ///
   /// Une carte qui ne se lit plus (signe absent des leçons) est sautée.
@@ -108,4 +108,7 @@ int _kind(Question question) => switch (question) {
   NoteQuestion() => 0,
   DurationQuestion() => 1,
   MarkingQuestion() => 2,
+  IntervalQuestion(heard: false) => 3,
+  IntervalQuestion() => 4,
+  EarNoteQuestion() => 5,
 };
