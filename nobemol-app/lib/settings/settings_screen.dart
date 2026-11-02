@@ -121,13 +121,14 @@ class SettingsScreen extends ConsumerWidget {
                               update((s) => s.copyWith(haptics: value)),
                         ),
                       ),
-                      // Pas encore d'audio : le réglage s'annonce.
                       _Row(
                         title: l10n.settingsSound,
-                        muted: true,
-                        trailing: Text(
-                          l10n.comingSoon.toUpperCase(),
-                          style: AppText.meta.copyWith(color: c.accentDeep),
+                        hint: l10n.settingsSoundHint,
+                        trailing: _Switch(
+                          key: const ValueKey('sound'),
+                          value: settings.sound,
+                          onChanged: (value) =>
+                              update((s) => s.copyWith(sound: value)),
                         ),
                       ),
                     ],
@@ -238,7 +239,6 @@ class _Row extends StatelessWidget {
     this.trailing,
     this.below,
     this.onTap,
-    this.muted = false,
   });
 
   final String title;
@@ -246,9 +246,6 @@ class _Row extends StatelessWidget {
   final Widget? trailing;
   final Widget? below;
   final VoidCallback? onTap;
-
-  /// Réglage pas encore disponible.
-  final bool muted;
 
   @override
   Widget build(BuildContext context) {
@@ -274,7 +271,7 @@ class _Row extends StatelessWidget {
                           title,
                           style: AppText.titleCard.copyWith(
                             fontSize: 15,
-                            color: muted ? c.inkMuted : c.ink,
+                            color: c.ink,
                           ),
                         ),
                         if (hint case final hint?) ...[

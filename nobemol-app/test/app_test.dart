@@ -17,6 +17,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:nobemol/achievements/achievements_screen.dart';
 import 'package:nobemol/arcade/arcade.dart';
+import 'package:nobemol/audio/note_player.dart';
+import 'package:nobemol/audio/synth.dart';
 import 'package:nobemol/arcade/arcade_screen.dart';
 import 'package:nobemol/arcade/game.dart';
 import 'package:nobemol/arcade/game_screen.dart';
@@ -68,6 +70,7 @@ void main() {
   late NobemolDatabase db;
   late SharedPreferences prefs;
   late _Files files;
+  late _Sounds sounds;
 
   /// Tag de la dernière release sur GitHub, `null` : pas de réponse.
   String? latestTag;
@@ -89,6 +92,7 @@ void main() {
     SharedPreferences.setMockInitialValues({'onboarded': true});
     prefs = await SharedPreferences.getInstance();
     files = _Files();
+    sounds = _Sounds();
     latestTag = null;
   });
   tearDown(() => db.close());
@@ -115,6 +119,7 @@ void main() {
           randomProvider.overrideWithValue(Random(1)),
           clockProvider.overrideWithValue(() => now),
           backupFilesProvider.overrideWithValue(files),
+          notePlayerProvider.overrideWithValue(sounds),
           // Hors ligne par défaut : l'appli installée est la 1.0.0.
           httpClientProvider.overrideWithValue(
             MockClient(
@@ -700,6 +705,8 @@ void main() {
         await hit(tester, game);
       }
       expect(find.text('150 points'), findsOneWidget);
+      // Chaque note juste sonne, aussi vite que la partie.
+      expect(sounds.played, hasLength(3));
 
       now = now.add(chronoLength);
       await tester.pump(const Duration(milliseconds: 50));
@@ -1329,6 +1336,60 @@ void main() {
     expect(find.bySemanticsLabel('do'), findsOneWidget);
   });
 
+  group('son des notes', () {
+    /// Répond à deux questions de la leçon de clé de sol, juste puis faux,
+    /// et rend les notes justes qu'on aurait dû entendre.
+    Future<List<int>> play(WidgetTester tester) async {
+      final container = await startSession(tester, 'treble-clef');
+      final expected = <int>[];
+      for (final right in [true, false]) {
+        expected.add(
+          midiOfQuestion(
+            container.read(sessionProvider(trebleClef)).question
+                as NoteQuestion,
+          ),
+        );
+        await answer(tester, container, trebleClef, right: right);
+      }
+      return expected;
+    }
+
+    testWidgets('la note juste à la correction, préparée avant', (
+      tester,
+    ) async {
+      final expected = await play(tester);
+      expect(sounds.played, expected);
+      // Chaque note jouée était prête dès sa question.
+      expect(sounds.prepared.take(2), expected);
+    });
+
+    testWidgets('coupé dans les réglages : silence', (tester) async {
+      await prefs.setBool('sound', false);
+      await play(tester);
+      expect(sounds.played, isEmpty);
+      expect(sounds.prepared, isEmpty);
+    });
+
+    testWidgets('pas de hauteur, pas de son : durées et signes', (
+      tester,
+    ) async {
+      await openLesson(tester, 'beats');
+      await readTheory(tester);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ReadingScreen)),
+      );
+      final exercise = container
+          .read(contentProvider)
+          .lesson('beats')!
+          .exercise;
+      await give(
+        tester,
+        container.read(sessionProvider(exercise)).question.answer,
+      );
+      expect(sounds.played, isEmpty);
+    });
+  });
+
   group('vibrations', () {
     late List<MethodCall> calls;
 
@@ -1626,4 +1687,19 @@ class _Files implements BackupFiles {
 
   @override
   Future<String?> pick() async => toPick;
+}
+
+/// Le lecteur de notes, sans haut-parleur : ce qui aurait sonné.
+class _Sounds implements NotePlayer {
+  final prepared = <int>[];
+  final played = <int>[];
+
+  @override
+  Future<void> prepare(int midi) async => prepared.add(midi);
+
+  @override
+  Future<void> play(int midi) async => played.add(midi);
+
+  @override
+  Future<void> dispose() async {}
 }

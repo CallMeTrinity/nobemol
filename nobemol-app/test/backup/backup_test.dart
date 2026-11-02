@@ -23,6 +23,7 @@ void main() {
     goal: DailyGoal.fifteen,
     theme: ThemeMode.dark,
     updateCheck: false,
+    sound: false,
   );
 
   /// Une base avec deux sessions, une théorie, une maîtrise et un succès.
@@ -126,6 +127,7 @@ void main() {
     expect(read.naming, NoteNaming.letters);
     expect(read.goal, DailyGoal.fifteen);
     expect(read.updateCheck, isFalse);
+    expect(read.sound, isFalse);
     expect(read.theme, ThemeMode.dark);
 
     // Un réglage inconnu (retiré d'une version) : celui du téléphone.

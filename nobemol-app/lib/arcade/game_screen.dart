@@ -8,6 +8,7 @@ import 'package:notation/notation.dart';
 
 import 'package:nobemol/achievements/achievement.dart';
 import 'package:nobemol/arcade/arcade.dart';
+import 'package:nobemol/audio/note_player.dart';
 import 'package:nobemol/arcade/arcade_screen.dart';
 import 'package:nobemol/arcade/game.dart';
 import 'package:nobemol/clock.dart';
@@ -69,6 +70,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   void _start() {
     _previousRecord = ref.read(progressProvider).records[_game.record];
+    ref.prepareNote(ref.read(arcadeProvider(_game)).question);
     _ticker?.cancel();
     _ticker = Timer.periodic(_frame, (_) {
       _notifier.tick();
@@ -88,13 +90,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final state = ref.watch(arcadeProvider(_game));
     ref.listen(arcadeProvider(_game), (previous, next) {
       if (previous?.phase == ArcadePhase.asking &&
-          next.phase == ArcadePhase.flash &&
-          ref.read(settingsProvider).haptics) {
-        unawaited(
-          next.answers.last.correct
-              ? HapticFeedback.lightImpact()
-              : HapticFeedback.vibrate(),
-        );
+          next.phase == ArcadePhase.flash) {
+        ref.playNote(next.question);
+        if (ref.read(settingsProvider).haptics) {
+          unawaited(
+            next.answers.last.correct
+                ? HapticFeedback.lightImpact()
+                : HapticFeedback.vibrate(),
+          );
+        }
+      }
+      if (next.phase == ArcadePhase.asking &&
+          previous?.question != next.question) {
+        ref.prepareNote(next.question);
       }
       if (previous?.finishedAt != null) return;
       if (next.finishedAt case final finishedAt?) {
