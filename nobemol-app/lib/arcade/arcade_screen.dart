@@ -15,7 +15,7 @@ final arcadeOptionsProvider = Provider<Arcade>(
   (ref) => Arcade(
     ref.watch(contentProvider),
     ref.watch(progressProvider),
-    acquired: ref.watch(settingsProvider.select((s) => s.start.acquired)),
+    acquired: ref.watch(settingsProvider.select((s) => s.acquired)),
   ),
 );
 

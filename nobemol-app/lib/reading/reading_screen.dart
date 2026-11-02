@@ -16,10 +16,7 @@ import 'package:nobemol/l10n/labels.dart';
 import 'package:nobemol/lessons/skill_tree.dart';
 import 'package:nobemol/progress/progress_provider.dart';
 import 'package:nobemol/progress/xp.dart';
-import 'package:nobemol/reading/beats.dart';
-import 'package:nobemol/reading/intervals.dart';
-import 'package:nobemol/reading/markings.dart';
-import 'package:nobemol/reading/note_name.dart';
+import 'package:nobemol/reading/answer_buttons.dart';
 import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/reading/rhythm_tapper.dart';
 import 'package:nobemol/reading/session.dart';
@@ -30,8 +27,6 @@ import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/confirm_dialog.dart';
 import 'package:nobemol/ui/depth.dart';
-import 'package:nobemol/ui/fit_words.dart';
-import 'package:nobemol/ui/note_keyboard.dart';
 import 'package:nobemol/ui/progress_bar.dart';
 
 /// Écran de lecture : une note (seule ou ciblée dans une phrase), et les
@@ -208,15 +203,8 @@ class _Exercise extends ConsumerWidget {
     final question = session.question;
     final feedback = session.phase == SessionPhase.feedback;
     final caption = switch (question) {
-      NoteQuestion() =>
-        _accidentals(exercise.choicesFor(question))
-            ? l10n.keyboardAccidentals
-            : l10n.keyboardNaturals,
-      DurationQuestion() => l10n.durationsHint,
-      MarkingQuestion() => null,
-      IntervalQuestion() => l10n.intervalsHint,
-      EarNoteQuestion() => l10n.keyboardNaturals,
       TapQuestion(:final tempo) => l10n.tapHint(tempo),
+      _ => answerCaption(l10n, question, exercise.choicesFor(question)),
     };
     final (taps, tapLabels) = _tapMarks(session, c, l10n);
 
@@ -270,15 +258,10 @@ class _Exercise extends ConsumerWidget {
                 style: AppText.meta.copyWith(color: c.inkMuted),
               ),
               const SizedBox(height: Space.s),
-              Text(switch (question) {
-                NoteQuestion() => l10n.noteQuestion,
-                DurationQuestion() => l10n.rhythmQuestion,
-                MarkingQuestion() => l10n.markingQuestion,
-                IntervalQuestion(heard: true) => l10n.earIntervalQuestion,
-                IntervalQuestion() => l10n.intervalQuestion,
-                EarNoteQuestion() => l10n.earNoteQuestion,
-                TapQuestion() => l10n.tapQuestion,
-              }, style: AppText.titlePrompt.copyWith(color: c.ink)),
+              Text(
+                questionTitle(l10n, question),
+                style: AppText.titlePrompt.copyWith(color: c.ink),
+              ),
             ],
           ),
         ),
@@ -334,7 +317,7 @@ class _Exercise extends ConsumerWidget {
         // rien ne bouge au-dessus.
         Stack(
           children: [
-            _Dock(
+            AnswerDock(
               caption: caption,
               child: _Answers(
                 exercise: exercise,
@@ -452,10 +435,6 @@ class _ListenButtonState extends ConsumerState<_ListenButton> {
   }
 }
 
-/// Vrai si les touches noires du clavier sont ouvertes.
-bool _accidentals(List<Enum> choices) =>
-    choices.any((choice) => choice is NoteName && choice.accidental != null);
-
 /// Couleur de la cible et de son halo : accent pendant la question, puis
 /// vert ou rouge à la correction.
 (Color, Color) _targetColors(SessionState session, NobemolColors c) =>
@@ -537,59 +516,6 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-/// Bas de l'écran : une légende, puis les réponses. Toujours au moins
-/// [Sizes.answerDock] de haut : la place du panneau de correction.
-class _Dock extends StatelessWidget {
-  const _Dock({required this.caption, required this.child});
-
-  final String? caption;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(Radii.sheet),
-        ),
-        boxShadow: [BoxShadow(color: c.line, offset: const Offset(0, -1))],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            Space.m,
-            Space.ml,
-            Space.m,
-            Space.l,
-          ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: Sizes.answerDock),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (caption case final caption?) ...[
-                  Text(
-                    caption.toUpperCase(),
-                    textAlign: TextAlign.center,
-                    style: AppText.meta.copyWith(color: c.inkMuted),
-                  ),
-                  const SizedBox(height: Space.m),
-                ],
-                child,
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// Réponses de l'exercice, colorées à la correction : la bonne en vert, la
 /// mauvaise réponse donnée en rouge.
 class _Answers extends StatelessWidget {
@@ -634,49 +560,6 @@ class _Answers extends StatelessWidget {
     final choices = exercise.choicesFor(session.question);
 
     return switch (session.question) {
-      NoteQuestion() || EarNoteQuestion() => NoteKeyboard(
-        label: (name) => l10n.noteFullName(name, naming: naming),
-        whiteLabels: keyLabels,
-        onKey: onAnswer,
-        accidentals: _accidentals(choices),
-        tones: {
-          for (final name in NoteName.values)
-            if (_tone(name) != AnswerTone.rest) name: _tone(name),
-        },
-      ),
-      DurationQuestion() => _Grid(
-        columns: 4,
-        children: [
-          for (final choice in choices)
-            _AnswerTile(
-              key: ValueKey('answer-${choice.name}'),
-              tone: _tone(choice),
-              height: Sizes.answerTile,
-              onPressed: () => onAnswer(choice),
-              child: Text(
-                l10n.beatsLabel(choice as Beats),
-                style: AppText.labelKey.copyWith(fontSize: 24),
-              ),
-            ),
-        ],
-      ),
-      IntervalQuestion() => _Grid(
-        columns: 4,
-        children: [
-          for (final choice in choices)
-            _AnswerTile(
-              key: ValueKey('answer-${choice.name}'),
-              tone: _tone(choice),
-              height: Sizes.answerTile,
-              onPressed: () => onAnswer(choice),
-              child: FitWordsText(
-                l10n.intervalLabel(choice as IntervalNumber),
-                textAlign: TextAlign.center,
-                style: AppText.labelCard,
-              ),
-            ),
-        ],
-      ),
       TapQuestion(:final track) => Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -701,87 +584,15 @@ class _Answers extends StatelessWidget {
           ),
         ],
       ),
-      MarkingQuestion() => _Grid(
-        columns: 3,
-        children: [
-          for (final choice in choices)
-            _AnswerTile(
-              key: ValueKey('answer-${choice.name}'),
-              tone: _tone(choice),
-              height: Sizes.markingCard,
-              radius: Radii.buttonLg,
-              onPressed: () => onAnswer(choice),
-              // Le sens seul : le signe se montre dans la correction.
-              child: FitWordsText(
-                l10n.markingLabel(choice as Marking),
-                textAlign: TextAlign.center,
-                style: AppText.labelCard,
-              ),
-            ),
-        ],
+      final question => AnswerButtons(
+        question: question,
+        choices: choices,
+        tone: _tone,
+        onAnswer: onAnswer,
+        naming: naming,
+        keyLabels: keyLabels,
       ),
     };
-  }
-}
-
-/// Grille de colonnes égales, remplie ligne par ligne.
-class _Grid extends StatelessWidget {
-  const _Grid({required this.columns, required this.children});
-
-  final int columns;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        for (var start = 0; start < children.length; start += columns)
-          Padding(
-            padding: EdgeInsets.only(top: start == 0 ? 0 : Space.s),
-            child: Row(
-              children: [
-                for (var i = start; i < start + columns; i++) ...[
-                  if (i > start) const SizedBox(width: Space.xs),
-                  Expanded(
-                    child: i < children.length
-                        ? children[i]
-                        : const SizedBox.shrink(),
-                  ),
-                ],
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _AnswerTile extends StatelessWidget {
-  const _AnswerTile({
-    super.key,
-    required this.tone,
-    required this.height,
-    required this.onPressed,
-    required this.child,
-    this.radius = Radii.button,
-  });
-
-  final AnswerTone tone;
-  final double height;
-  final double radius;
-  final VoidCallback onPressed;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Pressable(
-      colors: context.colors.answer(tone),
-      onPressed: onPressed,
-      height: height,
-      borderRadius: BorderRadius.circular(radius),
-      padding: const EdgeInsets.symmetric(horizontal: Space.xs),
-      child: Center(child: child),
-    );
   }
 }
 

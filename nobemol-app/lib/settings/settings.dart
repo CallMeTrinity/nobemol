@@ -15,6 +15,7 @@ class Settings {
     this.onboarded = false,
     this.naming = NoteNaming.solfege,
     this.start = StartLevel.beginner,
+    this.placement,
     this.keyLabels = true,
     this.goal = DailyGoal.five,
     this.haptics = true,
@@ -28,6 +29,15 @@ class Settings {
   final bool onboarded;
   final NoteNaming naming;
   final StartLevel start;
+
+  /// Compétences réussies au test de positionnement. Elles remplacent le
+  /// point de départ choisi à la main. `null` tant que le test n'est pas
+  /// passé, et dès qu'un point de départ est choisi.
+  final Set<String>? placement;
+
+  /// Compétences acquises au départ : celles du test, sinon celles du
+  /// point de départ.
+  Set<String> get acquired => placement ?? start.acquired;
 
   /// Noms des notes sur les touches blanches du clavier.
   final bool keyLabels;
@@ -52,6 +62,7 @@ class Settings {
     bool? onboarded,
     NoteNaming? naming,
     StartLevel? start,
+    Set<String>? Function()? placement,
     bool? keyLabels,
     DailyGoal? goal,
     bool? haptics,
@@ -63,6 +74,7 @@ class Settings {
     onboarded: onboarded ?? this.onboarded,
     naming: naming ?? this.naming,
     start: start ?? this.start,
+    placement: placement == null ? this.placement : placement(),
     keyLabels: keyLabels ?? this.keyLabels,
     goal: goal ?? this.goal,
     haptics: haptics ?? this.haptics,
@@ -83,6 +95,7 @@ class SettingsStore {
   static const _onboarded = 'onboarded';
   static const _naming = 'naming';
   static const _start = 'start';
+  static const _placement = 'placement';
   static const _keyLabels = 'keyLabels';
   static const _goal = 'goal';
   static const _haptics = 'haptics';
@@ -99,6 +112,7 @@ class SettingsStore {
       onboarded: _prefs.getBool(_onboarded) ?? defaults.onboarded,
       naming: named(NoteNaming.values, _naming) ?? defaults.naming,
       start: named(StartLevel.values, _start) ?? defaults.start,
+      placement: _prefs.getStringList(_placement)?.toSet(),
       keyLabels: _prefs.getBool(_keyLabels) ?? defaults.keyLabels,
       goal: named(DailyGoal.values, _goal) ?? defaults.goal,
       haptics: _prefs.getBool(_haptics) ?? defaults.haptics,
@@ -113,6 +127,10 @@ class SettingsStore {
     _prefs.setBool(_onboarded, settings.onboarded),
     _prefs.setString(_naming, settings.naming.name),
     _prefs.setString(_start, settings.start.name),
+    switch (settings.placement) {
+      final placement? => _prefs.setStringList(_placement, placement.toList()),
+      null => _prefs.remove(_placement),
+    },
     _prefs.setBool(_keyLabels, settings.keyLabels),
     _prefs.setString(_goal, settings.goal.name),
     _prefs.setBool(_haptics, settings.haptics),

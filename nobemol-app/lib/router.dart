@@ -14,6 +14,7 @@ import 'package:nobemol/lessons/content_provider.dart';
 import 'package:nobemol/lessons/lesson.dart';
 import 'package:nobemol/lessons/lesson_screen.dart';
 import 'package:nobemol/onboarding/onboarding_screen.dart';
+import 'package:nobemol/placement/placement_screen.dart';
 import 'package:nobemol/profile/profile_screen.dart';
 import 'package:nobemol/profile/stats_screen.dart';
 import 'package:nobemol/reading/calibration_screen.dart';
@@ -34,7 +35,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final onboarded = ref.read(settingsProvider).onboarded;
       final onboarding = state.matchedLocation == '/bienvenue';
-      if (!onboarded && !onboarding) return '/bienvenue';
+      // Le test de positionnement se passe pendant le démarrage.
+      final placement = state.matchedLocation == '/positionnement';
+      if (!onboarded && !onboarding && !placement) return '/bienvenue';
       if (onboarded && onboarding) return '/';
       return null;
     },
@@ -42,6 +45,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/bienvenue',
         builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/positionnement',
+        builder: (context, state) => const PlacementScreen(),
       ),
       GoRoute(
         path: '/reglages',

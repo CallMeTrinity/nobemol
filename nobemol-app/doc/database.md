@@ -101,6 +101,7 @@ Le **calage du rythme tapé** (`tapLatency`) n'y est pas : il mesure le retard d
 - Les **identifiants** de la base ne sont pas gardés : les réponses sont rangées dans leur session, dans l'ordre. La révision rejoue ce journal dans cet ordre.
 - Dates en **UTC**, relues en heure locale.
 - Un réglage absent ou inconnu garde la valeur du téléphone. Le démarrage est marqué passé.
+- `placement` : les compétences réussies au **test de positionnement**, seulement s'il a été passé. Il remplace `start`. Absent du fichier, il est effacé du téléphone : l'import remplace tout. Champ facultatif, `format` inchangé. Une version d'avant l'étape 16 l'ignore et garde `start`.
 
 Le fichier vit hors du téléphone (Drive, mail) et peut être réimporté des mois plus tard. Quand le schéma change :
 

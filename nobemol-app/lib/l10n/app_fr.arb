@@ -859,5 +859,35 @@
       "ms": { "type": "int" }
     }
   },
-  "settingsCalibrationNone": "Pas encore fait : à faire avant de taper un rythme"
+  "settingsCalibrationNone": "Pas encore fait : à faire avant de taper un rythme",
+  "onboardingStartTitle": "Tu lis déjà la musique ?",
+  "onboardingStartBody": "Si oui, un court test trouve ton point de départ : des questions de lecture, de plus en plus dures tant que tu réussis.",
+  "startBeginnerTitle": "Je débute",
+  "startBeginnerDescription": "On commence par la clé de sol, sans test",
+  "startTestTitle": "Je lis déjà un peu",
+  "startTestDescription": "Un test de 3 minutes au plus",
+  "startTestDone": "Test fait : {count, plural, =0{on commence au début} =1{1 compétence acquise} other{{count} compétences acquises}}",
+  "@startTestDone": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "onboardingStartTest": "Commencer le test",
+  "onboardingChoose": "Je préfère choisir moi-même",
+  "placementQuit": "Quitter le test",
+  "placementUnknown": "Je ne sais pas",
+  "placementResultMeta": "Ton point de départ",
+  "placementResultNoneTitle": "On commence au début",
+  "placementResultNoneBody": "La clé de sol t'attend. Le reste s'ouvre au fil du parcours.",
+  "placementResultTitle": "{count, plural, =1{1 compétence acquise} other{{count} compétences acquises}}",
+  "@placementResultTitle": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "placementResultBody": "Elles ouvrent la suite du parcours. Leurs leçons restent jouables, et rien n'est compté comme maîtrisé.",
+  "placementContinue": "Continuer",
+  "placementChoose": "Je préfère choisir",
+  "settingsPlacement": "Test de positionnement",
+  "settingsPlacementHint": "3 minutes au plus pour trouver ton point de départ"
 }

@@ -253,7 +253,7 @@ class ProgressNotifier extends Notifier<Progress> {
     int? score,
   }) async {
     final content = ref.read(contentProvider);
-    final acquired = ref.read(settingsProvider).start.acquired;
+    final acquired = ref.read(settingsProvider).acquired;
     final before = Course(content, state, acquired: acquired);
     final xpBefore = state.xp;
     await _store.recordSession(
@@ -338,6 +338,6 @@ final courseProvider = Provider<Course>(
   (ref) => Course(
     ref.watch(contentProvider),
     ref.watch(progressProvider),
-    acquired: ref.watch(settingsProvider.select((s) => s.start.acquired)),
+    acquired: ref.watch(settingsProvider.select((s) => s.acquired)),
   ),
 );

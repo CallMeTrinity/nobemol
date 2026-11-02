@@ -99,10 +99,32 @@ class SettingsScreen extends ConsumerWidget {
                     ],
                   ),
                   section(l10n.settingsStart),
+                  // Le test, ou un point de départ à la main : le dernier
+                  // choix remplace l'autre.
+                  ChoiceTile(
+                    key: const ValueKey('placement'),
+                    title: l10n.settingsPlacement,
+                    subtitle: switch (settings.placement) {
+                      final placement? => l10n.startTestDone(placement.length),
+                      null => l10n.settingsPlacementHint,
+                    },
+                    selected: settings.placement != null,
+                    onTap: () async {
+                      final placement = await context.push<Set<String>>(
+                        '/positionnement',
+                      );
+                      if (placement != null) {
+                        update((s) => s.copyWith(placement: () => placement));
+                      }
+                    },
+                  ),
                   StartLevelChoices(
-                    selected: settings.start,
-                    onSelect: (level) =>
-                        update((s) => s.copyWith(start: level)),
+                    selected: settings.placement == null
+                        ? settings.start
+                        : null,
+                    onSelect: (level) => update(
+                      (s) => s.copyWith(start: level, placement: () => null),
+                    ),
                   ),
                   section(l10n.settingsGoal),
                   DailyGoalChoices(
