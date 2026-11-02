@@ -88,8 +88,8 @@ void main() {
     },
   );
 
-  test('licences des polices dans À propos', () async {
-    registerFontLicenses(rootBundle);
+  test('licences des polices et du piano dans À propos', () async {
+    registerAssetLicenses(rootBundle);
     final packages = <String>{};
     await for (final license in LicenseRegistry.licenses) {
       packages.addAll(license.packages);
@@ -102,6 +102,7 @@ void main() {
         'Bricolage Grotesque',
         'Instrument Sans',
         'DM Mono',
+        'Salamander Grand Piano',
       ]),
     );
   });

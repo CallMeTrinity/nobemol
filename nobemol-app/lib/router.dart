@@ -6,6 +6,7 @@ import 'package:nobemol/achievements/achievements_screen.dart';
 import 'package:nobemol/arcade/arcade.dart';
 import 'package:nobemol/arcade/arcade_screen.dart';
 import 'package:nobemol/arcade/game_screen.dart';
+import 'package:nobemol/audio/listening_screen.dart';
 import 'package:nobemol/home/home_screen.dart';
 import 'package:nobemol/home/skill_screen.dart';
 import 'package:nobemol/lessons/content.dart';
@@ -45,6 +46,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/reglages',
         builder: (context, state) => const SettingsScreen(),
       ),
+      if (listeningAvailable)
+        GoRoute(
+          path: '/ecoute',
+          builder: (context, state) => const ListeningScreen(),
+        ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(shell: shell),
         branches: [

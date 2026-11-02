@@ -56,7 +56,7 @@ dependencies:
   file_picker: ^13.3.0
   http: ^1.6.0
   url_launcher: ^6.3.3
-  audioplayers: ^6.8.1
+  flutter_soloud: ^5.2.2
 
 dev_dependencies:
   flutter_test:
@@ -90,6 +90,9 @@ flutter:
     - assets/skills.yaml
     - assets/achievements.yaml
     - assets/lessons/
+    # Notes de piano (Salamander Grand Piano, CC-BY 3.0), préparées par
+    # tool/piano_samples.sh. Crédit affiché dans À propos.
+    - assets/audio/piano/
     # Licences des polices, affichées dans À propos (lib/licenses.dart).
     - fonts/BricolageGrotesque-OFL.txt
     - fonts/InstrumentSans-OFL.txt

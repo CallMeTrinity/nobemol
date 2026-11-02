@@ -23,7 +23,7 @@ Future<void> main() async {
   // Réglages : lus avant le premier écran, qui en dépend (démarrage, thème).
   final settingsStore = SettingsStore(await SharedPreferences.getInstance());
   final settings = settingsStore.load();
-  registerFontLicenses(rootBundle);
+  registerAssetLicenses(rootBundle);
   runApp(
     ProviderScope(
       overrides: [

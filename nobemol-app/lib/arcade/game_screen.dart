@@ -70,7 +70,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   void _start() {
     _previousRecord = ref.read(progressProvider).records[_game.record];
-    ref.prepareNote(ref.read(arcadeProvider(_game)).question);
+    ref.loadNotes();
     _ticker?.cancel();
     _ticker = Timer.periodic(_frame, (_) {
       _notifier.tick();
@@ -99,10 +99,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 : HapticFeedback.vibrate(),
           );
         }
-      }
-      if (next.phase == ArcadePhase.asking &&
-          previous?.question != next.question) {
-        ref.prepareNote(next.question);
       }
       if (previous?.finishedAt != null) return;
       if (next.finishedAt case final finishedAt?) {

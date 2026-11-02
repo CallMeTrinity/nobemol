@@ -1,0 +1,12 @@
+Salamander Grand Piano V3
+Alexander Holm
+https://archive.org/details/SalamanderGrandPianoV3
+https://github.com/sfzinstruments/SalamanderGrandPiano
+
+Licensed under Creative Commons Attribution 3.0 Unported (CC BY 3.0).
+https://creativecommons.org/licenses/by/3.0/
+
+Changes made for Nobémol: 30 notes (minor thirds from A0 to C8, velocity
+layer 10 of 16), mixed down to mono, trimmed to 2.5 seconds with a fade
+out, resampled to 32 kHz and encoded as Ogg Vorbis
+(nobemol-app/tool/piano_samples.sh).
