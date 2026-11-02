@@ -30,7 +30,7 @@ Les étapes 13 à 16 viennent de « Plus tard » : le son, puis ce qu'il ouvre (
 | 13 | | Son des notes (piano enregistré) | 1.1.0, corrigé ensuite |
 | 14 | Accords | Intervalles et oreille | Fait, à publier |
 | 15 | | Rythme tapé | Fait, à publier |
-| 16 | | Test de positionnement adaptatif | |
+| 16 | | Test de positionnement adaptatif | Fait, à publier |
 | Plus tard | Liaisons d'expression | Au besoin | |
 
 ## Releases
@@ -491,17 +491,32 @@ Tranché :
 
 ## Étape 16 : test de positionnement adaptatif
 
-- [ ] Au démarrage, à la place du choix du point de départ (le choix manuel reste possible, et dans les réglages)
-- [ ] Questions de lecture qui se durcissent tant que l'élève réussit : clé de sol, clé de fa, lignes supplémentaires, altérations, grande portée ; puis rythme et signes
-- [ ] Résultat : des compétences **acquises**, comme le point de départ (étape 9). Réversible, rien de maîtrisé en base
+- [x] Au démarrage, « Tu lis déjà la musique ? » : « Je débute » (sans test) ou « Je lis déjà un peu » (le test). Le choix à la main reste, au démarrage et dans les réglages
+- [x] Questions de lecture qui se durcissent tant que l'élève réussit, en suivant l'arbre : clé de sol, clé de fa, lignes supplémentaires, altérations, grande portée, phrases, armure ; puis rythme, signes et intervalles (`lib/placement/placement.dart`)
+- [x] Résultat : des compétences **acquises**, comme le point de départ (étape 9). Gardées dans les réglages (`placement`) et la sauvegarde. Réversible, rien de maîtrisé en base
+- [x] Écran du test (`/positionnement`) : correction rapide de l'arcade, « Je ne sais pas », résultat avec les compétences acquises. Réglages : tuile « Test de positionnement » au-dessus des 4 points de départ
+- [x] Widgets de réponse sortis de l'écran de lecture (`lib/reading/answer_buttons.dart`), partagés avec le test
 
 **Terminé quand** : un débutant et un lecteur confirmé arrivent sur des parcours différents en moins de 3 minutes de test.
 
-À trancher avant le code :
+Tranché :
 
-- Algorithme : escalier sur les paramètres de lecture (deux réussites pour monter, un échec pour s'arrêter), ou nombre fixe de questions par compétence.
-- Le test compte-t-il pour la révision (cartes des erreurs) et l'XP ?
-- Durée visée et sortie anticipée (« je préfère choisir »).
+- **Le test suit l'arbre, pas une échelle.** Une compétence n'est posée que si ses prérequis sont réussis, dans l'ordre du fichier. Une échelle unique (sol, fa, lignes, altérations...) arrêtait tout au premier échec : un violoniste qui ne lit pas la clé de fa perdait ses lignes supplémentaires et ses altérations. Avec l'arbre, la clé de fa ratée n'écarte que la grande portée.
+- **Deux sur trois par compétence** : deux justes la valident, deux fausses l'écartent (avec ce qui la suit), une 3e question départage. « Un échec pour s'arrêter » punissait une touche ratée de toute une branche. Une seule question laissait une chance sur sept de valider au hasard ; deux justes, une sur cinquante.
+- **Les questions viennent de l'exercice de la première leçon** de chaque compétence (celles qui comptent pour sa maîtrise). Pas de contenu à écrire, et une nouvelle leçon de lecture entre dans le test. Une phrase : ses cibles dans le désordre. Une lecture paramétrique : seulement les notes qui **distinguent** la compétence de ses prérequis, hors de la portée pour les lignes supplémentaires, altérées pour les altérations. Une note sur la portée ne dit rien des lignes supplémentaires.
+- **Hors du test : l'oreille et le rythme tapé.** Ils s'écoutent et se jouent, avec un calage : pas en deux questions. Les clés d'ut n'ont pas de leçon. Tout le reste de ce qui se lit y est, intervalles compris : 20 compétences.
+- **Durée** : un débutant sort après deux questions (clé de sol ratée). Un lecteur confirmé répond 40 fois, environ 2 minutes à 3 s par question. Correction rapide de l'arcade (150 ms en vert, 600 ms en rouge avec la bonne réponse), sans panneau ni explication : le test mesure, il n'enseigne pas.
+- **« Je ne sais pas »** à chaque question : une erreur, sans deviner. Un débutant n'a pas à appuyer au hasard.
+- **Ni XP, ni révision, ni session en base.** Les erreurs d'un débutant rempliraient l'onglet Réviser de notes jamais apprises, et l'XP fausserait l'objectif d'un premier jour. Le test ne laisse que son résultat.
+- **Sortie** : la croix (ou le retour) quitte le test, comme « Je préfère choisir » au résultat. Au démarrage, ils mènent au choix à la main ; dans les réglages, rien ne change.
+- **Le dernier choix fait foi** : le test remplace le point de départ, un point de départ choisi efface le test (`Settings.acquired`). Dans les réglages, la tuile du test est cochée tant qu'aucun point de départ n'est choisi depuis.
+- La compétence posée s'affiche au-dessus de la question (« Lire en clé de fa ») : l'élève sait ce qu'on lui demande, et la portée change de taille entre une note seule et une phrase.
+
+À vérifier :
+
+- Sur un vrai téléphone : la durée réelle pour un lecteur confirmé (visée : moins de 3 minutes pour 40 questions), et le confort de « Je ne sais pas » à côté du titre sur petit écran.
+- Les cibles des leçons de rythme ne sont pas toutes propres à leur compétence (une croche dans la leçon des notes pointées) : une question facile peut valider une compétence. À resserrer (cibles choisies pour le test) si les résultats sont trop généreux.
+- Le design « Touches » du test n'a pas pu être relu (pas d'accès au projet Claude Design) : construit avec les composants de l'étape 6 et la correction de l'arcade.
 
 ## Plus tard
 
