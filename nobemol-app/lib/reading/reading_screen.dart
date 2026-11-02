@@ -59,7 +59,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   @override
   void initState() {
     super.initState();
-    ref.prepareNote(ref.read(sessionProvider(_exercise)).question);
+    ref.loadNotes();
   }
 
   /// Des réponses données, pas encore enregistrées.
@@ -106,10 +106,6 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                 : HapticFeedback.vibrate(),
           );
         }
-      }
-      if (next.phase == SessionPhase.asking &&
-          previous?.question != next.question) {
-        ref.prepareNote(next.question);
       }
       if (previous?.finishedAt != null) return;
       if (next.finishedAt case final finishedAt?) {

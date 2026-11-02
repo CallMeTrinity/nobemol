@@ -6,6 +6,10 @@ Le workflow de release reprend la section de la version comme notes de release :
 
 ## [Non publié]
 
+### Corrigé
+
+- Son des notes : un vrai piano enregistré (Salamander Grand Piano) remplace le son synthétisé. Chaque réponse fait entendre une note et une seule : plus de note manquante ni de note en double, même en répondant vite en arcade.
+
 ## [1.1.0] - 2026-11-02
 
 Les étapes 10 à 13 de la [feuille de route](https://github.com/CallMeTrinity/nobemol/blob/main/ROADMAP.md) et ses éléments « En parallèle » : les quatre onglets sont complets. Une mise à jour depuis la `1.0.0` s'installe par-dessus et garde la progression.

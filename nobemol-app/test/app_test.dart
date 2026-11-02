@@ -18,7 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nobemol/achievements/achievements_screen.dart';
 import 'package:nobemol/arcade/arcade.dart';
 import 'package:nobemol/audio/note_player.dart';
-import 'package:nobemol/audio/synth.dart';
+import 'package:nobemol/audio/piano.dart';
 import 'package:nobemol/arcade/arcade_screen.dart';
 import 'package:nobemol/arcade/game.dart';
 import 'package:nobemol/arcade/game_screen.dart';
@@ -1337,12 +1337,12 @@ void main() {
   });
 
   group('son des notes', () {
-    /// Répond à deux questions de la leçon de clé de sol, juste puis faux,
-    /// et rend les notes justes qu'on aurait dû entendre.
+    /// Répond à quatre questions de la leçon de clé de sol, justes et
+    /// fausses mêlées, et rend les notes justes qu'on aurait dû entendre.
     Future<List<int>> play(WidgetTester tester) async {
       final container = await startSession(tester, 'treble-clef');
       final expected = <int>[];
-      for (final right in [true, false]) {
+      for (final right in [true, false, false, true]) {
         expected.add(
           midiOfQuestion(
             container.read(sessionProvider(trebleClef)).question
@@ -1354,20 +1354,20 @@ void main() {
       return expected;
     }
 
-    testWidgets('la note juste à la correction, préparée avant', (
+    testWidgets('une note par réponse, la juste, piano chargé avant', (
       tester,
     ) async {
       final expected = await play(tester);
+      // Ni note perdue ni note en double, juste ou faux.
       expect(sounds.played, expected);
-      // Chaque note jouée était prête dès sa question.
-      expect(sounds.prepared.take(2), expected);
+      expect(sounds.loads, greaterThan(0));
     });
 
     testWidgets('coupé dans les réglages : silence', (tester) async {
       await prefs.setBool('sound', false);
       await play(tester);
       expect(sounds.played, isEmpty);
-      expect(sounds.prepared, isEmpty);
+      expect(sounds.loads, 0);
     });
 
     testWidgets('pas de hauteur, pas de son : durées et signes', (
@@ -1691,11 +1691,11 @@ class _Files implements BackupFiles {
 
 /// Le lecteur de notes, sans haut-parleur : ce qui aurait sonné.
 class _Sounds implements NotePlayer {
-  final prepared = <int>[];
+  var loads = 0;
   final played = <int>[];
 
   @override
-  Future<void> prepare(int midi) async => prepared.add(midi);
+  Future<void> load() async => loads++;
 
   @override
   Future<void> play(int midi) async => played.add(midi);

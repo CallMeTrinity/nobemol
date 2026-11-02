@@ -27,7 +27,7 @@ nobemol-app/
 │   ├── progress/         base Drift, XP et niveaux, maîtrise et déblocage
 │   ├── lessons/          lecture du contenu (Dart pur) et écran de théorie
 │   ├── reading/          lecture de notes : générateur, session, écran
-│   ├── audio/            son des notes : synthèse et lecteur
+│   ├── audio/            son des notes : piano enregistré, lecteur SoLoud
 │   ├── review/           révision espacée (Leitner) et onglet Réviser
 │   ├── arcade/           onglet Arcade : modes, partie, records
 │   ├── profile/          onglet Profil : chiffres clés, statistiques
@@ -36,6 +36,7 @@ nobemol-app/
 │   └── update/           nouvelle version : dernière release GitHub
 ├── tool/validate_content.dart  validateur du contenu, lancé en CI
 ├── tool/icons.sh         icônes PNG depuis nobemol-icone.svg (macOS)
+├── tool/piano_samples.sh notes de piano (assets/audio/piano/), avec sox
 └── packages/notation/    moteur de rendu de notation (publiable)
     ├── doc/abc.md        sous-ensemble ABC accepté par le parser
     ├── fonts/            Bravura, Edwin Italic (termes) + licences OFL
@@ -64,6 +65,7 @@ flutter run -d chrome     # itération rapide sur le moteur
 flutter run               # appareil Android ou émulateur
 dart run tool/validate_content.dart  # après modification d'une leçon
 sh tool/icons.sh                     # après modification de nobemol-icone.svg
+tool/piano_samples.sh                # notes de piano, rarement (brew install sox)
 dart run build_runner build          # après modification de la base (doc/database.md)
 ```
 

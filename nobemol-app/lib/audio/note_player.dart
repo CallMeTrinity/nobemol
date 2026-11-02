@@ -1,106 +1,110 @@
 import 'dart:async';
-import 'dart:typed_data';
 
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_soloud/flutter_soloud.dart';
 
-import 'package:nobemol/audio/synth.dart';
+import 'package:nobemol/audio/piano.dart';
 import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/settings/settings.dart';
 
 /// Joue une note. Remplaçable en test.
 abstract interface class NotePlayer {
-  /// Prépare le son de [midi] : il part sans attente au [play] suivant.
-  Future<void> prepare(int midi);
+  /// Charge le son, une fois : la première note part alors sans attente.
+  Future<void> load();
 
   Future<void> play(int midi);
 
   Future<void> dispose();
 }
 
-/// Notes synthétisées (`synth.dart`), jouées par le lecteur du système.
+/// Le piano enregistré (`piano.dart`), joué par SoLoud.
 ///
-/// Sur Android, un son en mémoire passe par MediaPlayer, qui demande un
-/// temps de préparation (le mode faible latence n'accepte que des
-/// fichiers). D'où [prepare] : l'écran prépare la note juste dès que la
-/// question s'affiche, et la correction la lance aussitôt. Deux lecteurs
-/// en alternance : préparer la note suivante ne coupe pas celle qui sonne.
-class SynthNotePlayer implements NotePlayer {
-  SynthNotePlayer();
+/// Les 30 notes sont chargées en mémoire une fois pour toutes. Chaque [play]
+/// lance une voix neuve : rien à préparer, aucun lecteur réutilisé, donc
+/// pas de note perdue ni jouée deux fois, quel que soit le rythme des
+/// réponses. Une nouvelle note éteint la précédente en [_release].
+///
+/// SoLoud ne demande pas le focus audio : la musique de l'élève continue.
+class PianoNotePlayer implements NotePlayer {
+  PianoNotePlayer();
 
-  final _players = [AudioPlayer(), AudioPlayer()];
-  final _sounds = <int, Uint8List>{};
-  var _next = 0;
-  (int, AudioPlayer)? _prepared;
-  Future<void>? _setup;
+  static const _release = Duration(milliseconds: 80);
 
-  /// Joue par-dessus la musique de l'élève, sans la couper.
-  Future<void> _context() => _setup ??= Future.wait([
-    for (final player in _players)
-      player.setAudioContext(
-        AudioContextConfig(focus: AudioContextConfigFocus.mixWithOthers)
-            .build(),
-      ),
-  ]);
+  final _soloud = SoLoud.instance;
+  Future<Map<int, AudioSource>>? _sources;
+  SoundHandle? _sounding;
 
   @override
-  Future<void> prepare(int midi) async {
-    await _context();
-    final player = _players[_next];
-    _next = 1 - _next;
-    await player.setSource(
-      BytesSource(
-        _sounds.putIfAbsent(midi, () => pianoWav(midi)),
-        mimeType: 'audio/wav',
-      ),
-    );
-    _prepared = (midi, player);
+  Future<void> load() => _loaded();
+
+  Future<Map<int, AudioSource>> _loaded() async {
+    final pending = _sources ??= _load();
+    try {
+      return await pending;
+    } catch (_) {
+      // Pas de sortie audio, par exemple : on réessaiera à la note suivante.
+      if (identical(_sources, pending)) _sources = null;
+      rethrow;
+    }
+  }
+
+  Future<Map<int, AudioSource>> _load() async {
+    if (!_soloud.isInitialized) await _soloud.init();
+    final sources = await Future.wait([
+      for (final sample in pianoSamples) _soloud.loadAsset(pianoAsset(sample)),
+    ]);
+    return {for (final (i, sample) in pianoSamples.indexed) sample: sources[i]};
   }
 
   @override
   Future<void> play(int midi) async {
-    if (_prepared?.$1 != midi) await prepare(midi);
-    final (_, player) = _prepared!;
-    _prepared = null;
-    await player.resume();
+    final sources = await _loaded();
+    final (:sample, :speed) = pianoSample(midi);
+
+    if (_sounding case final previous?) {
+      _soloud
+        ..fadeVolume(previous, 0, _release)
+        ..scheduleStop(previous, _release);
+    }
+    // En pause le temps de régler la hauteur : pas un instant de faux.
+    final handle = _soloud.play(sources[sample]!, paused: true);
+    _soloud
+      ..setRelativePlaySpeed(handle, speed)
+      ..setPause(handle, false);
+    _sounding = handle;
   }
 
   @override
   Future<void> dispose() async {
-    for (final player in _players) {
-      await player.dispose();
-    }
+    if (_soloud.isInitialized) await _soloud.deinitAsync();
   }
 }
 
 final notePlayerProvider = Provider<NotePlayer>((ref) {
-  final player = SynthNotePlayer();
+  final player = PianoNotePlayer();
   ref.onDispose(player.dispose);
   return player;
 });
 
-/// Le son d'une question, côté écran. Une note à lire seulement : une
-/// durée ou un signe n'a pas de hauteur. Rien si le son est coupé.
+/// Le son des questions, côté écran. Une note à lire seulement : une durée
+/// ou un signe n'a pas de hauteur. Rien si le son est coupé.
 extension NoteSound on WidgetRef {
-  /// Dès que la question s'affiche.
-  void prepareNote(Question question) =>
-      _note(question, (player, midi) => player.prepare(midi));
+  /// À l'ouverture d'un exercice : le piano est prêt avant la première
+  /// réponse.
+  void loadNotes() => _sound((player) => player.load());
 
   /// À la correction, juste ou faux : la note juste.
-  void playNote(Question question) =>
-      _note(question, (player, midi) => player.play(midi));
+  void playNote(Question question) {
+    if (question is! NoteQuestion) return;
+    _sound((player) => player.play(midiOfQuestion(question)));
+  }
 
   /// Sans attendre, et sans jamais faire échouer l'exercice : un son raté
   /// ne se voit pas.
-  void _note(
-    Question question,
-    Future<void> Function(NotePlayer player, int midi) action,
-  ) {
-    if (question is! NoteQuestion || !read(settingsProvider).sound) return;
+  void _sound(Future<void> Function(NotePlayer player) action) {
+    if (!read(settingsProvider).sound) return;
     unawaited(
-      Future.sync(
-        () => action(read(notePlayerProvider), midiOfQuestion(question)),
-      ).catchError((Object _) {}),
+      Future.sync(() => action(read(notePlayerProvider))).catchError((_) {}),
     );
   }
 }

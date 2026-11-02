@@ -27,7 +27,7 @@ Les étapes 13 à 16 viennent de « Plus tard » : le son, puis ce qu'il ouvre (
 | 10 | | Révision espacée | 1.1.0 |
 | 11 | | Arcade | 1.1.0 |
 | 12 | | Profil, statistiques, succès, sauvegarde | 1.1.0 |
-| 13 | | Son des notes (synthèse) | 1.1.0 |
+| 13 | | Son des notes (piano enregistré) | 1.1.0, corrigé ensuite |
 | 14 | Accords | Intervalles et oreille | |
 | 15 | N-olets, au besoin | Rythme tapé | |
 | 16 | | Test de positionnement adaptatif | |
@@ -373,27 +373,43 @@ Tranché :
 
 ## Étape 13 : son des notes
 
-- [x] **Synthèse en Dart** (`lib/audio/synth.dart`) : harmoniques un peu inharmoniques, qui s'éteignent d'autant plus vite qu'elles sont aiguës. Fichier WAV en mémoire (22 kHz, 16 bits, mono, 1,5 s), gardé par hauteur
-- [x] Lecteur `audioplayers` derrière `NotePlayer`, remplaçable en test (`lib/audio/note_player.dart`)
+- [x] ~~Synthèse en Dart, lecteur `audioplayers`~~ (1.1.0) : remplacés, voir « Correctif » plus bas
+- [x] Lecteur derrière `NotePlayer`, remplaçable en test (`lib/audio/note_player.dart`)
 - [x] La note juste jouée à la correction, juste ou faux : leçons, révision, arcade. Notes seulement : une durée ou un signe n'a pas de hauteur
 - [x] Réglage « Son des notes » actif (plus de « Bientôt »), gardé dans la sauvegarde
 
 **Terminé quand** : en leçon de lecture de notes, la correction fait entendre la note juste, et le réglage coupé fait silence.
 
+### Correctif : piano enregistré, SoLoud
+
+Testée sur un téléphone, la `1.1.0` sonnait faux de deux façons. Le timbre : dix sinusoïdes qui s'éteignent, sans marteau ni cordes qui battent, ça ne ressemble pas à un piano. La lecture : parfois pas de note, parfois deux. La préparation à l'avance et les deux lecteurs `audioplayers` en alternance se marchaient dessus sur Android (une source chargée dans un lecteur encore « en lecture » part toute seule, un `resume` sur un lecteur pas prêt se perd). Le reste de la boucle était sain : une seule correction par réponse.
+
+- [x] **Échantillons** : Salamander Grand Piano V3 (Yamaha C5, Alexander Holm, CC-BY 3.0), 30 notes toutes les tierces mineures du la0 au do8, vélocité 10 sur 16. Préparés par `tool/piano_samples.sh` (sox) : mono, attaque au début, 2,5 s avec extinction, 32 kHz, Ogg Vorbis, même gain pour toutes. 560 Ko dans `assets/audio/piano/`, commités
+- [x] Hauteur : la note enregistrée la plus proche, accélérée ou ralentie d'un demi-ton au plus (`lib/audio/piano.dart`)
+- [x] **`flutter_soloud`** à la place d'`audioplayers` : les 30 notes chargées en mémoire à l'ouverture d'un exercice, une voix neuve par note. Plus de préparation par question ni de lecteur réutilisé
+- [x] Une nouvelle note éteint la précédente en 80 ms : en arcade, les notes ne se chevauchent pas
+- [x] Test : une note par réponse, la juste, sur une série juste, faux, faux, juste
+- [x] Crédit Salamander dans À propos ; script SoLoud dans `web/index.html`
+
 Tranché :
 
-- **Synthèse plutôt qu'échantillons ou soundfont** : aucun fichier, APK presque inchangé, toutes les hauteurs. Moins réaliste qu'un vrai piano : à réévaluer à l'oreille.
+- **Échantillons plutôt que synthèse** (revient sur le choix de la `1.1.0`) : le piano est trop dur à synthétiser de façon crédible. 30 notes pèsent 560 Ko, pas des Mo : l'argument visait une soundfont complète.
+- **SoLoud plutôt qu'`audioplayers`** : faible latence, voix mêlées en natif, hauteur réglable. Prépare les accords (étape 14) et le métronome (étape 15).
+- **Ogg Vorbis, codecs Xiph gardés.** Sans eux (`no_xiph_libs`), l'APK perd environ 1,7 Mo par ABI, mais il faudrait du MP3 : celui de sox n'a pas d'en-tête LAME, d'où environ 35 ms de silence en tête de chaque note.
+- **Coût** : environ 3,9 Mo de bibliothèques natives par ABI (SoLoud et Xiph), soit +11 Mo sur l'APK universel de la CI (77 Mo). Un APK par ABI (`--split-per-abi`) diviserait le téléchargement par trois : à décider avec le workflow de release.
+
+Tranché pour la `1.1.0`, toujours valable :
 - **On entend ce qu'on lit** : la réponse (armure et altérations de la mesure comprises) à l'octave écrite. Dans la leçon sur l'armure, un fa en ré majeur sonne fa dièse.
-- **Préparée à l'affichage, jouée à la correction.** Sur Android, un son en mémoire passe par MediaPlayer : le mode faible latence (SoundPool) n'accepte que des fichiers. La préparation (décodage) se fait pendant que l'élève lit la note. Deux lecteurs en alternance : en arcade, préparer la note suivante ne coupe pas celle qui sonne.
-- **Par-dessus la musique** de l'élève, sans la couper (focus audio « mix with others »).
+- **Par-dessus la musique** de l'élève, sans la couper. SoLoud ne demande pas le focus audio.
 - Un son raté (pas de sortie audio, erreur du lecteur) ne se voit pas et ne bloque rien.
 - Son actif par défaut. Pas de son sur les touches du clavier, ni en théorie : la correction seulement, pour l'instant.
 
 À vérifier :
 
-- Sur un vrai téléphone : le timbre (notes graves et aiguës), le délai entre la réponse et le son, en leçon et en arcade.
+- Sur un vrai téléphone, en `flutter run --release` : le timbre (clé de fa avec lignes supplémentaires, aigus de la clé de sol), le délai entre la réponse et le son.
+- Une série rapide d'une vingtaine de réponses en arcade : ni note perdue ni note en double.
 - Volume par rapport à une autre appli, et musique de fond qui continue.
-- Délai du web (dev) : le son passe par une URL `data:`, sans préparation garantie.
+- Web (dev) : SoLoud se charge (balise dans `web/index.html`), la première note sonne après un premier geste de l'élève.
 
 ## Étape 14 : intervalles et oreille
 
