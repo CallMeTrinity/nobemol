@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import 'package:nobemol/audio/listening_screen.dart';
 import 'package:nobemol/l10n/app_localizations.dart';
 import 'package:nobemol/l10n/labels.dart';
 import 'package:nobemol/settings/choices.dart';
@@ -131,6 +132,18 @@ class SettingsScreen extends ConsumerWidget {
                               update((s) => s.copyWith(sound: value)),
                         ),
                       ),
+                      // Hors release : pas traduit, jamais livré.
+                      if (listeningAvailable)
+                        _Row(
+                          key: const ValueKey('listening'),
+                          title: 'Écoute du piano',
+                          hint: 'Debug : toutes les notes, une par une',
+                          trailing: Icon(
+                            Icons.chevron_right_rounded,
+                            color: c.inkMuted,
+                          ),
+                          onTap: () => context.push('/ecoute'),
+                        ),
                     ],
                   ),
                   section(l10n.settingsAppearance),

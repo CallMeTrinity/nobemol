@@ -390,6 +390,7 @@ Testée sur un téléphone, la `1.1.0` sonnait faux de deux façons. Le timbre :
 - [x] Une nouvelle note éteint la précédente en 80 ms : en arcade, les notes ne se chevauchent pas
 - [x] Test : une note par réponse, la juste, sur une série juste, faux, faux, juste
 - [x] Crédit Salamander dans À propos ; script SoLoud dans `web/index.html`
+- [x] Page d'écoute hors release (Réglages > Écoute du piano) : tout le clavier note par note, les notes enregistrées seules, tout le clavier, une rafale de 20 notes en 2 s. `flutter run --profile` pour l'entendre au plus près de la release
 
 Tranché :
 

@@ -17,6 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:nobemol/achievements/achievements_screen.dart';
 import 'package:nobemol/arcade/arcade.dart';
+import 'package:nobemol/audio/listening_screen.dart';
 import 'package:nobemol/audio/note_player.dart';
 import 'package:nobemol/audio/piano.dart';
 import 'package:nobemol/arcade/arcade_screen.dart';
@@ -1287,6 +1288,32 @@ void main() {
       await openSettings(tester);
       await tapSetting(tester, 'licenses');
       expect(find.byType(LicensePage), findsOneWidget);
+    });
+
+    testWidgets('écoute du piano, hors release : une note, une rafale', (
+      tester,
+    ) async {
+      // Même son coupé : la page sert à écouter.
+      await prefs.setBool('sound', false);
+      await openSettings(tester);
+      await tapSetting(tester, 'listening');
+      expect(find.byType(ListeningScreen), findsOneWidget);
+      expect(sounds.loads, 1);
+
+      await tester.tap(find.byKey(const ValueKey('listening-burst')));
+      await tester.pump(const Duration(seconds: 3));
+      expect(sounds.played, hasLength(20));
+      // Fini tout seul : Stop n'a plus rien à arrêter.
+      final stop = tester.widget<DepthButton>(
+        find.byKey(const ValueKey('listening-stop')),
+      );
+      expect(stop.onPressed, isNull);
+
+      sounds.played.clear();
+      await scrollTo(tester, find.byKey(const ValueKey('listening-60')));
+      await tester.tap(find.byKey(const ValueKey('listening-60')));
+      await tester.pump();
+      expect(sounds.played, [60]);
     });
   });
 
