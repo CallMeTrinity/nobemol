@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notation/notation.dart';
 
+import 'package:nobemol/reading/intervals.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
 
@@ -135,5 +136,60 @@ void main() {
     expect(second.targets, [targets[1]]);
     expect(second.answer, NoteName.b);
     expect(second.system, same(system));
+  });
+
+  group('oreille', () {
+    List<Question> drawAll(ReadingExercise exercise, {int count = 500}) {
+      final source = exercise.questions(Random(3));
+      final questions = <Question>[];
+      for (var i = 0; i < count; i++) {
+        questions.add(source.next(previous: questions.lastOrNull));
+      }
+      return questions;
+    }
+
+    test('note : le do, puis une des notes choisies, à l’octave 4', () {
+      const params = EarNoteParams(notes: [NoteName.c, NoteName.e, NoteName.g]);
+      final questions = drawAll(params).cast<EarNoteQuestion>();
+      expect(questions.map((q) => q.answer).toSet(), params.notes.toSet());
+      for (final question in questions) {
+        expect(question.pitch.octave, 4);
+        expect(question.heard, isTrue);
+        final staff = question.system.staves.single;
+        expect(staff.notes.first.pitch, referencePitch);
+        expect(staff.notes.last.pitch, question.pitch);
+      }
+      for (var i = 1; i < questions.length; i++) {
+        expect(questions[i].answer, isNot(questions[i - 1].answer));
+      }
+    });
+
+    test('intervalle : les numéros choisis, touches blanches, sans triton', () {
+      const params = EarIntervalParams(
+        intervals: [IntervalNumber.fourth, IntervalNumber.fifth],
+      );
+      final questions = drawAll(params).cast<IntervalQuestion>();
+      expect(questions.map((q) => q.answer).toSet(), params.intervals.toSet());
+      for (final question in questions) {
+        final [low, high] = question.pitches;
+        expect(semitonesBetween(low, high), isNot(6));
+        expect(low.accidental, isNull);
+        expect(high.accidental, isNull);
+        expect(high.diatonic, greaterThan(low.diatonic));
+        expect(low.diatonic, inInclusiveRange(28, 35));
+        expect(question.harmonic, isFalse);
+        expect(question.targets, hasLength(2));
+      }
+    });
+
+    test('intervalle harmonique : un accord', () {
+      const params = EarIntervalParams(
+        intervals: [IntervalNumber.second, IntervalNumber.octave],
+        harmonic: true,
+      );
+      final question = drawAll(params, count: 1).single as IntervalQuestion;
+      expect(question.harmonic, isTrue);
+      expect(question.system.event(question.targets.single), isA<Chord>());
+    });
   });
 }

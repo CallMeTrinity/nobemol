@@ -68,6 +68,9 @@ Tout champ inconnu est une erreur : une faute de frappe (`ledger_lines`) ne pass
 | `identify-note` | `abc`, `targets` | Une phrase écrite en ABC. Chaque cible est colorée à son tour, et il faut la nommer. Une question par cible, dans l'ordre. |
 | `identify-duration` | `abc`, `targets` | Même principe, mais il faut donner la durée de la cible en temps : ¼, ½, ¾, 1, 1½, 2, 3 ou 4. |
 | `identify-marking` | `abc`, `targets`, `choices` | Même principe, mais la cible est un signe (nuance, soufflet, articulation, terme) : il faut donner son sens parmi les réponses choisies par l'auteur. |
+| `identify-interval` | `abc`, `targets` | Même principe, mais la cible est un intervalle : un accord de deux notes, ou deux notes. Il faut donner son numéro, de l'unisson à l'octave. |
+| `ear-note` | `notes` | Oreille : le do central, puis une note à nommer au clavier. 12 questions tirées au hasard. |
+| `ear-interval` | `intervals`, `harmonic` | Oreille : deux notes, l'une après l'autre ou ensemble. Il faut donner le numéro de l'intervalle. 12 questions tirées au hasard. |
 
 ### `identify-note`
 
@@ -191,6 +194,48 @@ La réponse est un **sens**, pas une écriture : le soufflet et « cresc. » don
 | `cantabile` | `"_cantabile"` | chantant |
 
 Un terme se reconnaît à son texte, au-dessus (`^`) comme au-dessous (`_`) de la portée. L'usage : les termes de mouvement au-dessus, les autres au-dessous.
+
+### `identify-interval`
+
+```yaml
+exercise:
+  type: identify-interval
+  abc: |
+    X:1
+    M:4/4
+    L:1/4
+    K:C
+    C E [DF] [^FA] | c C [Bc]2 |]
+  targets:
+    - { measure: 1, event: 1, to: { measure: 1, event: 2 } }   # do, mi : tierce
+    - { measure: 1, event: 3 }                                 # accord ré-fa : tierce
+    - { measure: 2, event: 1, to: { measure: 2, event: 2 } }   # do5, do4 : octave
+```
+
+- **Intervalle harmonique** : la cible vise un **accord de deux notes** (accords dans [doc/abc.md](../packages/notation/doc/abc.md#accords)). Pas de `to`.
+- **Intervalle mélodique** : la cible vise une **note**, et `to: { measure, event }` la seconde note, sur la même portée, **après** la première. Elles peuvent être éloignées, ou de part et d'autre d'une barre. L'intervalle se lit dans l'ordre : en montant ou en descendant.
+- Les deux notes sont colorées. La réponse est un **numéro** : on compte les notes de l'une à l'autre, les deux comprises (do, ré, mi : une tierce). Les altérations ne le changent pas. La qualité (majeure, mineure, juste) viendra plus tard.
+- Refusé : un silence, un accord de trois notes ou plus, une note seule sans `to`, un `to` sur un accord, un écart de plus d'une octave, une note sans touche au clavier (mi dièse). `explain` reste possible.
+- À la correction, on entend l'intervalle : les deux notes à la suite, ou ensemble pour un accord (si le son des notes est actif).
+
+### `ear-note` et `ear-interval`
+
+```yaml
+exercise:
+  type: ear-note
+  notes: [c, d, e, f, g]          # touches blanches, de do4 à si4, deux au moins
+```
+
+```yaml
+exercise:
+  type: ear-interval
+  intervals: [3, 5, 8]            # numéros de 1 à 8, deux au moins : les réponses
+  harmonic: false                 # facultatif : true, les deux notes ensemble (défaut false)
+```
+
+- La question **se joue** à l'ouverture, même si l'élève a coupé le son des notes : c'est elle qu'il faut nommer. « Réécouter » la rejoue. La portée est cachée, à sa place, et apparaît à la correction.
+- `ear-note` : le do central, puis la note. Réponse au clavier, touches blanches seulement : à l'oreille, un fa dièse et un sol bémol ne se distinguent pas.
+- `ear-interval` : la note du bas va de do4 à do5, en touches blanches. En mélodique, la seconde note monte. Les réponses proposées sont les intervalles de `intervals`, dans l'ordre : le niveau devient un jeu de paramètres. Jamais de triton (fa-si, si-fa) : quarte ou quinte, son numéro ne s'entend pas. Pas d'unisson en harmonique.
 
 ## Conventions
 

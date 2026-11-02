@@ -15,10 +15,12 @@ import 'package:nobemol/lessons/skill_tree.dart';
 import 'package:nobemol/progress/progress_provider.dart';
 import 'package:nobemol/progress/xp.dart';
 import 'package:nobemol/reading/beats.dart';
+import 'package:nobemol/reading/intervals.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/reading/session.dart';
+import 'package:nobemol/review/card.dart';
 import 'package:nobemol/review/card_tile.dart';
 import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/theme/tokens.dart';
@@ -56,10 +58,22 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
 
   ReadingExercise get _exercise => widget.exercise;
 
+  /// Les notes encore à venir d'une question ou d'une correction : elles
+  /// s'arrêtent avec l'écran.
+  late final SoundSequence _sequence;
+
   @override
   void initState() {
     super.initState();
-    ref.loadNotes();
+    _sequence = ref.read(soundSequenceProvider);
+    // Un exercice d'oreille joue ses questions, son des notes coupé ou non.
+    ref.loadNotes(always: _hasHeard(_exercise));
+  }
+
+  @override
+  void dispose() {
+    _sequence.cancel();
+    super.dispose();
   }
 
   /// Des réponses données, pas encore enregistrées.
@@ -152,6 +166,13 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   }
 }
 
+/// Vrai si [exercise] pose des questions d'oreille.
+bool _hasHeard(ReadingExercise exercise) => switch (exercise) {
+  EarNoteParams() || EarIntervalParams() => true,
+  ReviewExercise(:final cards) => cards.any((card) => card.heard),
+  _ => false,
+};
+
 class _Exercise extends ConsumerWidget {
   const _Exercise({
     required this.exercise,
@@ -179,6 +200,8 @@ class _Exercise extends ConsumerWidget {
             : l10n.keyboardNaturals,
       DurationQuestion() => l10n.durationsHint,
       MarkingQuestion() => null,
+      IntervalQuestion() => l10n.intervalsHint,
+      EarNoteQuestion() => l10n.keyboardNaturals,
     };
 
     return Column(
@@ -209,6 +232,9 @@ class _Exercise extends ConsumerWidget {
                 NoteQuestion() => l10n.noteQuestion,
                 DurationQuestion() => l10n.rhythmQuestion,
                 MarkingQuestion() => l10n.markingQuestion,
+                IntervalQuestion(heard: true) => l10n.earIntervalQuestion,
+                IntervalQuestion() => l10n.intervalQuestion,
+                EarNoteQuestion() => l10n.earNoteQuestion,
               }, style: AppText.titlePrompt.copyWith(color: c.ink)),
             ],
           ),
@@ -217,27 +243,42 @@ class _Exercise extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.all(Space.ml),
             child: Center(
-              // scaleDown : la portée garde sa taille, sauf si elle déborde.
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: NotationView(
-                  system: question.system,
-                  // Une note, une durée ou un signe seul : en grand.
-                  staffSpace:
-                      exercise is NoteReadingParams ||
-                          exercise is ReviewExercise
-                      ? StaffSpaces.exercise
-                      : StaffSpaces.phrase,
-                  options: exercise.layoutOptions,
-                  color: c.ink,
-                  highlights: {for (final ref in question.targets) ref: target},
-                  halos: {for (final ref in question.targets) ref: halo},
-                  decorationHighlights: {
-                    for (final ref in question.decorationTargets) ref: target,
-                  },
-                  decorationHalos: {
-                    for (final ref in question.decorationTargets) ref: halo,
-                  },
+              // Question d'oreille : la portée est cachée, à sa place, jusqu'à
+              // la correction. Rien ne bouge quand elle apparaît.
+              child: _Hidden(
+                hidden: question.heard && session.phase == SessionPhase.asking,
+                // Une par question : elle joue en apparaissant.
+                prompt: _ListenButton(
+                  key: ValueKey(session.answered),
+                  question: question,
+                ),
+                // scaleDown : la portée garde sa taille, sauf si elle déborde.
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: NotationView(
+                    system: question.system,
+                    // Une note, une durée, un signe ou un intervalle seul : en
+                    // grand.
+                    staffSpace:
+                        exercise is NoteReadingParams ||
+                            exercise is ReviewExercise ||
+                            exercise is EarNoteParams ||
+                            exercise is EarIntervalParams
+                        ? StaffSpaces.exercise
+                        : StaffSpaces.phrase,
+                    options: exercise.layoutOptions,
+                    color: c.ink,
+                    highlights: {
+                      for (final ref in question.targets) ref: target,
+                    },
+                    halos: {for (final ref in question.targets) ref: halo},
+                    decorationHighlights: {
+                      for (final ref in question.decorationTargets) ref: target,
+                    },
+                    decorationHalos: {
+                      for (final ref in question.decorationTargets) ref: halo,
+                    },
+                  ),
                 ),
               ),
             ),
@@ -270,6 +311,60 @@ class _Exercise extends ConsumerWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// [child] à sa place, invisible si [hidden], avec [prompt] par-dessus.
+class _Hidden extends StatelessWidget {
+  const _Hidden({
+    required this.hidden,
+    required this.prompt,
+    required this.child,
+  });
+
+  final bool hidden;
+  final Widget prompt;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!hidden) return child;
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        ExcludeSemantics(child: Opacity(opacity: 0, child: child)),
+        prompt,
+      ],
+    );
+  }
+}
+
+/// Joue la question d'oreille en apparaissant, puis à chaque appui.
+class _ListenButton extends ConsumerStatefulWidget {
+  const _ListenButton({super.key, required this.question});
+
+  final Question question;
+
+  @override
+  ConsumerState<_ListenButton> createState() => _ListenButtonState();
+}
+
+class _ListenButtonState extends ConsumerState<_ListenButton> {
+  @override
+  void initState() {
+    super.initState();
+    ref.playHeard(widget.question);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DepthButton(
+      key: const ValueKey('replay'),
+      label: AppLocalizations.of(context).earReplay,
+      variant: ButtonVariant.outline,
+      large: true,
+      onPressed: () => ref.playHeard(widget.question),
     );
   }
 }
@@ -444,7 +539,7 @@ class _Answers extends StatelessWidget {
     final choices = exercise.choicesFor(session.question);
 
     return switch (session.question) {
-      NoteQuestion() => NoteKeyboard(
+      NoteQuestion() || EarNoteQuestion() => NoteKeyboard(
         label: (name) => l10n.noteFullName(name, naming: naming),
         whiteLabels: keyLabels,
         onKey: onAnswer,
@@ -466,6 +561,23 @@ class _Answers extends StatelessWidget {
               child: Text(
                 l10n.beatsLabel(choice as Beats),
                 style: AppText.labelKey.copyWith(fontSize: 24),
+              ),
+            ),
+        ],
+      ),
+      IntervalQuestion() => _Grid(
+        columns: 4,
+        children: [
+          for (final choice in choices)
+            _AnswerTile(
+              key: ValueKey('answer-${choice.name}'),
+              tone: _tone(choice),
+              height: Sizes.answerTile,
+              onPressed: () => onAnswer(choice),
+              child: FitWordsText(
+                l10n.intervalLabel(choice as IntervalNumber),
+                textAlign: TextAlign.center,
+                style: AppText.labelCard,
               ),
             ),
         ],
@@ -849,12 +961,15 @@ class _Results extends ConsumerWidget {
                       CardTile(
                         question: question,
                         // Une phrase entière serait trop large : seulement
-                        // la note seule.
-                        staff:
-                            question is NoteQuestion &&
-                            question.system.staves.every(
-                              (staff) => staff.notes.length <= 1,
-                            ),
+                        // une note ou un intervalle seul.
+                        staff: question.system.staves.every(
+                          (staff) => switch (question) {
+                            NoteQuestion() => staff.notes.length <= 1,
+                            IntervalQuestion() ||
+                            EarNoteQuestion() => staff.events.length <= 2,
+                            _ => false,
+                          },
+                        ),
                         caption: l10n.resultReviewGiven(
                           l10n.answerLabel(given, naming: naming),
                         ),
@@ -923,6 +1038,7 @@ Object _reviewKey(Question question) => switch (question) {
     pitch.diatonic,
     answer,
   ),
+  IntervalQuestion() || EarNoteQuestion() => cardOf(question),
   _ => question.answer,
 };
 

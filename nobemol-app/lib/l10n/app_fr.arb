@@ -254,6 +254,8 @@
   "branchRhythm": "Rythme",
   "branchTerms": "Nuances et termes",
   "branchSymbols": "Symboles",
+  "branchIntervals": "Intervalles",
+  "branchEar": "Oreille",
   "skillTodo": "À faire",
   "skillStarted": "En cours · {percent} %",
   "@skillStarted": {
@@ -331,6 +333,26 @@
   "keyboardNaturals": "Pas d'altérations · noires inactives",
   "keyboardAccidentals": "Touche noire pour un dièse ou un bémol",
   "durationsHint": "En temps · la noire vaut 1",
+  "intervalQuestion": "Quel intervalle ?",
+  "earIntervalQuestion": "Quel intervalle entends-tu ?",
+  "earNoteQuestion": "Après le do, quelle note ?",
+  "intervalsHint": "On compte les deux notes",
+  "earReplay": "Réécouter",
+  "intervalUnison": "Unisson",
+  "intervalSecond": "Seconde",
+  "intervalThird": "Tierce",
+  "intervalFourth": "Quarte",
+  "intervalFifth": "Quinte",
+  "intervalSixth": "Sixte",
+  "intervalSeventh": "Septième",
+  "intervalOctave": "Octave",
+  "intervalName": "{interval, select, unison{un unisson} second{une seconde} third{une tierce} fourth{une quarte} fifth{une quinte} sixth{une sixte} seventh{une septième} other{une octave}}",
+  "@intervalName": {
+    "description": "Intervalle avec son article, dans une phrase.",
+    "placeholders": {
+      "interval": { "type": "String" }
+    }
+  },
   "resultTitle": "Session terminée",
   "resultScore": "{correct} / {total}",
   "@resultScore": {
@@ -385,6 +407,18 @@
   "milestoneAchievement": "Succès débloqué",
   "milestoneAchievements": "Succès",
   "feedbackRightNote": "Juste, c'est un {name}",
+  "feedbackRightInterval": "Juste, c'est {interval}",
+  "@feedbackRightInterval": {
+    "placeholders": {
+      "interval": { "type": "String" }
+    }
+  },
+  "feedbackWrongInterval": "C'est {interval}",
+  "@feedbackWrongInterval": {
+    "placeholders": {
+      "interval": { "type": "String" }
+    }
+  },
   "@feedbackRightNote": {
     "placeholders": {
       "name": { "type": "String" }
@@ -539,6 +573,29 @@
       "note": { "type": "String" }
     }
   },
+  "explainInterval": "{notes} : {count} notes, c'est {interval}.",
+  "@explainInterval": {
+    "placeholders": {
+      "notes": { "type": "String" },
+      "count": { "type": "int" },
+      "interval": { "type": "String" }
+    }
+  },
+  "explainUnison": "Deux fois le même {note} : c'est un unisson.",
+  "@explainUnison": {
+    "placeholders": {
+      "note": { "type": "String" }
+    }
+  },
+  "explainIntervalAccidentals": "Les altérations ne changent pas le numéro.",
+  "explainEarNote": "Après le do, un {note} : {interval} au-dessus.",
+  "@explainEarNote": {
+    "placeholders": {
+      "note": { "type": "String" },
+      "interval": { "type": "String" }
+    }
+  },
+  "explainEarReference": "Le do de référence, joué une deuxième fois.",
   "explainWritten": "{sign, select, sharp{Le dièse} flat{Le bémol} other{Le bécarre}} devant la note en fait un {name}.",
   "@explainWritten": {
     "placeholders": {

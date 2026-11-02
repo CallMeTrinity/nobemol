@@ -1,0 +1,20 @@
+id: ear-intervals
+title: Tierce, quinte, octave
+skills: [ear.intervals]
+level: 3
+theory:
+  - text: >-
+      Un intervalle s'entend aussi. Deux notes, l'une après l'autre : écoute
+      le saut entre elles, pas les notes elles-mêmes.
+  - text: >-
+      Trois repères pour commencer. La tierce, un petit saut. La quinte, un
+      saut large et stable. L'octave, la même note, plus haut.
+    names: true
+    abc: |
+      X:1
+      L:1/1
+      K:C
+      C E C G C c
+exercise:
+  type: ear-interval
+  intervals: [3, 5, 8]

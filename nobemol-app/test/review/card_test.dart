@@ -7,6 +7,7 @@ import 'package:notation/core.dart';
 import 'package:nobemol/lessons/content.dart';
 import 'package:nobemol/lessons/content_provider.dart';
 import 'package:nobemol/reading/beats.dart';
+import 'package:nobemol/reading/intervals.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
@@ -147,5 +148,60 @@ void main() {
       Marking.diminuendo,
     ]);
     expect(markingChoices(content, Marking.pianississimo), isEmpty);
+  });
+
+  test('intervalles et oreille : format stocké', () {
+    String first(String lessonId) =>
+        cardOf(questionsOf(content.lesson(lessonId)!.exercise).first);
+    // Do4 puis mi4, lus en clé de sol.
+    expect(first('melodic-intervals'), 'interval:melodic:treble:c4+e4');
+    expect(first('harmonic-intervals'), 'interval:harmonic:treble:c4+e4');
+    expect(
+      questionsOf(content.lesson('harmonic-intervals')!.exercise)
+          .map(cardOf)
+          .elementAt(5),
+      'interval:harmonic:treble:fSharp4+b4',
+    );
+    expect(first('ear-notes'), matches(RegExp(r'^ear:note:[cdefg]4$')));
+    expect(
+      first('ear-intervals'),
+      matches(RegExp(r'^ear:interval:[a-g]\d\+[a-g]\d$')),
+    );
+    expect(
+      first('ear-harmonic-intervals'),
+      matches(RegExp(r'^ear:chord:[a-g]\d\+[a-g]\d$')),
+    );
+  });
+
+  test('intervalle : sens de lecture gardé, réponse recalculée', () {
+    final down = questionOf('interval:melodic:bass:g3+bFlat2')!;
+    expect(down, isA<IntervalQuestion>());
+    expect(down.answer, IntervalNumber.sixth);
+    expect(
+      (down as IntervalQuestion).pitches.first,
+      const Pitch(DiatonicStep.g, 3),
+    );
+    final chord = questionOf('ear:chord:c4+g4')! as IntervalQuestion;
+    expect(chord.heard, isTrue);
+    expect(chord.harmonic, isTrue);
+    expect(chord.system.event(chord.targets.single), isA<Chord>());
+    final ear = questionOf('ear:note:a4')! as EarNoteQuestion;
+    expect(ear.answer, NoteName.a);
+    expect(ear.system.staves.single.notes.first.pitch, referencePitch);
+  });
+
+  test('carte d’intervalle illisible : null', () {
+    for (final card in [
+      'interval:melodic:treble:c4+d6',
+      'interval:harmonic:treble:c4+c4',
+      'interval:diagonal:treble:c4+e4',
+      'interval:melodic:piano:c4+e4',
+      'interval:melodic:treble:c4',
+      'ear:chord:c4+c4',
+      'ear:note:fSharp4',
+      'ear:song:c4+e4',
+    ]) {
+      expect(questionOf(card), isNull, reason: card);
+    }
   });
 }

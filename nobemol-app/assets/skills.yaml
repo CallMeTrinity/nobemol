@@ -82,3 +82,23 @@
 - id: terms.character
   title: Lire les termes de caractère
   requires: [terms.dynamics]
+
+- id: intervals.melodic
+  title: Lire les intervalles mélodiques
+  requires: [note-reading.phrases]
+
+- id: intervals.harmonic
+  title: Lire les intervalles harmoniques
+  requires: [intervals.melodic, note-reading.accidentals]
+
+- id: ear.notes
+  title: Reconnaître une note à l'oreille
+  requires: [note-reading.treble]
+
+- id: ear.intervals
+  title: Reconnaître un intervalle à l'oreille
+  requires: [intervals.melodic, ear.notes]
+
+- id: ear.harmonic
+  title: Reconnaître un intervalle harmonique à l'oreille
+  requires: [ear.intervals, intervals.harmonic]

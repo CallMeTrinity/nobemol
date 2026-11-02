@@ -1,0 +1,20 @@
+id: ear-notes-scale
+title: Toute la gamme à l'oreille
+skills: [ear.notes]
+level: 3
+theory:
+  - text: >-
+      Après le sol viennent le la et le si. Au-dessus du si, on retrouve le
+      do, une octave plus haut.
+    names: true
+    abc: |
+      X:1
+      L:1/1
+      K:C
+      C D E F G A B c
+  - text: >-
+      Le si est tout près du do d'en haut. S'il donne envie de monter
+      encore d'une marche, c'est sûrement lui.
+exercise:
+  type: ear-note
+  notes: [c, d, e, f, g, a, b]

@@ -34,6 +34,7 @@ import 'package:nobemol/l10n/labels.dart';
 import 'package:nobemol/lessons/content.dart';
 import 'package:nobemol/lessons/content_provider.dart';
 import 'package:nobemol/lessons/lesson_screen.dart';
+import 'package:nobemol/reading/intervals.dart';
 import 'package:nobemol/main.dart';
 import 'package:nobemol/onboarding/onboarding_screen.dart';
 import 'package:nobemol/profile/profile_screen.dart';
@@ -1417,6 +1418,72 @@ void main() {
     });
   });
 
+  group('intervalles et oreille', () {
+    /// Ouvre l'exercice de la leçon [id] et rend sa session.
+    Future<(ProviderContainer, ReadingExercise)> open(
+      WidgetTester tester,
+      String id,
+    ) async {
+      await openLesson(tester, id);
+      await readTheory(tester);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ReadingScreen)),
+      );
+      return (container, container.read(contentProvider).lesson(id)!.exercise);
+    }
+
+    Opacity? staffOpacity(WidgetTester tester) => tester
+        .widgetList<Opacity>(
+          find.ancestor(
+            of: find.byType(NotationView),
+            matching: find.byType(Opacity),
+          ),
+        )
+        .firstOrNull;
+
+    testWidgets('oreille : joué même son coupé, portée cachée jusqu’à la '
+        'correction', (tester) async {
+      await prefs.setBool('sound', false);
+      final (container, exercise) = await open(tester, 'ear-notes');
+      // Le do, puis la note.
+      await tester.pump(const Duration(seconds: 1));
+      final question =
+          container.read(sessionProvider(exercise)).question as EarNoteQuestion;
+      final midi = midiOfPitch(question.pitch);
+      expect(sounds.played, [60, midi]);
+      expect(staffOpacity(tester)?.opacity, 0);
+      expect(find.text('Après le do, quelle note ?'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('replay')));
+      await tester.pump(const Duration(seconds: 1));
+      expect(sounds.played, [60, midi, 60, midi]);
+
+      await give(tester, question.answer);
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byKey(const ValueKey('replay')), findsNothing);
+      expect(staffOpacity(tester), isNull);
+      // La correction suit le réglage : rien de plus.
+      expect(sounds.played, hasLength(4));
+    });
+
+    testWidgets('intervalles en accords : tuiles, accord à la correction', (
+      tester,
+    ) async {
+      final (container, exercise) = await open(tester, 'harmonic-intervals');
+      final question =
+          container.read(sessionProvider(exercise)).question
+              as IntervalQuestion;
+      expect(question.answer, IntervalNumber.third);
+      expect(staffOpacity(tester), isNull);
+      expect(find.byKey(const ValueKey('answer-octave')), findsOneWidget);
+      await give(tester, IntervalNumber.fifth);
+      await tester.pump(const Duration(seconds: 1));
+      // Do4 et mi4 ensemble.
+      expect(sounds.played, [60, 64]);
+      expect(find.text("C'est une tierce"), findsOneWidget);
+    });
+  });
+
   group('vibrations', () {
     late List<MethodCall> calls;
 
@@ -1725,7 +1792,7 @@ class _Sounds implements NotePlayer {
   Future<void> load() async => loads++;
 
   @override
-  Future<void> play(int midi) async => played.add(midi);
+  Future<void> play(List<int> midis) async => played.addAll(midis);
 
   @override
   Future<void> dispose() async {}

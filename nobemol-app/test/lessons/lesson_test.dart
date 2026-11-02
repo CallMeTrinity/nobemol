@@ -6,6 +6,7 @@ import 'package:notation/core.dart';
 import 'package:nobemol/lessons/lesson.dart';
 import 'package:nobemol/lessons/yaml_fields.dart';
 import 'package:nobemol/reading/beats.dart';
+import 'package:nobemol/reading/intervals.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
@@ -134,7 +135,7 @@ exercise:
         14,
         9,
         '« quiz » inconnu (note-reading, identify-note, identify-duration, '
-        'identify-marking)',
+        'identify-marking, identify-interval, ear-note, ear-interval)',
       ),
     );
     expect(
@@ -610,6 +611,227 @@ exercise:
               ),
         ),
         error(18, 12, 'de 2 à 8 réponses'),
+      );
+    });
+  });
+
+  /// Leçon dont l'exercice est [exercise], indenté de deux espaces.
+  String withExercise(String exercise) => '''
+id: test-lesson
+title: Test
+skills: [note-reading.treble]
+level: 1
+theory:
+  - text: Texte.
+exercise:
+$exercise''';
+
+  Matcher fails(String message) => throwsA(
+    isA<ContentException>().having(
+      (e) => e.message,
+      'message',
+      contains(message),
+    ),
+  );
+
+  group('identify-interval', () {
+    String interval(
+      String targets, {
+      String music = 'C E [DF] [^FA] | c C [Bc]2 |]',
+    }) => withExercise('''
+  type: identify-interval
+  abc: |
+    X:1
+    M:4/4
+    L:1/4
+    K:C
+    $music
+  targets:
+$targets''');
+
+    test('deux notes (to) ou un accord', () {
+      final exercise =
+          parse(
+                interval(
+                  '    - { measure: 1, event: 1, to: { measure: 1, event: 2 } }\n'
+                  '    - { measure: 1, event: 3 }\n'
+                  '    - { measure: 2, event: 1, to: { measure: 2, event: 2 } }\n',
+                ),
+              ).exercise
+              as IdentifyIntervalExercise;
+      expect(exercise.targets, const [
+        IntervalTarget(
+          EventRef(staff: 0, measure: 0, event: 0),
+          EventRef(staff: 0, measure: 0, event: 1),
+        ),
+        IntervalTarget(EventRef(staff: 0, measure: 0, event: 2)),
+        IntervalTarget(
+          EventRef(staff: 0, measure: 1, event: 0),
+          EventRef(staff: 0, measure: 1, event: 1),
+        ),
+      ]);
+      final questions = exercise.questions(Random(1));
+      final answers = [
+        for (var i = 0; i < exercise.length; i++)
+          (questions.next() as IntervalQuestion).answer,
+      ];
+      // Do-mi, ré-fa en accord, do5 puis do4 en descendant.
+      expect(answers, [
+        IntervalNumber.third,
+        IntervalNumber.third,
+        IntervalNumber.octave,
+      ]);
+    });
+
+    test('les notes portent l’altération lue', () {
+      final exercise =
+          parse(interval('    - { measure: 1, event: 4 }\n')).exercise
+              as IdentifyIntervalExercise;
+      final question = exercise.questions(Random(1)).next() as IntervalQuestion;
+      expect(question.pitches, const [
+        Pitch(DiatonicStep.f, 4, accidental: Accidental.sharp),
+        Pitch(DiatonicStep.a, 4),
+      ]);
+      expect(question.harmonic, isTrue);
+      expect(question.targets, hasLength(1));
+    });
+
+    test('note seule, accord avec to, silence : refusés', () {
+      expect(
+        () => parse(interval('    - { measure: 1, event: 1 }\n')),
+        fails('« to » attendu'),
+      );
+      expect(
+        () => parse(
+          interval(
+            '    - { measure: 1, event: 3, to: { measure: 1, event: 4 } }\n',
+          ),
+        ),
+        fails('« to » en trop'),
+      );
+      expect(
+        () => parse(
+          interval(
+            '    - { measure: 1, event: 2 }\n',
+            music: 'C z [DF] [^FA] |]',
+          ),
+        ),
+        fails('un silence'),
+      );
+    });
+
+    test('seconde note avant la première, ou accord : refusée', () {
+      expect(
+        () => parse(
+          interval(
+            '    - { measure: 1, event: 2, to: { measure: 1, event: 1 } }\n',
+          ),
+        ),
+        fails('après la première'),
+      );
+      expect(
+        () => parse(
+          interval(
+            '    - { measure: 1, event: 2, to: { measure: 1, event: 3 } }\n',
+          ),
+        ),
+        fails('une note attendue'),
+      );
+    });
+
+    test('accord de trois notes, au-delà de l’octave : refusés', () {
+      expect(
+        () => parse(
+          interval('    - { measure: 1, event: 1 }\n', music: '[CEG]4 |]'),
+        ),
+        fails('accord de 3 notes'),
+      );
+      expect(
+        () => parse(
+          interval(
+            '    - { measure: 1, event: 1, to: { measure: 1, event: 2 } }\n',
+            music: 'C2 e2 |]',
+          ),
+        ),
+        fails('au-delà de l’octave'),
+      );
+    });
+
+    test('mi dièse : pas de touche', () {
+      expect(
+        () => parse(
+          interval('    - { measure: 1, event: 1 }\n', music: '[C^E]4 |]'),
+        ),
+        fails('pas de touche'),
+      );
+    });
+
+    test('cible en double', () {
+      expect(
+        () => parse(
+          interval(
+            '    - { measure: 1, event: 3 }\n'
+            '    - { measure: 1, event: 3 }\n',
+          ),
+        ),
+        fails('en double'),
+      );
+    });
+  });
+
+  group('oreille', () {
+    test('ear-note : touches blanches, rangées', () {
+      final exercise = parse(
+        withExercise('  type: ear-note\n  notes: [g, c, e]\n'),
+      ).exercise;
+      expect(
+        exercise,
+        const EarNoteParams(notes: [NoteName.c, NoteName.e, NoteName.g]),
+      );
+      expect(
+        () => parse(withExercise('  type: ear-note\n  notes: [c, fSharp]\n')),
+        fails('« fSharp » n’est pas une touche blanche'),
+      );
+      expect(
+        () => parse(withExercise('  type: ear-note\n  notes: [c]\n')),
+        fails('deux notes au moins'),
+      );
+    });
+
+    test('ear-interval : numéros de 1 à 8, rangés', () {
+      final exercise = parse(
+        withExercise('  type: ear-interval\n  intervals: [8, 3, 5]\n'),
+      ).exercise;
+      expect(
+        exercise,
+        const EarIntervalParams(
+          intervals: [
+            IntervalNumber.third,
+            IntervalNumber.fifth,
+            IntervalNumber.octave,
+          ],
+        ),
+      );
+      expect(
+        () =>
+            parse(withExercise('  type: ear-interval\n  intervals: [3, 9]\n')),
+        fails('de 1 à 8'),
+      );
+      expect(
+        () =>
+            parse(withExercise('  type: ear-interval\n  intervals: [3, 3]\n')),
+        fails('3 en double'),
+      );
+    });
+
+    test('ear-interval harmonique : pas d’unisson', () {
+      expect(
+        () => parse(
+          withExercise(
+            '  type: ear-interval\n  harmonic: true\n  intervals: [1, 3]\n',
+          ),
+        ),
+        fails('de 2 à 8'),
       );
     });
   });

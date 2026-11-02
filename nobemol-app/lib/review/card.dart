@@ -15,6 +15,14 @@ import 'package:nobemol/reading/note_reading.dart';
 //   duration:half+quarter        `+` entre deux notes liées
 //   marking:dynamic:p            nuance, articulation, soufflet,
 //   marking:above:rit.           terme au-dessus ou au-dessous
+//   interval:melodic:treble:e4+c4  intervalle lu : deux notes dans
+//   interval:harmonic:bass:g2+bFlat2  l'ordre de lecture, ou un accord
+//   ear:interval:c4+g4           intervalle entendu, en montant
+//   ear:chord:c4+e4              intervalle entendu, notes ensemble
+//   ear:note:e4                  note entendue après le do4
+//
+// Les notes d'un intervalle portent l'altération lue, comme une carte de
+// note.
 //
 // Ces textes sont stockés : ne jamais changer leur format sans migration.
 
@@ -34,7 +42,26 @@ String cardOf(Question question) => switch (question) {
     'duration:${targets.map((ref) => _figure(system.event(ref)!)).join('+')}',
   MarkingQuestion(:final system, :final target) =>
     'marking:${_sign(signsOf(system.event(target)!).single)}',
+  IntervalQuestion(heard: true, :final harmonic, :final pitches) =>
+    'ear:${harmonic ? 'chord' : 'interval'}:${_notes(pitches)}',
+  IntervalQuestion(
+    :final system,
+    :final targets,
+    :final harmonic,
+    :final pitches,
+  ) =>
+    'interval:${harmonic ? 'harmonic' : 'melodic'}'
+        ':${_clefName(system.staves.elementAt(targets.first.staff).clef)}'
+        ':${_notes(pitches)}',
+  EarNoteQuestion(:final pitch) => 'ear:note:${_keyNote(pitch)}',
 };
+
+/// Note au clavier et octave : `fSharp5`. La hauteur porte l'altération
+/// lue.
+String _keyNote(Pitch pitch) =>
+    '${NoteName.of(pitch.step, pitch.accidental)!.name}${pitch.octave}';
+
+String _notes(List<Pitch> pitches) => pitches.map(_keyNote).join('+');
 
 String _clefName(Clef clef) =>
     _clefs.entries.firstWhere((entry) => entry.value == clef).key;
@@ -65,8 +92,55 @@ Question? questionOf(String card) {
       rest[0],
       rest.skip(1).join(':'),
     ),
+    'interval' when rest.length == 3 => _interval(rest[0], rest[1], rest[2]),
+    'ear' when rest.length == 2 => _ear(rest[0], rest[1]),
     _ => null,
   };
+}
+
+/// Hauteur d'une note au clavier et son octave, `fSharp5`. `null` si le
+/// texte ne se lit pas.
+Pitch? _pitchOf(String note) {
+  final match = _noteName.firstMatch(note);
+  final name = NoteName.values.asNameMap()[match?[1]];
+  if (name == null) return null;
+  return Pitch(name.step, int.parse(match![2]!), accidental: name.accidental);
+}
+
+/// Les deux notes d'un intervalle, `c4+e4`.
+(Pitch, Pitch)? _pair(String notes) {
+  final pitches = notes.split('+').map(_pitchOf).toList();
+  if (pitches case [final first?, final second?]) return (first, second);
+  return null;
+}
+
+IntervalQuestion? _interval(String kind, String clefName, String notes) {
+  final clef = _clefs[clefName];
+  final pair = _pair(notes);
+  if (clef == null || pair == null || !{'melodic', 'harmonic'}.contains(kind)) {
+    return null;
+  }
+  return intervalQuestion(clef, pair.$1, pair.$2, harmonic: kind == 'harmonic');
+}
+
+/// Une question d'oreille s'affiche, à la correction, en clé de sol : ses
+/// notes vont de do4 à do6.
+Question? _ear(String kind, String notes) {
+  if (kind == 'note') {
+    final pitch = _pitchOf(notes);
+    return pitch == null || pitch.accidental != null
+        ? null
+        : earNoteQuestion(pitch);
+  }
+  final pair = _pair(notes);
+  if (pair == null || !{'interval', 'chord'}.contains(kind)) return null;
+  return intervalQuestion(
+    Clef.treble,
+    pair.$1,
+    pair.$2,
+    harmonic: kind == 'chord',
+    heard: true,
+  );
 }
 
 /// Clé et nom d'une carte de note (statistiques), `null` pour une autre

@@ -3,6 +3,7 @@ import 'package:notation/core.dart';
 import 'package:nobemol/l10n/app_localizations.dart';
 import 'package:nobemol/l10n/labels.dart';
 import 'package:nobemol/reading/beats.dart';
+import 'package:nobemol/reading/intervals.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
@@ -29,6 +30,14 @@ extension Explanations on AppLocalizations {
       right
           ? feedbackRightMarking(markingLabel(answer))
           : feedbackWrongMarking(markingLabel(answer)),
+    IntervalQuestion(:final answer) =>
+      right
+          ? feedbackRightInterval(intervalName(answer.name))
+          : feedbackWrongInterval(intervalName(answer.name)),
+    EarNoteQuestion(:final answer) =>
+      right
+          ? feedbackRightNote(noteFullName(answer, naming: naming))
+          : feedbackWrongNote(noteFullName(answer, naming: naming)),
   };
 
   /// Explication de [question] : celle de l'auteur, sinon générée.
@@ -41,6 +50,8 @@ extension Explanations on AppLocalizations {
           targets,
         ),
         MarkingQuestion(:final answer) => _explainMarking(answer),
+        IntervalQuestion() => _explainInterval(question, naming),
+        EarNoteQuestion(:final pitch) => _explainEarNote(pitch, naming),
       };
 
   String clefName(Clef clef) => switch (clef) {
@@ -96,6 +107,41 @@ extension Explanations on AppLocalizations {
     return '$place $cause';
   }
 
+  /// Les notes de la gamme d'un bout à l'autre, comptées : « Do, ré, mi :
+  /// 3 notes, c'est une tierce. »
+  String _explainInterval(IntervalQuestion question, NoteNaming naming) {
+    final [first, second] = question.pitches;
+    final direction = second.diatonic >= first.diatonic ? 1 : -1;
+    final steps = [
+      for (
+        var diatonic = first.diatonic;
+        diatonic != second.diatonic + direction;
+        diatonic += direction
+      )
+        Pitch.fromDiatonic(diatonic).step,
+    ];
+    final names = [for (final step in steps) noteName(step, naming: naming)];
+    final text = question.answer == IntervalNumber.unison
+        ? explainUnison(names.single)
+        : explainInterval(
+            _capitalized(names.join(', ')),
+            names.length,
+            intervalName(question.answer.name),
+          );
+    final altered = question.pitches.any((pitch) => pitch.accidental != null);
+    return altered ? '$text $explainIntervalAccidentals' : text;
+  }
+
+  /// La note entendue, et son écart au do de référence.
+  String _explainEarNote(Pitch pitch, NoteNaming naming) {
+    final interval = intervalBetween(referencePitch, pitch)!;
+    if (interval == IntervalNumber.unison) return explainEarReference;
+    return explainEarNote(
+      noteName(pitch.step, naming: naming),
+      intervalName(interval.name),
+    );
+  }
+
   /// Figures de la liaison, et leurs temps additionnés.
   String _explainDuration(System system, List<EventRef> targets) {
     final events = [for (final ref in targets) system.event(ref)!];
@@ -113,11 +159,11 @@ extension Explanations on AppLocalizations {
   /// Nom d'une figure de note ou de silence, point compris.
   String _figure(Event event) {
     final (name, feminine) = switch ((event, event.value)) {
-      (Note(), NoteValue.whole) => (figureWhole, true),
-      (Note(), NoteValue.half) => (figureHalf, true),
-      (Note(), NoteValue.quarter) => (figureQuarter, true),
-      (Note(), NoteValue.eighth) => (figureEighth, true),
-      (Note(), NoteValue.sixteenth) => (figureSixteenth, true),
+      (Note() || Chord(), NoteValue.whole) => (figureWhole, true),
+      (Note() || Chord(), NoteValue.half) => (figureHalf, true),
+      (Note() || Chord(), NoteValue.quarter) => (figureQuarter, true),
+      (Note() || Chord(), NoteValue.eighth) => (figureEighth, true),
+      (Note() || Chord(), NoteValue.sixteenth) => (figureSixteenth, true),
       (Rest(), NoteValue.whole) => (restWhole, true),
       (Rest(), NoteValue.half) => (restHalf, true),
       (Rest(), NoteValue.quarter) => (restQuarter, false),
