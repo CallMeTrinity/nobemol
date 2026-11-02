@@ -18,6 +18,7 @@ class Settings {
     this.keyLabels = true,
     this.goal = DailyGoal.five,
     this.haptics = true,
+    this.sound = true,
     this.theme = ThemeMode.system,
     this.updateCheck = true,
   });
@@ -33,6 +34,9 @@ class Settings {
 
   /// Retour haptique juste / faux.
   final bool haptics;
+
+  /// La note juste jouée à la correction.
+  final bool sound;
   final ThemeMode theme;
 
   /// Interroger GitHub au lancement : une nouvelle version est-elle sortie ?
@@ -45,6 +49,7 @@ class Settings {
     bool? keyLabels,
     DailyGoal? goal,
     bool? haptics,
+    bool? sound,
     ThemeMode? theme,
     bool? updateCheck,
   }) => Settings(
@@ -54,6 +59,7 @@ class Settings {
     keyLabels: keyLabels ?? this.keyLabels,
     goal: goal ?? this.goal,
     haptics: haptics ?? this.haptics,
+    sound: sound ?? this.sound,
     theme: theme ?? this.theme,
     updateCheck: updateCheck ?? this.updateCheck,
   );
@@ -72,6 +78,7 @@ class SettingsStore {
   static const _keyLabels = 'keyLabels';
   static const _goal = 'goal';
   static const _haptics = 'haptics';
+  static const _sound = 'sound';
   static const _theme = 'theme';
   static const _updateCheck = 'updateCheck';
 
@@ -86,6 +93,7 @@ class SettingsStore {
       keyLabels: _prefs.getBool(_keyLabels) ?? defaults.keyLabels,
       goal: named(DailyGoal.values, _goal) ?? defaults.goal,
       haptics: _prefs.getBool(_haptics) ?? defaults.haptics,
+      sound: _prefs.getBool(_sound) ?? defaults.sound,
       theme: named(ThemeMode.values, _theme) ?? defaults.theme,
       updateCheck: _prefs.getBool(_updateCheck) ?? defaults.updateCheck,
     );
@@ -98,6 +106,7 @@ class SettingsStore {
     _prefs.setBool(_keyLabels, settings.keyLabels),
     _prefs.setString(_goal, settings.goal.name),
     _prefs.setBool(_haptics, settings.haptics),
+    _prefs.setBool(_sound, settings.sound),
     _prefs.setString(_theme, settings.theme.name),
     _prefs.setBool(_updateCheck, settings.updateCheck),
   ]);

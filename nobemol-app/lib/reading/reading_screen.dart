@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:notation/notation.dart';
 
+import 'package:nobemol/audio/note_player.dart';
 import 'package:nobemol/clock.dart';
 import 'package:nobemol/l10n/app_localizations.dart';
 import 'package:nobemol/l10n/explanations.dart';
@@ -55,6 +56,12 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
 
   ReadingExercise get _exercise => widget.exercise;
 
+  @override
+  void initState() {
+    super.initState();
+    ref.prepareNote(ref.read(sessionProvider(_exercise)).question);
+  }
+
   /// Des réponses données, pas encore enregistrées.
   bool _unsaved(SessionState session) =>
       session.answered > 0 && session.finishedAt == null;
@@ -89,14 +96,20 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     final session = ref.watch(sessionProvider(_exercise));
     ref.listen(sessionProvider(_exercise), (previous, next) {
       if (previous?.phase == SessionPhase.asking &&
-          next.phase == SessionPhase.feedback &&
-          ref.read(settingsProvider).haptics) {
-        // Courte si c'est juste, plus longue si c'est faux.
-        unawaited(
-          next.answers.last.correct
-              ? HapticFeedback.lightImpact()
-              : HapticFeedback.vibrate(),
-        );
+          next.phase == SessionPhase.feedback) {
+        ref.playNote(next.question);
+        if (ref.read(settingsProvider).haptics) {
+          // Courte si c'est juste, plus longue si c'est faux.
+          unawaited(
+            next.answers.last.correct
+                ? HapticFeedback.lightImpact()
+                : HapticFeedback.vibrate(),
+          );
+        }
+      }
+      if (next.phase == SessionPhase.asking &&
+          previous?.question != next.question) {
+        ref.prepareNote(next.question);
       }
       if (previous?.finishedAt != null) return;
       if (next.finishedAt case final finishedAt?) {

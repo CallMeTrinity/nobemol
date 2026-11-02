@@ -26,6 +26,7 @@ void main() {
       expect(settings.haptics, isTrue);
       expect(settings.theme, ThemeMode.system);
       expect(settings.updateCheck, isTrue);
+      expect(settings.sound, isTrue);
     });
 
     test('écrits puis relus', () async {
@@ -41,6 +42,7 @@ void main() {
           haptics: false,
           theme: ThemeMode.dark,
           updateCheck: false,
+          sound: false,
         ),
       );
       final settings = store.load();
@@ -52,6 +54,7 @@ void main() {
       expect(settings.haptics, isFalse);
       expect(settings.theme, ThemeMode.dark);
       expect(settings.updateCheck, isFalse);
+      expect(settings.sound, isFalse);
     });
 
     test(

@@ -121,6 +121,7 @@ class Backup {
         'keyLabels': settings.keyLabels,
         'goal': settings.goal.name,
         'haptics': settings.haptics,
+        'sound': settings.sound,
         'theme': settings.theme.name,
         'updateCheck': settings.updateCheck,
       },
@@ -250,6 +251,7 @@ Settings _readSettings(Map<String, Object?> json, Settings current) {
     keyLabels: flag('keyLabels', current.keyLabels),
     goal: named(DailyGoal.values, 'goal', current.goal),
     haptics: flag('haptics', current.haptics),
+    sound: flag('sound', current.sound),
     theme: named(ThemeMode.values, 'theme', current.theme),
     updateCheck: flag('updateCheck', current.updateCheck),
   );
