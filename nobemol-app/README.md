@@ -19,7 +19,8 @@ nobemol-app/
 ├── lib/
 │   ├── l10n/             textes (app_fr.arb), AppLocalizations généré par pub get
 │   ├── theme/            tokens du design « Touches » et thème clair / sombre
-│   ├── ui/               composants : boutons à ombre pleine, tuiles, clavier
+│   ├── ui/               composants : boutons à ombre pleine, tuiles, clavier,
+│   │                     animations (motion.dart)
 │   ├── shell/            barre à 4 onglets
 │   ├── onboarding/       démarrage : bienvenue, point de départ, objectif
 │   ├── settings/         réglages (shared_preferences) et leur écran

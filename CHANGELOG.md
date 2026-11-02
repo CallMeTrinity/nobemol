@@ -16,6 +16,8 @@ Le workflow de release reprend la section de la version comme notes de release :
 - 4 leçons et 2 compétences de rythme tapé : noires et blanches, deux croches, croches en phrase, notes pointées et liées. Chaque leçon va de la phrase la plus simple à la plus longue.
 - Test de positionnement, au démarrage et dans les réglages : des questions de lecture, de plus en plus dures tant que tu réussis (clés, lignes supplémentaires, altérations, grande portée, rythme, signes, intervalles). Ce que tu sais déjà s'ouvre dans le parcours, en 3 minutes au plus. « Je ne sais pas » passe une question, et le choix à la main reste possible.
 
+- Animations : le score et l'XP défilent à la fin d'une leçon ou d'une partie, le combo apparaît et saute à chaque bonne réponse, une réponse fausse tremble. Les écrans, les questions et les onglets s'enchaînent en fondu. Rien ne bouge si les animations sont supprimées dans les réglages d'Android.
+
 ### Corrigé
 
 - Son des notes : un vrai piano enregistré (Salamander Grand Piano) remplace le son synthétisé. Chaque réponse fait entendre une note et une seule : plus de note manquante ni de note en double, même en répondant vite en arcade.

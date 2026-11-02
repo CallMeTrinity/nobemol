@@ -27,6 +27,7 @@ import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/confirm_dialog.dart';
 import 'package:nobemol/ui/depth.dart';
+import 'package:nobemol/ui/motion.dart';
 import 'package:nobemol/ui/progress_bar.dart';
 
 /// Écran de lecture : une note (seule ou ciblée dans une phrase), et les
@@ -154,20 +155,28 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       child: Scaffold(
         body: SafeArea(
           bottom: false,
-          child: switch (_milestone) {
-            final outcome? => _Milestone(outcome: outcome, onDone: _continue),
-            null when session.phase == SessionPhase.finished => _Results(
-              exercise: _exercise,
-              session: session,
-              onRestart: _restart,
-              onContinue: _continue,
-            ),
-            null => _Exercise(
-              exercise: _exercise,
-              session: session,
-              onClose: _close,
-            ),
-          },
+          child: FadeSwitcher(
+            child: switch (_milestone) {
+              final outcome? => _Milestone(
+                key: const ValueKey('milestone'),
+                outcome: outcome,
+                onDone: _continue,
+              ),
+              null when session.phase == SessionPhase.finished => _Results(
+                key: const ValueKey('results'),
+                exercise: _exercise,
+                session: session,
+                onRestart: _restart,
+                onContinue: _continue,
+              ),
+              null => _Exercise(
+                key: const ValueKey('exercise'),
+                exercise: _exercise,
+                session: session,
+                onClose: _close,
+              ),
+            },
+          ),
         ),
       ),
     );
@@ -184,6 +193,7 @@ bool _hasHeard(ReadingExercise exercise) => switch (exercise) {
 
 class _Exercise extends ConsumerWidget {
   const _Exercise({
+    super.key,
     required this.exercise,
     required this.session,
     required this.onClose,
@@ -268,45 +278,55 @@ class _Exercise extends ConsumerWidget {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(Space.ml),
-            child: Center(
-              // Question d'oreille : la portée est cachée, à sa place, jusqu'à
-              // la correction. Rien ne bouge quand elle apparaît.
-              child: _Hidden(
-                hidden: question.heard && session.phase == SessionPhase.asking,
-                // Une par question : elle joue en apparaissant.
-                prompt: _ListenButton(
-                  key: ValueKey(session.answered),
-                  question: question,
-                ),
-                // scaleDown : la portée garde sa taille, sauf si elle déborde.
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: NotationView(
-                    system: question.system,
-                    // Une note, une durée, un signe ou un intervalle seul : en
-                    // grand.
-                    staffSpace:
-                        exercise is NoteReadingParams ||
-                            exercise is ReviewExercise ||
-                            exercise is EarNoteParams ||
-                            exercise is EarIntervalParams
-                        ? StaffSpaces.exercise
-                        : StaffSpaces.phrase,
-                    options: exercise.layoutOptions,
-                    color: c.ink,
-                    highlights: {
-                      for (final ref in question.targets) ref: target,
-                      ...taps,
-                    },
-                    labels: tapLabels,
-                    labelStyle: AppText.staffLabel.copyWith(color: c.inkMuted),
-                    halos: {for (final ref in question.targets) ref: halo},
-                    decorationHighlights: {
-                      for (final ref in question.decorationTargets) ref: target,
-                    },
-                    decorationHalos: {
-                      for (final ref in question.decorationTargets) ref: halo,
-                    },
+            // La question suivante arrive par la droite.
+            child: FadeSwitcher(
+              offset: const Offset(0.04, 0),
+              child: Center(
+                key: ValueKey(session.answered + (feedback ? 0 : 1)),
+                // Question d'oreille : la portée est cachée, à sa place,
+                // jusqu'à la correction. Rien ne bouge quand elle apparaît.
+                child: _Hidden(
+                  hidden:
+                      question.heard && session.phase == SessionPhase.asking,
+                  // Une par question : elle joue en apparaissant.
+                  prompt: _ListenButton(
+                    key: ValueKey(session.answered),
+                    question: question,
+                  ),
+                  // scaleDown : la portée garde sa taille, sauf si elle
+                  // déborde.
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: NotationView(
+                      system: question.system,
+                      // Une note, une durée, un signe ou un intervalle seul :
+                      // en grand.
+                      staffSpace:
+                          exercise is NoteReadingParams ||
+                              exercise is ReviewExercise ||
+                              exercise is EarNoteParams ||
+                              exercise is EarIntervalParams
+                          ? StaffSpaces.exercise
+                          : StaffSpaces.phrase,
+                      options: exercise.layoutOptions,
+                      color: c.ink,
+                      highlights: {
+                        for (final ref in question.targets) ref: target,
+                        ...taps,
+                      },
+                      labels: tapLabels,
+                      labelStyle: AppText.staffLabel.copyWith(
+                        color: c.inkMuted,
+                      ),
+                      halos: {for (final ref in question.targets) ref: halo},
+                      decorationHighlights: {
+                        for (final ref in question.decorationTargets)
+                          ref: target,
+                      },
+                      decorationHalos: {
+                        for (final ref in question.decorationTargets) ref: halo,
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -491,17 +511,23 @@ class _TopBar extends StatelessWidget {
           const SizedBox(width: Space.s),
           Expanded(child: ProgressBar(value: progress)),
           // Le combo se montre à partir de deux bonnes réponses d'affilée.
-          if (session.combo >= 2) ...[
-            const SizedBox(width: Space.s),
-            pill(
-              key: const ValueKey('combo'),
-              color: c.accentSoft,
-              child: Text(
-                '×${session.combo}',
-                style: AppText.metaLarge.copyWith(color: c.accentDeep),
+          Appear(
+            visible: session.combo >= 2,
+            child: Padding(
+              padding: const EdgeInsets.only(left: Space.s),
+              child: Pop(
+                trigger: session.combo,
+                child: pill(
+                  key: const ValueKey('combo'),
+                  color: c.accentSoft,
+                  child: Text(
+                    '×${session.combo}',
+                    style: AppText.metaLarge.copyWith(color: c.accentDeep),
+                  ),
+                ),
               ),
             ),
-          ],
+          ),
           const SizedBox(width: Space.s),
           pill(
             color: c.surfaceInverse,
@@ -697,11 +723,18 @@ class _FeedbackSheetState extends State<_FeedbackSheet>
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        right
-                            ? Icons.check_circle_rounded
-                            : Icons.cancel_rounded,
-                        color: tone,
+                      // L'icône arrive juste après le panneau.
+                      Reveal(
+                        delay: _sheetSlide ~/ 2,
+                        offset: 0,
+                        scale: 0.4,
+                        curve: Motion.emphasis,
+                        child: Icon(
+                          right
+                              ? Icons.check_circle_rounded
+                              : Icons.cancel_rounded,
+                          color: tone,
+                        ),
                       ),
                       const SizedBox(width: Space.s),
                       Expanded(
@@ -792,6 +825,7 @@ class _FeedbackSheetState extends State<_FeedbackSheet>
 /// Fin de session : score, chrono, détail de l'XP, et ce qui est à revoir.
 class _Results extends ConsumerWidget {
   const _Results({
+    super.key,
     required this.exercise,
     required this.session,
     required this.onRestart,
@@ -813,7 +847,14 @@ class _Results extends ConsumerWidget {
     final bonus = session.xp - base;
     final misses = _misses(session);
 
-    Widget xpRow(String label, String value, {bool strong = false}) => Padding(
+    /// Une ligne du détail. Avec [value], le chiffre défile depuis [from].
+    Widget xpRow(
+      String label,
+      String text, {
+      bool strong = false,
+      int? from,
+      int? value,
+    }) => Padding(
       padding: const EdgeInsets.symmetric(vertical: Space.xxs),
       child: Row(
         children: [
@@ -825,12 +866,22 @@ class _Results extends ConsumerWidget {
                   : AppText.body.copyWith(color: c.inkMuted),
             ),
           ),
-          Text(
-            value,
-            style: AppText.metaLarge.copyWith(
-              color: strong ? c.accentDeep : c.ink,
+          if (value == null)
+            Text(
+              text,
+              style: AppText.metaLarge.copyWith(
+                color: strong ? c.accentDeep : c.ink,
+              ),
+            )
+          else
+            CountUp(
+              value: value,
+              from: from,
+              format: l10n.resultXp,
+              style: AppText.metaLarge.copyWith(
+                color: strong ? c.accentDeep : c.ink,
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -853,86 +904,108 @@ class _Results extends ConsumerWidget {
                 style: AppText.meta.copyWith(color: c.inkMuted),
               ),
               const SizedBox(height: Space.ml),
-              Text(
-                l10n.resultScore(session.correct, exercise.length),
+              // Le score défile, puis le reste entre en cascade.
+              CountUp(
+                value: session.correct,
+                from: 0,
+                format: (correct) => l10n.resultScore(correct, exercise.length),
                 textAlign: TextAlign.center,
                 style: AppText.displayXl.copyWith(color: c.ink, fontSize: 64),
               ),
               const SizedBox(height: Space.m),
-              Text(
-                l10n.resultTime(formatDuration(elapsed)),
-                textAlign: TextAlign.center,
-                style: AppText.bodyLarge.copyWith(color: c.inkMuted),
-              ),
-              if (session.bestCombo >= 2)
-                Text(
-                  l10n.resultCombo(session.bestCombo),
-                  textAlign: TextAlign.center,
-                  style: AppText.bodyLarge.copyWith(color: c.inkMuted),
-                ),
-              const SizedBox(height: Space.xl),
-              AppTile(
+              Reveal(
+                delay: Reveal.staggered(2),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      l10n.resultXpTitle.toUpperCase(),
-                      style: AppText.meta.copyWith(color: c.inkMuted),
+                      l10n.resultTime(formatDuration(elapsed)),
+                      textAlign: TextAlign.center,
+                      style: AppText.bodyLarge.copyWith(color: c.inkMuted),
                     ),
-                    const SizedBox(height: Space.s),
-                    xpRow(
-                      l10n.resultXpAnswers(session.correct, xpPerAnswer),
-                      l10n.feedbackXp(base),
-                    ),
-                    if (bonus > 0)
-                      xpRow(l10n.resultXpCombo, l10n.feedbackXp(bonus)),
-                    Divider(color: c.line, height: Space.m),
-                    xpRow(
-                      l10n.resultXpTotal,
-                      l10n.resultXp(session.xp),
-                      strong: true,
-                    ),
+                    if (session.bestCombo >= 2)
+                      Text(
+                        l10n.resultCombo(session.bestCombo),
+                        textAlign: TextAlign.center,
+                        style: AppText.bodyLarge.copyWith(color: c.inkMuted),
+                      ),
                   ],
                 ),
               ),
-              // Une phrase tapée ne se revoit pas seule : pas de carte.
-              if (exercise is! TapRhythmExercise) ...[
-                const SizedBox(height: Space.xl),
-                Text(
-                  l10n.resultReview,
-                  style: AppText.titleCard.copyWith(color: c.ink),
-                ),
-                const SizedBox(height: Space.m),
-                if (misses.isEmpty)
-                  Text(
-                    l10n.resultNoMistake,
-                    style: AppText.body.copyWith(color: c.inkMuted),
-                  )
-                else
-                  Wrap(
-                    spacing: Space.s,
-                    runSpacing: Space.s,
+              const SizedBox(height: Space.xl),
+              Reveal(
+                delay: Reveal.staggered(3),
+                child: AppTile(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      for (final (question, given) in misses)
-                        CardTile(
-                          question: question,
-                          // Une phrase entière serait trop large : seulement
-                          // une note ou un intervalle seul.
-                          staff: question.system.staves.every(
-                            (staff) => switch (question) {
-                              NoteQuestion() => staff.notes.length <= 1,
-                              IntervalQuestion() ||
-                              EarNoteQuestion() => staff.events.length <= 2,
-                              _ => false,
-                            },
-                          ),
-                          caption: l10n.resultReviewGiven(
-                            l10n.answerLabel(given, naming: naming),
-                          ),
+                      Text(
+                        l10n.resultXpTitle.toUpperCase(),
+                        style: AppText.meta.copyWith(color: c.inkMuted),
+                      ),
+                      const SizedBox(height: Space.s),
+                      xpRow(
+                        l10n.resultXpAnswers(session.correct, xpPerAnswer),
+                        l10n.feedbackXp(base),
+                      ),
+                      if (bonus > 0)
+                        xpRow(l10n.resultXpCombo, l10n.feedbackXp(bonus)),
+                      Divider(color: c.line, height: Space.m),
+                      xpRow(
+                        l10n.resultXpTotal,
+                        l10n.resultXp(session.xp),
+                        strong: true,
+                        from: 0,
+                        value: session.xp,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Une phrase tapée ne se revoit pas seule : pas de carte.
+              if (exercise is! TapRhythmExercise)
+                Reveal(
+                  delay: Reveal.staggered(4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: Space.xl),
+                      Text(
+                        l10n.resultReview,
+                        style: AppText.titleCard.copyWith(color: c.ink),
+                      ),
+                      const SizedBox(height: Space.m),
+                      if (misses.isEmpty)
+                        Text(
+                          l10n.resultNoMistake,
+                          style: AppText.body.copyWith(color: c.inkMuted),
+                        )
+                      else
+                        Wrap(
+                          spacing: Space.s,
+                          runSpacing: Space.s,
+                          children: [
+                            for (final (question, given) in misses)
+                              CardTile(
+                                question: question,
+                                // Une phrase entière serait trop large :
+                                // seulement une note ou un intervalle seul.
+                                staff: question.system.staves.every(
+                                  (staff) => switch (question) {
+                                    NoteQuestion() => staff.notes.length <= 1,
+                                    IntervalQuestion() || EarNoteQuestion() =>
+                                      staff.events.length <= 2,
+                                    _ => false,
+                                  },
+                                ),
+                                caption: l10n.resultReviewGiven(
+                                  l10n.answerLabel(given, naming: naming),
+                                ),
+                              ),
+                          ],
                         ),
                     ],
                   ),
-              ],
+                ),
             ],
           ),
         ),
@@ -1002,7 +1075,7 @@ Object _reviewKey(Question question) => switch (question) {
 /// Palier franchi : un niveau, une compétence maîtrisée ou un succès, et
 /// ce qui se débloque.
 class _Milestone extends StatelessWidget {
-  const _Milestone({required this.outcome, required this.onDone});
+  const _Milestone({super.key, required this.outcome, required this.onDone});
 
   final SessionOutcome outcome;
   final VoidCallback onDone;
@@ -1025,36 +1098,39 @@ class _Milestone extends StatelessWidget {
           title.toUpperCase(),
           style: AppText.meta.copyWith(color: c.inkMuted),
         ),
-        for (final (name, detail) in entries)
-          Padding(
-            padding: const EdgeInsets.only(top: Space.s),
-            child: AppTile(
-              child: Row(
-                children: [
-                  Icon(icon, color: c.accent),
-                  const SizedBox(width: Space.m),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          style: AppText.titleCard.copyWith(fontSize: 15),
-                        ),
-                        if (detail != null) ...[
-                          const SizedBox(height: Space.xxs),
+        for (final (index, (name, detail)) in entries.indexed)
+          Reveal(
+            delay: Reveal.staggered(index + 3),
+            child: Padding(
+              padding: const EdgeInsets.only(top: Space.s),
+              child: AppTile(
+                child: Row(
+                  children: [
+                    Icon(icon, color: c.accent),
+                    const SizedBox(width: Space.m),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            detail,
-                            style: AppText.body.copyWith(
-                              fontSize: 13,
-                              color: c.inkMuted,
-                            ),
+                            name,
+                            style: AppText.titleCard.copyWith(fontSize: 15),
                           ),
+                          if (detail != null) ...[
+                            const SizedBox(height: Space.xxs),
+                            Text(
+                              detail,
+                              style: AppText.body.copyWith(
+                                fontSize: 13,
+                                color: c.inkMuted,
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1071,7 +1147,6 @@ class _Milestone extends StatelessWidget {
         : (l10n.milestoneAchievement, outcome.achievements.first.title);
 
     return Column(
-      key: const ValueKey('milestone'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
@@ -1089,16 +1164,26 @@ class _Milestone extends StatelessWidget {
                 style: AppText.meta.copyWith(color: c.accentDeep),
               ),
               const SizedBox(height: Space.ml),
-              Text(
-                headline,
-                textAlign: TextAlign.center,
-                style: AppText.displayXl.copyWith(color: c.ink),
+              // Le palier arrive en grossissant, avec un léger rebond.
+              Reveal(
+                offset: 0,
+                scale: 0.7,
+                duration: Motion.base * 1.5,
+                curve: Motion.emphasis,
+                child: Text(
+                  headline,
+                  textAlign: TextAlign.center,
+                  style: AppText.displayXl.copyWith(color: c.ink),
+                ),
               ),
               if (outcome.levelUp) ...[
                 const SizedBox(height: Space.xl),
+                // Le nouveau niveau se remplit depuis zéro.
                 ProgressBar(
                   value: outcome.level.progress / outcome.level.span,
                   color: c.accent,
+                  from: 0,
+                  duration: Motion.count,
                 ),
                 const SizedBox(height: Space.xs),
                 Text(

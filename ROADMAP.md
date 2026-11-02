@@ -10,7 +10,7 @@ Les étapes 1 à 5 forment le MVP, publié en bêta (`0.0.1`, voir [CHANGELOG.md
 
 Les étapes 6 à 12 viennent du design « Touches » (Claude Design, tour 2) : tous les écrans de l'appli. Elles touchent surtout l'appli. Le moteur ne bouge que pour le halo de cible et les noms sous les notes.
 
-Les étapes 13 à 16 viennent de « Plus tard » : le son, puis ce qu'il ouvre (intervalles, oreille, rythme tapé), et le test de positionnement. Une étape par PR.
+Les étapes 13 à 16 viennent de « Plus tard » : le son, puis ce qu'il ouvre (intervalles, oreille, rythme tapé), et le test de positionnement. L'étape 17 anime l'appli, sans rien changer à ce qu'elle fait. Une étape par PR.
 
 | Étape | Moteur | Appli débloquée | État |
 |---|---|---|---|
@@ -31,6 +31,7 @@ Les étapes 13 à 16 viennent de « Plus tard » : le son, puis ce qu'il ouvre (
 | 14 | Accords | Intervalles et oreille | Fait, à publier |
 | 15 | | Rythme tapé | Fait, à publier |
 | 16 | | Test de positionnement adaptatif | Fait, à publier |
+| 17 | | Animations : scores, transitions, retours | Fait, à publier |
 | Plus tard | Liaisons d'expression | Au besoin | |
 
 ## Releases
@@ -517,6 +518,35 @@ Tranché :
 - Sur un vrai téléphone : la durée réelle pour un lecteur confirmé (visée : moins de 3 minutes pour 40 questions), et le confort de « Je ne sais pas » à côté du titre sur petit écran.
 - Les cibles des leçons de rythme ne sont pas toutes propres à leur compétence (une croche dans la leçon des notes pointées) : une question facile peut valider une compétence. À resserrer (cibles choisies pour le test) si les résultats sont trop généreux.
 - Le design « Touches » du test n'a pas pu être relu (pas d'accès au projet Claude Design) : construit avec les composants de l'étape 6 et la correction de l'arcade.
+
+## Étape 17 : animations
+
+- [x] Briques communes (`lib/ui/motion.dart`) : durées et courbes (`Motion`), score qui défile (`CountUp`), bloc qui entre (`Reveal`), saut (`Pop`), tremblement (`Shake`), fondu entre deux contenus (`FadeSwitcher`), badge qui apparaît (`Appear`)
+- [x] Scores : le score des résultats et de la fin de partie défile depuis zéro, l'XP gagnée aussi. En arcade, le score saute et défile à chaque point. Le record battu arrive quand le score a fini
+- [x] Combo : le badge apparaît en grossissant, saute à chaque bonne réponse, disparaît à la perte. En survie, une vie perdue saute en se vidant
+- [x] Barres de progression : elles glissent vers leur valeur. Celle du niveau, au palier, se remplit depuis zéro
+- [x] Transitions : exercice, résultats et palier en fondu. La question suivante arrive par la droite. Les pages du démarrage aussi, le résultat du test de positionnement en fondu. L'onglet choisi apparaît en fondu, sa couleur et son icône changent en douceur
+- [x] Retours : une réponse fausse tremble (tuile ou touche blanche). L'icône du panneau de correction arrive avec un léger rebond. La pause de l'arcade en fondu
+- [x] « Supprimer les animations » (accessibilité Android) respecté partout : tout s'affiche à sa valeur finale
+
+**Terminé quand** : l'appli paraît plus vivante sans être plus lente, et rien ne bouge avec les animations coupées.
+
+Tranché :
+
+- **Une animation accompagne un changement, elle ne le retarde pas.** 160 à 240 ms pour un retour ou un écran, 700 ms pour un score qui défile, rien au-delà. Rien n'attend la fin d'une animation pour répondre : les boutons restent actifs, la question suivante se joue dès qu'elle arrive.
+- **Rien sur l'appui.** Un bouton s'enfonce tout de suite, comme avant : une touche qui répond en retard se sent comme un clavier lent.
+- **Rien qui tourne en boucle.** Pas de pulsation, pas de brillance, pas de confettis : une animation joue une fois, au changement. Les tests (`pumpAndSettle`) s'arrêtent d'eux-mêmes.
+- **La barre de temps de l'arcade ne s'anime pas** : elle suit déjà l'horloge, 30 fois par seconde. Animée, elle serait en retard sur le temps réel. Le mode Entraînement, qui compte les notes, s'anime.
+- **Pas de transition entre deux notes de l'arcade.** La note suivante arrive 150 ms après une bonne réponse, et son temps court dès qu'elle est posée : un fondu mangerait ce temps.
+- **Transitions de pages : celles d'Android.** Flutter 3.47 fait déjà celles d'Android 16 (fondu vers l'avant, retour prédictif) : on ne les remplace pas. Seuls les changements à l'intérieur d'un écran, sans route, s'animent ici.
+- **Onglets en fondu à l'arrivée seulement.** Les quatre onglets restent construits (`indexedStack`) : l'ancien disparaît d'un coup, le nouveau monte de 8 px en apparaissant. Un fondu croisé demanderait deux onglets peints à la fois, pour une différence à peine visible.
+- **Le tremblement reste sur sa touche** : 4 px, trois allers-retours qui s'amortissent, en 320 ms. Assez pour se voir, sans toucher les touches voisines.
+
+À vérifier :
+
+- Sur un vrai téléphone, en `flutter run --release` : la fluidité (pas d'image sautée sur un téléphone d'entrée de gamme), le confort du score qui défile sur l'écran de résultats, et le tremblement d'une touche blanche du clavier.
+- Avec « Supprimer les animations » activé dans les réglages d'Android : tout s'affiche à sa place, sans mouvement.
+- Le design « Touches » ne décrit pas d'animations (pas d'accès au projet Claude Design pour le vérifier) : durées et courbes choisies ici, à recaler à l'usage.
 
 ## Plus tard
 

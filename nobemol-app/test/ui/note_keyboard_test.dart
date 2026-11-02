@@ -140,7 +140,11 @@ void main() {
     final key = find.byKey(const ValueKey('answer-e'));
     double offset() => tester
         .widget<Transform>(
-          find.descendant(of: key, matching: find.byType(Transform)),
+          // Le décalage de l'appui, pas celui du tremblement autour.
+          find.descendant(
+            of: find.descendant(of: key, matching: find.byType(Pressable)),
+            matching: find.byType(Transform),
+          ),
         )
         .transform
         .getTranslation()

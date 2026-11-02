@@ -10,6 +10,7 @@ import 'package:nobemol/reading/note_reading.dart';
 import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/depth.dart';
+import 'package:nobemol/ui/motion.dart';
 import 'package:nobemol/ui/fit_words.dart';
 import 'package:nobemol/ui/note_keyboard.dart';
 
@@ -248,13 +249,17 @@ class _AnswerTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Pressable(
-      colors: context.colors.answer(tone),
-      onPressed: onPressed,
-      height: height,
-      borderRadius: BorderRadius.circular(radius),
-      padding: const EdgeInsets.symmetric(horizontal: Space.xs),
-      child: Center(child: child),
+    // Une réponse fausse tremble en passant au rouge.
+    return Shake(
+      active: tone == AnswerTone.wrong,
+      child: Pressable(
+        colors: context.colors.answer(tone),
+        onPressed: onPressed,
+        height: height,
+        borderRadius: BorderRadius.circular(radius),
+        padding: const EdgeInsets.symmetric(horizontal: Space.xs),
+        child: Center(child: child),
+      ),
     );
   }
 }

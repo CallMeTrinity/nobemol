@@ -4,6 +4,7 @@ import 'package:notation/notation.dart';
 import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/depth.dart';
+import 'package:nobemol/ui/motion.dart';
 
 /// Touches blanches suivies d'une touche noire : do, ré, fa, sol, la.
 const _blackAfter = [
@@ -196,22 +197,26 @@ class _WhiteKey extends StatelessWidget {
       ),
       _ => c.answer(tone),
     };
-    return Pressable(
-      colors: colors,
-      onPressed: onPressed,
-      depth: Depths.key,
-      height: height,
-      semanticLabel: semanticLabel,
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(6),
-        bottom: Radius.circular(Radii.key),
-      ),
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(label ?? '', style: AppText.labelKey),
+    // Une touche fausse tremble en passant au rouge.
+    return Shake(
+      active: tone == AnswerTone.wrong,
+      child: Pressable(
+        colors: colors,
+        onPressed: onPressed,
+        depth: Depths.key,
+        height: height,
+        semanticLabel: semanticLabel,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(6),
+          bottom: Radius.circular(Radii.key),
+        ),
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(label ?? '', style: AppText.labelKey),
+          ),
         ),
       ),
     );
