@@ -14,7 +14,7 @@ import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/depth.dart';
 import 'package:nobemol/ui/nobemol_icon.dart';
 
-/// Version de l'appli, lue dans l'APK : « 1.1.0 (3) ».
+/// Version de l'appli, lue dans l'APK : « 1.2.0 (4) ».
 final appVersionProvider = FutureProvider<String>((ref) async {
   final info = await PackageInfo.fromPlatform();
   return '${info.version} (${info.buildNumber})';

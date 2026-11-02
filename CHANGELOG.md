@@ -6,6 +6,10 @@ Le workflow de release reprend la section de la version comme notes de release :
 
 ## [Non publié]
 
+## [1.2.0] - 2026-11-02
+
+Les étapes 14 à 17 de la [feuille de route](https://github.com/CallMeTrinity/nobemol/blob/main/ROADMAP.md), et le correctif du son : intervalles, oreille, rythme tapé, test de positionnement et animations. Une mise à jour depuis la `1.1.0` s'installe par-dessus et garde la progression.
+
 ### Ajouté
 
 - Intervalles : nommer l'écart entre deux notes, à la suite ou jouées ensemble (en accord), de l'unisson à l'octave. On l'entend à la correction.
@@ -21,6 +25,11 @@ Le workflow de release reprend la section de la version comme notes de release :
 ### Corrigé
 
 - Son des notes : un vrai piano enregistré (Salamander Grand Piano) remplace le son synthétisé. Chaque réponse fait entendre une note et une seule : plus de note manquante ni de note en double, même en répondant vite en arcade.
+
+### Limites connues
+
+- Rythme tapé : le calage dépend du téléphone et de la sortie audio. À refaire en changeant de casque, surtout en Bluetooth.
+- Le test de positionnement peut être généreux sur le rythme : une question facile suffit parfois à valider une compétence.
 
 ## [1.1.0] - 2026-11-02
 
@@ -117,7 +126,8 @@ Première bêta : le MVP, étapes 1 à 5 de la [feuille de route](https://github
 - Le moteur n'évite pas les chevauchements horizontaux entre signes voisins.
 - Icône d'appli par défaut.
 
-[Non publié]: https://github.com/CallMeTrinity/nobemol/compare/v1.1.0...HEAD
+[Non publié]: https://github.com/CallMeTrinity/nobemol/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/CallMeTrinity/nobemol/releases/tag/v1.2.0
 [1.1.0]: https://github.com/CallMeTrinity/nobemol/releases/tag/v1.1.0
 [1.0.0]: https://github.com/CallMeTrinity/nobemol/releases/tag/v1.0.0
 [0.0.1]: https://github.com/CallMeTrinity/nobemol/releases/tag/v0.0.1

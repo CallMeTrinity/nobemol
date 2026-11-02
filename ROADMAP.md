@@ -6,7 +6,7 @@ Le produit et les décisions techniques sont dans [IDEA.md](IDEA.md).
 
 ## Vue d'ensemble
 
-Les étapes 1 à 5 forment le MVP, publié en bêta (`0.0.1`, voir [CHANGELOG.md](CHANGELOG.md)). Les étapes 6 à 9 font la version de lancement (`1.0.0`), les étapes 10 à 13 et « En parallèle » la `1.1.0`. Leurs « À vérifier » se font sur l'APK de la release.
+Les étapes 1 à 5 forment le MVP, publié en bêta (`0.0.1`, voir [CHANGELOG.md](CHANGELOG.md)). Les étapes 6 à 9 font la version de lancement (`1.0.0`), les étapes 10 à 13 et « En parallèle » la `1.1.0`, les étapes 14 à 17 la `1.2.0`. Leurs « À vérifier » se font sur l'APK de la release.
 
 Les étapes 6 à 12 viennent du design « Touches » (Claude Design, tour 2) : tous les écrans de l'appli. Elles touchent surtout l'appli. Le moteur ne bouge que pour le halo de cible et les noms sous les notes.
 
@@ -27,11 +27,11 @@ Les étapes 13 à 16 viennent de « Plus tard » : le son, puis ce qu'il ouvre (
 | 10 | | Révision espacée | 1.1.0 |
 | 11 | | Arcade | 1.1.0 |
 | 12 | | Profil, statistiques, succès, sauvegarde | 1.1.0 |
-| 13 | | Son des notes (piano enregistré) | 1.1.0, corrigé ensuite |
-| 14 | Accords | Intervalles et oreille | Fait, à publier |
-| 15 | | Rythme tapé | Fait, à publier |
-| 16 | | Test de positionnement adaptatif | Fait, à publier |
-| 17 | | Animations : scores, transitions, retours | Fait, à publier |
+| 13 | | Son des notes (piano enregistré) | 1.1.0, corrigé en 1.2.0 |
+| 14 | Accords | Intervalles et oreille | 1.2.0 |
+| 15 | | Rythme tapé | 1.2.0 |
+| 16 | | Test de positionnement adaptatif | 1.2.0 |
+| 17 | | Animations : scores, transitions, retours | 1.2.0 |
 | Plus tard | Liaisons d'expression | Au besoin | |
 
 ## Releases
@@ -42,6 +42,7 @@ Une release par version, publiée sur GitHub Releases avec l'APK signé (workflo
 - [x] Workflow : tag `v*.*.*` sur `main` vers APK signé + release
 - [x] Version `1.0.0` (lancement) : étapes 6 à 9
 - [x] Version `1.1.0` : étapes 10 à 13, « En parallèle »
+- [x] Version `1.2.0` : étapes 14 à 17, correctif du son
 - [ ] Clé de signature créée, sauvegardée hors du repo, secrets GitHub renseignés
 - [ ] `0.0.1` installée sur un vrai téléphone, puis `0.0.2` installée **par-dessus** (même signature)
 
