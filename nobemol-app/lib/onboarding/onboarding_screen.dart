@@ -12,6 +12,7 @@ import 'package:nobemol/settings/choices.dart';
 import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/depth.dart';
+import 'package:nobemol/ui/motion.dart';
 import 'package:nobemol/ui/nobemol_icon.dart';
 import 'package:nobemol/ui/progress_bar.dart';
 
@@ -127,81 +128,90 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       },
       child: Scaffold(
         body: SafeArea(
-          child: switch (_page) {
-            _Page.welcome => _Welcome(
-              onStart: () => _open(_Page.start),
-              onRestore: () => unawaited(_restore()),
-            ),
-            _Page.start => _Step(
-              step: 1,
-              title: l10n.onboardingStartTitle,
-              body: l10n.onboardingStartBody,
-              onBack: _back,
-              action: _answer == _Start.test && _placement == null
-                  ? l10n.onboardingStartTest
-                  : l10n.onboardingNext,
-              onAction: _answer == null ? null : _next,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  ChoiceTile(
-                    key: const ValueKey('start-new'),
-                    title: l10n.startBeginnerTitle,
-                    subtitle: l10n.startBeginnerDescription,
-                    selected: _answer == _Start.beginner,
-                    onTap: () => setState(() => _answer = _Start.beginner),
+          // Une page à la fois : la suivante arrive par la droite.
+          child: FadeSwitcher(
+            offset: const Offset(0.04, 0),
+            child: KeyedSubtree(
+              key: ValueKey(_page),
+              child: switch (_page) {
+                _Page.welcome => _Welcome(
+                  onStart: () => _open(_Page.start),
+                  onRestore: () => unawaited(_restore()),
+                ),
+                _Page.start => _Step(
+                  step: 1,
+                  title: l10n.onboardingStartTitle,
+                  body: l10n.onboardingStartBody,
+                  onBack: _back,
+                  action: _answer == _Start.test && _placement == null
+                      ? l10n.onboardingStartTest
+                      : l10n.onboardingNext,
+                  onAction: _answer == null ? null : _next,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ChoiceTile(
+                        key: const ValueKey('start-new'),
+                        title: l10n.startBeginnerTitle,
+                        subtitle: l10n.startBeginnerDescription,
+                        selected: _answer == _Start.beginner,
+                        onTap: () => setState(() => _answer = _Start.beginner),
+                      ),
+                      ChoiceTile(
+                        key: const ValueKey('start-test'),
+                        title: l10n.startTestTitle,
+                        subtitle: switch (_placement) {
+                          final placement? => l10n.startTestDone(
+                            placement.length,
+                          ),
+                          null => l10n.startTestDescription,
+                        },
+                        selected: _answer == _Start.test,
+                        onTap: () => setState(() => _answer = _Start.test),
+                      ),
+                      const SizedBox(height: Space.s),
+                      Center(
+                        child: TextButton(
+                          key: const ValueKey('start-choose'),
+                          onPressed: () => _open(_Page.manual),
+                          child: Text(l10n.onboardingChoose),
+                        ),
+                      ),
+                    ],
                   ),
-                  ChoiceTile(
-                    key: const ValueKey('start-test'),
-                    title: l10n.startTestTitle,
-                    subtitle: switch (_placement) {
-                      final placement? => l10n.startTestDone(placement.length),
-                      null => l10n.startTestDescription,
-                    },
-                    selected: _answer == _Start.test,
-                    onTap: () => setState(() => _answer = _Start.test),
+                ),
+                _Page.manual => _Step(
+                  step: 1,
+                  title: l10n.onboardingLevelTitle,
+                  body: l10n.onboardingLevelBody,
+                  onBack: _back,
+                  action: l10n.onboardingNext,
+                  onAction: _start == null
+                      ? null
+                      : () {
+                          _placement = null;
+                          _open(_Page.goal);
+                        },
+                  child: StartLevelChoices(
+                    selected: _start,
+                    onSelect: (level) => setState(() => _start = level),
                   ),
-                  const SizedBox(height: Space.s),
-                  Center(
-                    child: TextButton(
-                      key: const ValueKey('start-choose'),
-                      onPressed: () => _open(_Page.manual),
-                      child: Text(l10n.onboardingChoose),
-                    ),
+                ),
+                _Page.goal => _Step(
+                  step: 2,
+                  title: l10n.onboardingGoalTitle,
+                  body: l10n.onboardingGoalBody,
+                  onBack: _back,
+                  action: l10n.onboardingDone,
+                  onAction: _goal == null ? null : () => unawaited(_finish()),
+                  child: DailyGoalChoices(
+                    selected: _goal,
+                    onSelect: (goal) => setState(() => _goal = goal),
                   ),
-                ],
-              ),
+                ),
+              },
             ),
-            _Page.manual => _Step(
-              step: 1,
-              title: l10n.onboardingLevelTitle,
-              body: l10n.onboardingLevelBody,
-              onBack: _back,
-              action: l10n.onboardingNext,
-              onAction: _start == null
-                  ? null
-                  : () {
-                      _placement = null;
-                      _open(_Page.goal);
-                    },
-              child: StartLevelChoices(
-                selected: _start,
-                onSelect: (level) => setState(() => _start = level),
-              ),
-            ),
-            _Page.goal => _Step(
-              step: 2,
-              title: l10n.onboardingGoalTitle,
-              body: l10n.onboardingGoalBody,
-              onBack: _back,
-              action: l10n.onboardingDone,
-              onAction: _goal == null ? null : () => unawaited(_finish()),
-              child: DailyGoalChoices(
-                selected: _goal,
-                onSelect: (goal) => setState(() => _goal = goal),
-              ),
-            ),
-          },
+          ),
         ),
       ),
     );

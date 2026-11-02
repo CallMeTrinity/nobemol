@@ -17,6 +17,7 @@ import 'package:nobemol/reading/session.dart';
 import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/depth.dart';
+import 'package:nobemol/ui/motion.dart';
 import 'package:nobemol/ui/progress_bar.dart';
 
 /// Test en cours. Neuf à chaque ouverture de l'écran.
@@ -160,16 +161,18 @@ class _PlacementScreenState extends ConsumerState<PlacementScreen> {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: state.finished
-            ? _Result(passed: state.passed)
-            : _Question(state: state),
+        child: FadeSwitcher(
+          child: state.finished
+              ? _Result(key: const ValueKey('result'), passed: state.passed)
+              : _Question(key: const ValueKey('question'), state: state),
+        ),
       ),
     );
   }
 }
 
 class _Question extends ConsumerWidget {
-  const _Question({required this.state});
+  const _Question({super.key, required this.state});
 
   final PlacementState state;
 
@@ -293,7 +296,7 @@ class _Question extends ConsumerWidget {
 
 /// Le point de départ trouvé : les compétences acquises, ou le début.
 class _Result extends ConsumerWidget {
-  const _Result({required this.passed});
+  const _Result({super.key, required this.passed});
 
   final List<String> passed;
 

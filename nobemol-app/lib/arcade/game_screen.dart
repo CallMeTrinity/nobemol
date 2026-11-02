@@ -20,6 +20,7 @@ import 'package:nobemol/reading/reading_screen.dart';
 import 'package:nobemol/settings/settings.dart';
 import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/depth.dart';
+import 'package:nobemol/ui/motion.dart';
 import 'package:nobemol/ui/note_keyboard.dart';
 import 'package:nobemol/ui/progress_bar.dart';
 
@@ -131,26 +132,34 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       child: Scaffold(
         body: SafeArea(
           bottom: false,
-          child: finished
-              ? _End(
-                  game: _game,
-                  state: state,
-                  previousRecord: _previousRecord,
-                  outcome: _outcome,
-                  onReplay: _replay,
-                )
-              : Stack(
-                  children: [
-                    _Play(game: _game, state: state),
-                    if (state.paused)
+          child: FadeSwitcher(
+            child: finished
+                ? _End(
+                    key: const ValueKey('end'),
+                    game: _game,
+                    state: state,
+                    previousRecord: _previousRecord,
+                    outcome: _outcome,
+                    onReplay: _replay,
+                  )
+                : Stack(
+                    key: const ValueKey('play'),
+                    children: [
+                      _Play(game: _game, state: state),
                       Positioned.fill(
-                        child: _Pause(
-                          onResume: _notifier.resume,
-                          onQuit: () => context.pop(),
+                        child: AnimatedSwitcher(
+                          duration: Motion.of(context, Motion.fast),
+                          child: state.paused
+                              ? _Pause(
+                                  onResume: _notifier.resume,
+                                  onQuit: () => context.pop(),
+                                )
+                              : const SizedBox.shrink(),
                         ),
                       ),
-                  ],
-                ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );
@@ -191,19 +200,35 @@ class _Play extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
-                child: Text(
-                  l10n.arcadeScore(game.mode, state.score),
-                  key: const ValueKey('arcade-score'),
-                  style: AppText.titleScreen.copyWith(color: c.ink),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Pop(
+                    trigger: state.score,
+                    scale: 1.08,
+                    child: CountUp(
+                      key: const ValueKey('arcade-score'),
+                      value: state.score,
+                      from: state.score,
+                      duration: Motion.base,
+                      format: (score) => l10n.arcadeScore(game.mode, score),
+                      style: AppText.titleScreen.copyWith(color: c.ink),
+                    ),
+                  ),
                 ),
               ),
-              if (state.combo >= 2)
-                Text(
-                  game.mode == ArcadeMode.chrono
-                      ? '×${comboMultiplier(state.combo)}'
-                      : '×${state.combo}',
-                  style: AppText.metaLarge.copyWith(color: c.accentDeep),
+              Appear(
+                visible: state.combo >= 2,
+                child: Pop(
+                  trigger: state.combo,
+                  scale: 1.3,
+                  child: Text(
+                    game.mode == ArcadeMode.chrono
+                        ? '×${comboMultiplier(state.combo)}'
+                        : '×${state.combo}',
+                    style: AppText.metaLarge.copyWith(color: c.accentDeep),
+                  ),
                 ),
+              ),
             ],
           ),
         ),
@@ -318,6 +343,8 @@ class _TopBar extends ConsumerWidget {
           const SizedBox(width: Space.s),
           Expanded(
             child: ProgressBar(
+              // Le temps avance déjà à chaque image : pas d'animation.
+              duration: practice ? Motion.base : Duration.zero,
               value: practice
                   ? state.answers.length / practiceLength
                   : (left.inMilliseconds / total.inMilliseconds).clamp(0, 1),
@@ -347,13 +374,18 @@ class _TopBar extends ConsumerWidget {
             Row(
               key: const ValueKey('lives'),
               children: [
+                // Une vie perdue saute en se vidant.
                 for (var i = 0; i < survivalLives; i++)
-                  Icon(
-                    i < state.lives
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    size: 20,
-                    color: c.danger,
+                  Pop(
+                    trigger: i < state.lives,
+                    scale: 1.35,
+                    child: Icon(
+                      i < state.lives
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      size: 20,
+                      color: c.danger,
+                    ),
                   ),
               ],
             ),
@@ -419,6 +451,7 @@ class _Pause extends StatelessWidget {
 /// Fin de partie : le score et le record, puis le détail.
 class _End extends StatelessWidget {
   const _End({
+    super.key,
     required this.game,
     required this.state,
     required this.previousRecord,
@@ -478,24 +511,32 @@ class _End extends StatelessWidget {
                 style: AppText.meta.copyWith(color: c.inkMuted),
               ),
               const SizedBox(height: Space.ml),
-              Text(
-                l10n.arcadeScore(game.mode, state.score),
+              CountUp(
+                value: state.score,
+                from: 0,
+                format: (score) => l10n.arcadeScore(game.mode, score),
                 textAlign: TextAlign.center,
                 style: AppText.displayXl.copyWith(color: c.ink, fontSize: 48),
               ),
-              // Sans record ni point, rien à dire.
+              // Sans record ni point, rien à dire. Le record arrive quand le
+              // score a fini de défiler.
               if (newRecord || ranked && previous != null) ...[
                 const SizedBox(height: Space.m),
-                Text(
-                  newRecord
-                      ? l10n.arcadeNewRecord
-                      : l10n.arcadeRecord(
-                          l10n.arcadeScore(game.mode, previous!),
-                        ),
-                  key: const ValueKey('arcade-record'),
-                  textAlign: TextAlign.center,
-                  style: AppText.titleCard.copyWith(
-                    color: newRecord ? c.accentDeep : c.inkMuted,
+                Reveal(
+                  delay: Motion.count - Motion.fast,
+                  scale: newRecord ? 0.8 : 1,
+                  curve: newRecord ? Motion.emphasis : Motion.enter,
+                  child: Text(
+                    newRecord
+                        ? l10n.arcadeNewRecord
+                        : l10n.arcadeRecord(
+                            l10n.arcadeScore(game.mode, previous!),
+                          ),
+                    key: const ValueKey('arcade-record'),
+                    textAlign: TextAlign.center,
+                    style: AppText.titleCard.copyWith(
+                      color: newRecord ? c.accentDeep : c.inkMuted,
+                    ),
                   ),
                 ),
               ],

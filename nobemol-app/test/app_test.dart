@@ -62,6 +62,7 @@ import 'package:nobemol/settings/settings_screen.dart';
 import 'package:nobemol/theme/tokens.dart';
 import 'package:nobemol/ui/depth.dart';
 import 'package:nobemol/ui/glyph_view.dart';
+import 'package:nobemol/ui/motion.dart';
 import 'package:nobemol/ui/note_keyboard.dart';
 import 'package:nobemol/update/update.dart';
 
@@ -714,6 +715,8 @@ void main() {
       for (var i = 0; i < 3; i++) {
         await hit(tester, game);
       }
+      // Le score défile jusqu'à sa valeur.
+      await tester.pump(Motion.base);
       expect(find.text('150 points'), findsOneWidget);
       // Chaque note juste sonne, aussi vite que la partie.
       expect(sounds.played, hasLength(3));
