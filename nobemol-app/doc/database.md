@@ -82,7 +82,7 @@ L'onglet Profil exporte toute la base et les réglages dans un fichier JSON (`no
   "app": "nobemol",
   "format": 1,
   "exportedAt": "2026-10-31T17:00:00.000Z",
-  "settings": { "naming": "solfege", "start": "beginner", "keyLabels": true, "goal": "five", "haptics": true, "theme": "system", "updateCheck": true },
+  "settings": { "naming": "solfege", "start": "beginner", "keyLabels": true, "goal": "five", "haptics": true, "sound": true, "theme": "system", "updateCheck": true },
   "progress": {
     "sessions": [
       { "lessonId": "treble-clef", "arcade": null, "score": null, "startedAt": "…", "finishedAt": "…",

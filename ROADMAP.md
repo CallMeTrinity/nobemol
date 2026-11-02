@@ -10,6 +10,8 @@ Les étapes 1 à 5 forment le MVP, publié en bêta (`0.0.1`, voir [CHANGELOG.md
 
 Les étapes 6 à 12 viennent du design « Touches » (Claude Design, tour 2) : tous les écrans de l'appli. Elles touchent surtout l'appli. Le moteur ne bouge que pour le halo de cible et les noms sous les notes.
 
+Les étapes 13 à 16 viennent de « Plus tard » : le son, puis ce qu'il ouvre (intervalles, oreille, rythme tapé), et le test de positionnement. Une étape par PR.
+
 | Étape | Moteur | Appli débloquée | État |
 |---|---|---|---|
 | 0 | Setup du repo | | Fait |
@@ -25,7 +27,11 @@ Les étapes 6 à 12 viennent du design « Touches » (Claude Design, tour 2) : t
 | 10 | | Révision espacée | Fait |
 | 11 | | Arcade | Fait |
 | 12 | | Profil, statistiques, succès, sauvegarde | Fait |
-| Plus tard | Accords, n-olets, liaisons d'expression | Au besoin | |
+| 13 | | Son des notes (synthèse) | Fait |
+| 14 | Accords | Intervalles et oreille | |
+| 15 | N-olets, au besoin | Rythme tapé | |
+| 16 | | Test de positionnement adaptatif | |
+| Plus tard | Liaisons d'expression | Au besoin | |
 
 ## Releases
 
@@ -364,11 +370,80 @@ Tranché :
 - La tuile de mise à jour sur un vrai téléphone. La `1.0.0` ne vérifie rien : la tuile apparaîtra dans la version qui contient ce code, quand une release plus récente sortira.
 - Lien vers la release : le navigateur s'ouvre bien depuis l'appli (`<queries>` https dans le manifeste).
 
+## Étape 13 : son des notes
+
+- [x] **Synthèse en Dart** (`lib/audio/synth.dart`) : harmoniques un peu inharmoniques, qui s'éteignent d'autant plus vite qu'elles sont aiguës. Fichier WAV en mémoire (22 kHz, 16 bits, mono, 1,5 s), gardé par hauteur
+- [x] Lecteur `audioplayers` derrière `NotePlayer`, remplaçable en test (`lib/audio/note_player.dart`)
+- [x] La note juste jouée à la correction, juste ou faux : leçons, révision, arcade. Notes seulement : une durée ou un signe n'a pas de hauteur
+- [x] Réglage « Son des notes » actif (plus de « Bientôt »), gardé dans la sauvegarde
+
+**Terminé quand** : en leçon de lecture de notes, la correction fait entendre la note juste, et le réglage coupé fait silence.
+
+Tranché :
+
+- **Synthèse plutôt qu'échantillons ou soundfont** : aucun fichier, APK presque inchangé, toutes les hauteurs. Moins réaliste qu'un vrai piano : à réévaluer à l'oreille.
+- **On entend ce qu'on lit** : la réponse (armure et altérations de la mesure comprises) à l'octave écrite. Dans la leçon sur l'armure, un fa en ré majeur sonne fa dièse.
+- **Préparée à l'affichage, jouée à la correction.** Sur Android, un son en mémoire passe par MediaPlayer : le mode faible latence (SoundPool) n'accepte que des fichiers. La préparation (décodage) se fait pendant que l'élève lit la note. Deux lecteurs en alternance : en arcade, préparer la note suivante ne coupe pas celle qui sonne.
+- **Par-dessus la musique** de l'élève, sans la couper (focus audio « mix with others »).
+- Un son raté (pas de sortie audio, erreur du lecteur) ne se voit pas et ne bloque rien.
+- Son actif par défaut. Pas de son sur les touches du clavier, ni en théorie : la correction seulement, pour l'instant.
+
+À vérifier :
+
+- Sur un vrai téléphone : le timbre (notes graves et aiguës), le délai entre la réponse et le son, en leçon et en arcade.
+- Volume par rapport à une autre appli, et musique de fond qui continue.
+- Délai du web (dev) : le son passe par une URL `data:`, sans préparation garantie.
+
+## Étape 14 : intervalles et oreille
+
+Le son et le moteur avancent ensemble : les intervalles harmoniques demandent des accords.
+
+- [ ] Sous-ensemble ABC étendu avant le code : accords `[CEG]`, durée commune
+- [ ] Moteur : accords (une hampe, secondes décalées, altérations échelonnées), alignement entre portées inchangé
+- [ ] Exercice `identify-interval` : l'intervalle entre deux notes ciblées, mélodique puis harmonique. Vérifié par le validateur
+- [ ] Oreille : entendre deux notes et nommer l'intervalle ; entendre une note après un do de référence et la nommer au clavier
+- [ ] Compétences `intervals.*` et `ear.*`, leçons, cartes de révision
+
+**Terminé quand** : une leçon d'intervalles harmoniques s'affiche en accords et se joue à l'oreille sur un vrai téléphone.
+
+À trancher avant le code :
+
+- Intervalles : le numéro seul (seconde à octave) au début, la qualité (majeure, mineure, juste) dans une leçon suivante ?
+- Oreille : un écran sans portée, ou la portée cachée puis montrée à la correction ?
+- Format des cartes d'intervalle et d'oreille (stocké, comme `note:` et `duration:`).
+
+## Étape 15 : rythme tapé
+
+- [ ] Métronome (clic synthétisé) et décompte d'une mesure
+- [ ] Taper le rythme d'une phrase sur un grand bouton : attaques comparées à la partition, avec une tolérance
+- [ ] Retour par note : en avance, juste, en retard ; la phrase rejouée
+- [ ] Moteur : n-olets (triolets) si les leçons en demandent
+
+**Terminé quand** : une phrase tapée en rythme est jugée juste sur un vrai téléphone, et une attaque en retard est signalée à sa note.
+
+À trancher avant le code :
+
+- **Latence** : MediaPlayer (étape 13) ne suffit pas pour un métronome. Moteur audio à faible latence (`flutter_soloud` ou équivalent), et calibrage du délai tactile et audio par appareil.
+- Tolérance (en millisecondes, ou en part de temps selon le tempo).
+- Triolets dès cette étape, ou plus tard.
+
+## Étape 16 : test de positionnement adaptatif
+
+- [ ] Au démarrage, à la place du choix du point de départ (le choix manuel reste possible, et dans les réglages)
+- [ ] Questions de lecture qui se durcissent tant que l'élève réussit : clé de sol, clé de fa, lignes supplémentaires, altérations, grande portée ; puis rythme et signes
+- [ ] Résultat : des compétences **acquises**, comme le point de départ (étape 9). Réversible, rien de maîtrisé en base
+
+**Terminé quand** : un débutant et un lecteur confirmé arrivent sur des parcours différents en moins de 3 minutes de test.
+
+À trancher avant le code :
+
+- Algorithme : escalier sur les paramètres de lecture (deux réussites pour monter, un échec pour s'arrêter), ou nombre fixe de questions par compétence.
+- Le test compte-t-il pour la révision (cartes des erreurs) et l'XP ?
+- Durée visée et sortie anticipée (« je préfère choisir »).
+
 ## Plus tard
 
-- Accords, n-olets, liaisons d'expression
-- Test de positionnement adaptatif
-- Audio : jouer une note (soundfont piano seule ou synthèse), puis intervalles, oreille, rythme tapé
-- Détection de hauteur au micro (projet à part)
+- Liaisons d'expression
+- Détection de hauteur au micro : **projet à part**, un prototype hors de l'appli pour mesurer latence et fiabilité avant d'intégrer
 - Back-office Symfony, quand le contenu devra être servi à distance
 - Publication du package `notation` (découpage `notation_core` / `notation_flutter`)
