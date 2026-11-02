@@ -77,6 +77,8 @@ Les tests échouent si l'une de ces étapes manque :
 
 L'onglet Profil exporte toute la base et les réglages dans un fichier JSON (`nobemol-2026-10-31.json`), partagé par la feuille de partage d'Android. L'import, depuis le Profil ou « J'ai déjà une sauvegarde » au démarrage, **remplace** la base et les réglages, d'un seul bloc : un fichier refusé ne change rien. Code dans `lib/backup/`.
 
+Le **calage du rythme tapé** (`tapLatency`) n'y est pas : il mesure le retard du son et du toucher de ce téléphone. L'import garde celui du téléphone qui importe.
+
 ```json
 {
   "app": "nobemol",

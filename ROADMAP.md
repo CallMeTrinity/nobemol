@@ -29,7 +29,7 @@ Les étapes 13 à 16 viennent de « Plus tard » : le son, puis ce qu'il ouvre (
 | 12 | | Profil, statistiques, succès, sauvegarde | 1.1.0 |
 | 13 | | Son des notes (piano enregistré) | 1.1.0, corrigé ensuite |
 | 14 | Accords | Intervalles et oreille | Fait, à publier |
-| 15 | N-olets, au besoin | Rythme tapé | |
+| 15 | | Rythme tapé | Fait, à publier |
 | 16 | | Test de positionnement adaptatif | |
 | Plus tard | Liaisons d'expression | Au besoin | |
 
@@ -449,18 +449,45 @@ Tranché :
 
 ## Étape 15 : rythme tapé
 
-- [ ] Métronome (clic synthétisé) et décompte d'une mesure
-- [ ] Taper le rythme d'une phrase sur un grand bouton : attaques comparées à la partition, avec une tolérance
-- [ ] Retour par note : en avance, juste, en retard ; la phrase rejouée
-- [ ] Moteur : n-olets (triolets) si les leçons en demandent
+- [x] Métronome : un clic par noire, plus aigu au début de la mesure, et une mesure de décompte. Toute la piste est **un seul son**, fabriqué en Dart (WAV en mémoire) et joué par SoLoud (`lib/audio/metronome.dart`)
+- [x] Taper le rythme d'une phrase sur un grand bouton : chaque touche notée au doigt posé, comparée aux attaques de la partition, **160 ms** de tolérance (`lib/reading/tapping.dart`)
+- [x] Retour par note : verte en place, orange « tôt » ou « tard », rouge « oubli », et les touches en trop dans l'explication. La phrase rejouée sur le métronome, « Réécouter »
+- [x] Retour à chaque touche : une vibration courte, et la note de la phrase la plus proche (si le son des notes est actif)
+- [x] **Calage** du retard son et toucher, par téléphone : 12 clics à taper, le retard médian (Réglages, ou « Caler le rythme » sous le bouton)
+- [x] Exercice `tap-rhythm` : `tempo`, `phrases` en ABC. Vérifié par le validateur ([doc/lessons.md](nobemol-app/doc/lessons.md#tap-rhythm))
+- [x] Compétences `rhythm.tap` et `rhythm.tap-dotted`, 4 leçons : noires et blanches, deux croches, croches en phrase, notes pointées et liées
+- [x] ~~Moteur : n-olets~~ : aucune leçon n'en demande, voir « Plus tard »
 
 **Terminé quand** : une phrase tapée en rythme est jugée juste sur un vrai téléphone, et une attaque en retard est signalée à sa note.
 
-À trancher avant le code :
+Tranché :
 
-- **Latence** : MediaPlayer (étape 13) ne suffit pas pour un métronome. Moteur audio à faible latence (`flutter_soloud` ou équivalent), et calibrage du délai tactile et audio par appareil.
-- Tolérance (en millisecondes, ou en part de temps selon le tempo).
-- Triolets dès cette étape, ou plus tard.
+- **Latence : SoLoud suffit, avec un calage.** Le moteur de l'étape 13 joue à faible latence (AAudio sur Android). Le reste du retard (sortie audio, casque Bluetooth, écran tactile) dépend de l'appareil : il se mesure, il ne se devine pas. Le calage est **déduit de chaque touche**. Sans calage, 0 ms : l'exercice se joue, et le lien « Caler le rythme » reste sous le bouton.
+- **Métronome en un seul son plutôt qu'un clic par minuteur.** Un `Timer` Dart part avec quelques millisecondes de retard, différent à chaque temps : le métronome boiterait. Dans un seul WAV, les clics sont exacts entre eux. Seul le départ varie : SoLoud lance un son au prochain bloc de mixage, jusqu'à 46 ms plus tard. On attend que la position du son avance pour dater le départ : il est alors connu à une ou deux ms près, à un décalage constant près, absorbé par le calage. Sans ça, le départ changeait à chaque essai, et le calage ne pouvait pas suffire.
+- **Touches datées par l'horodatage du système**, posé au contact du doigt, et pas à leur réception par l'appli, qui varie avec sa charge. Les horodatages sont exacts entre eux. On les recale sur l'horloge du métronome par le plus petit délai de réception de la phrase. 22 kHz mono, quelques centaines de Ko par phrase, en mémoire le temps de l'exercice.
+- **Tolérance fixe, 160 ms**, et pas une part de temps : la précision du geste ne dépend pas du tempo. Partie de 120 ms, relevée après un premier essai : trop dur. Au-delà : en avance ou en retard.
+- **Touches et notes alignées dans l'ordre, d'un seul coup**, pour le plus petit coût : l'écart de chaque touche à sa note, un demi-temps par note oubliée ou touche en trop. Une touche ne va qu'à une note à moins d'un demi-temps. Avant, chaque note avait sa fenêtre jusqu'à mi-chemin de ses voisines : une touche un peu en retard prenait la note suivante, dont la vraie touche passait en trop (double peine), et un double appui pouvait glisser sur la note d'après sans être puni. Les touches du décompte ne comptent pas.
+- **Une phrase juste = une erreur permise par tranche de 5 notes, une au moins** (une sur 6 notes, deux sur 10). Une erreur : une note pas en place (avance, retard, oubli) ou une touche en trop. Exiger toutes les notes en place était trop punitif. L'erreur permise reste colorée et dite dans l'explication. La réponse gardée en base est le bilan : `inTime`, ou le défaut principal (`missed`, puis `extra`, puis `early` ou `late`). Une question par phrase, 10 XP, combo compris, comme les autres exercices.
+- **Deux attaques à 320 ms au moins** (deux tolérances) au tempo de la leçon, vérifié par le validateur : sinon une touche entre deux notes se lirait des deux côtés. Des croches passent jusqu'à la noire à 93. Des doubles croches demanderaient la noire à 46 : pas de doubles croches tapées.
+- **Croches en deux leçons, et des phrases rangées du plus simple au plus long.** Une seule leçon de croches à 72, phrases de 2 à 4 mesures dès la première, était impossible du premier coup. « Deux croches » (à 60) : une paire dans une mesure, puis deux, puis deux mesures. « Croches en phrase » (à 66) : 2 à 4 mesures, puis le demi-soupir, sur le clic et sur le « et ». Les questions d'une leçon se posent dans l'ordre du fichier : l'ordre des phrases fait la progression.
+- **Pas de triolets.** Aucune leçon ne les demande : le moteur avance au rythme de l'appli. Ils restent dans « Plus tard ».
+- **Chiffrages x/4, une portée.** Le métronome bat les noires, comme les durées de l'étape 4. Le 6/8 attendra, avec sa pulsation à la noire pointée.
+- **Chaque touche se sent et s'entend** : une vibration courte (réglage des vibrations) et la note de la phrase la plus proche, au piano (réglage du son des notes). Sans retour, on ne savait pas si la touche était prise. Pas la phrase avant de taper : on lit, puis on tape. Pas de son de touche au calage : il se calerait sur le clic à l'oreille, et fausserait la mesure.
+- **Les temps s'affichent aussi** (numéro du décompte, un point par temps), retardés du calage pour tomber avec les clics entendus : sans son, l'exercice se joue à l'œil.
+- **Phrase rejouée à la correction**, si le son des notes est actif : le décompte, puis les notes au piano sur le métronome. « Réécouter » la rejoue toujours. « Continuer » l'arrête.
+- **Les mots sous les notes gardent leur place dès la question** (un nom vide sous chaque attaque) : la portée ne bouge pas quand « tôt » et « tard » apparaissent.
+- **Pas de carte de révision, pas de « À revoir »** : une phrase ne se lit pas sans la leçon, et un rythme raté ne se réduit pas à une figure.
+- **Calage hors de la sauvegarde** : il dépend du téléphone. L'import garde celui du téléphone qui importe.
+
+À vérifier :
+
+- Sur un vrai téléphone, en `flutter run --release` : la régularité du métronome, le calage obtenu (haut-parleur, puis casque filaire, puis Bluetooth), et une phrase juste sans effort particulier.
+- Le départ daté par la position du son : refaire le calage (l'ancien mesurait un départ décalé), puis vérifier qu'il donne la même valeur d'un essai à l'autre, à 20 ms près.
+- Les horodatages des touches sur Android : précis à la milliseconde (`MotionEvent`). Sur le web, à vérifier.
+- Le son de touche : le piano s'entend-il assez vite pour aider, ou gêne-t-il en se mêlant au clic ? Une vibration seule reste possible (son des notes coupé).
+- Équilibre : tolérance de 160 ms, tempos (60 à 72), 10 XP par phrase pour 15 à 20 s de jeu. À recaler avec l'usage.
+- Lisibilité de « tôt » et « tard » sous des croches voisines.
+- Le design « Touches » du rythme tapé n'a pas pu être relu (pas d'accès au projet Claude Design) : construit avec les composants de l'étape 6.
 
 ## Étape 16 : test de positionnement adaptatif
 
@@ -479,6 +506,7 @@ Tranché :
 ## Plus tard
 
 - Liaisons d'expression
+- N-olets (triolets), quand une leçon de rythme en demandera
 - Détection de hauteur au micro : **projet à part**, un prototype hors de l'appli pour mesurer latence et fiabilité avant d'intégrer
 - Back-office Symfony, quand le contenu devra être servi à distance
 - Publication du package `notation` (découpage `notation_core` / `notation_flutter`)
