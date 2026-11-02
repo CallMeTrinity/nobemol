@@ -141,6 +141,20 @@ void main() {
     expect(mixed.haptics, isFalse);
   });
 
+  test('calage du rythme : propre au téléphone, hors de la sauvegarde', () {
+    final json = Backup(
+      rows: const ProgressRows(),
+      settings: const Settings(tapLatency: 120),
+      exportedAt: start,
+    ).encode();
+    expect(json, isNot(contains('tapLatency')));
+    final read = Backup.decode(
+      json,
+      current: const Settings(tapLatency: 40),
+    ).settings;
+    expect(read.tapLatency, 40);
+  });
+
   test('fichier abîmé ou étranger : refusé', () {
     final valid = jsonDecode(
       Backup(

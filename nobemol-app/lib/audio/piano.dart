@@ -2,7 +2,9 @@ import 'dart:math';
 
 import 'package:notation/core.dart';
 
+import 'package:nobemol/reading/note_name.dart';
 import 'package:nobemol/reading/note_reading.dart';
+import 'package:nobemol/reading/tapping.dart';
 
 /// Numéro MIDI d'une hauteur : do4 (do du milieu) = 60, la4 = 69.
 int midiOf(DiatonicStep step, int octave, Accidental? accidental) {
@@ -43,7 +45,29 @@ List<List<int>> soundOf(Question question) => switch (question) {
     [midiOfPitch(pitch)],
   ],
   DurationQuestion() || MarkingQuestion() => const [],
+  // Rejouée sur le métronome : voir [rhythmSound].
+  TapQuestion() => const [],
 };
+
+/// La phrase d'un rythme tapé, depuis le premier clic du décompte : chaque
+/// note ou accord à son attaque, armure comprise, et un silence à chaque
+/// silence et à la fin. Une note liée sonne jusqu'au bout de sa liaison.
+List<(Duration, List<int>)> rhythmSound(TapQuestion question) {
+  final system = question.system;
+  final track = question.track;
+  final steps = <(Duration, List<int>)>[];
+  var beat = Fraction.zero;
+  var tied = false;
+  for (final (:measure, :event, :value) in system.staves.first.events) {
+    final ref = EventRef(staff: 0, measure: measure, event: event);
+    final at = track.countIn + beatsAt(beat, track.tempo);
+    if (!tied) steps.add((at, _midisAt(system, ref)));
+    tied = value is Note && value.tiedToNext;
+    beat = beat + value.duration * const Fraction(4);
+  }
+  steps.add((track.countIn + beatsAt(beat, track.tempo), const []));
+  return steps;
+}
 
 /// Numéro MIDI d'une hauteur telle qu'on la lit.
 int midiOfPitch(Pitch pitch) =>
@@ -70,3 +94,22 @@ String pianoAsset(int sample) => 'assets/audio/piano/$sample.ogg';
   final sample = pianoSamples[index];
   return (sample: sample, speed: pow(2, (midi - sample) / 12).toDouble());
 }
+
+/// La note de la phrase la plus proche de [time] (depuis le premier clic) :
+/// ce qu'on entend en tapant.
+List<int> tapSound(TapQuestion question, Duration time) {
+  final expected = question.expected;
+  var nearest = 0;
+  for (var i = 1; i < expected.length; i++) {
+    if ((expected[i] - time).abs() < (expected[nearest] - time).abs()) {
+      nearest = i;
+    }
+  }
+  return _midisAt(question.system, question.attacks[nearest].ref);
+}
+
+/// Les notes de l'événement [ref], armure et altérations comprises.
+List<int> _midisAt(System system, EventRef ref) => [
+  for (final pitch in system.event(ref)!.pitches)
+    midiOfPitch(soundingPitch(system, ref, pitch) ?? pitch),
+];

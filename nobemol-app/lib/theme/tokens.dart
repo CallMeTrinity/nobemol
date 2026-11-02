@@ -234,6 +234,9 @@ abstract final class Sizes {
   static const answerTile = 68.0;
   static const markingCard = 104.0;
 
+  /// Le grand bouton du rythme tapé : on le touche sans le regarder.
+  static const tapPad = 140.0;
+
   /// Hauteur minimale du bas d'un exercice, réponses comprises : la place
   /// du panneau de correction, qui le recouvre sans rien décaler.
   static const answerDock = 240.0;

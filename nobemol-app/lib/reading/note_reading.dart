@@ -6,6 +6,7 @@ import 'package:nobemol/reading/beats.dart';
 import 'package:nobemol/reading/intervals.dart';
 import 'package:nobemol/reading/markings.dart';
 import 'package:nobemol/reading/note_name.dart';
+import 'package:nobemol/reading/tapping.dart';
 
 /// Nombre de notes d'une session de lecture paramétrique.
 const sessionLength = 20;
@@ -289,6 +290,32 @@ class IdentifyIntervalExercise extends ReadingExercise {
   QuestionSource questions(Random random) => _IntervalQuestions(this);
 }
 
+/// Rythme tapé : des phrases à taper l'une après l'autre, sur un métronome.
+///
+/// Clé de la session comparée par identité : la leçon est chargée une fois.
+class TapRhythmExercise extends ReadingExercise {
+  const TapRhythmExercise({required this.phrases, required this.tempo});
+
+  /// Les phrases, dans l'ordre : une portée, en x/4. Vérifié au chargement
+  /// de la leçon, comme l'écart entre deux attaques.
+  final List<System> phrases;
+
+  /// Noires par minute.
+  final int tempo;
+
+  @override
+  int get length => phrases.length;
+
+  @override
+  List<Enum> choicesFor(Question question) => TapVerdict.values;
+
+  @override
+  LayoutOptions get layoutOptions => const LayoutOptions();
+
+  @override
+  QuestionSource questions(Random random) => _TapQuestions(this);
+}
+
 /// Réserve la place d'une ligne supplémentaire sous la portée (do4) et de
 /// deux au-dessus (do6) : la portée ne bouge pas d'une question d'oreille à
 /// l'autre.
@@ -392,6 +419,7 @@ class ReviewExercise extends ReadingExercise {
     MarkingQuestion(:final answer) => markingChoices[answer] ?? [answer],
     IntervalQuestion() => IntervalNumber.values,
     EarNoteQuestion() => NoteName.naturals,
+    TapQuestion() => TapVerdict.values,
   };
 
   /// La place de deux lignes supplémentaires, au-dessus et au-dessous : la
@@ -547,6 +575,35 @@ class EarNoteQuestion extends Question {
 
   @override
   final NoteName answer;
+}
+
+/// Une phrase à taper en rythme. La réponse attendue est
+/// [TapVerdict.inTime] : la réponse donnée est le bilan des touches.
+class TapQuestion extends Question {
+  TapQuestion({required super.system, required this.tempo})
+    : attacks = attacksOf(system),
+      track = ClickTrack.forPhrase(system, tempo);
+
+  /// Noires par minute.
+  final int tempo;
+
+  /// Les attaques à taper, dans l'ordre.
+  final List<Attack> attacks;
+
+  /// Le métronome : une mesure de décompte, puis la phrase.
+  final ClickTrack track;
+
+  /// Instants des attaques, depuis le premier clic du décompte.
+  List<Duration> get expected => [
+    for (final attack in attacks) track.countIn + beatsAt(attack.beat, tempo),
+  ];
+
+  /// Rien n'est ciblé : toute la phrase se tape.
+  @override
+  List<EventRef> get targets => const [];
+
+  @override
+  TapVerdict get answer => TapVerdict.inTime;
 }
 
 /// Le do de référence puis [pitch], en rondes sur la clé de sol.
@@ -814,6 +871,18 @@ class _EarIntervals implements QuestionSource {
       if (question != null) return question;
     }
   }
+}
+
+/// Les phrases d'un [TapRhythmExercise], dans l'ordre.
+class _TapQuestions implements QuestionSource {
+  _TapQuestions(this.exercise);
+
+  final TapRhythmExercise exercise;
+  var _index = 0;
+
+  @override
+  TapQuestion next({Question? previous}) =>
+      TapQuestion(system: exercise.phrases[_index++], tempo: exercise.tempo);
 }
 
 /// Les cartes d'une [ReviewExercise], dans l'ordre.

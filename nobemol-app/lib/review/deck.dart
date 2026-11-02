@@ -111,4 +111,6 @@ int _kind(Question question) => switch (question) {
   IntervalQuestion(heard: false) => 3,
   IntervalQuestion() => 4,
   EarNoteQuestion() => 5,
+  // Jamais en révision : pas de carte.
+  TapQuestion() => 6,
 };

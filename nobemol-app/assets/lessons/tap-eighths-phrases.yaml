@@ -1,0 +1,72 @@
+id: tap-eighths-phrases
+title: Taper les croches en phrase
+skills: [rhythm.tap]
+level: 3
+theory:
+  - text: >-
+      Sur plusieurs mesures, on garde le compte d'un bout à l'autre : « 1 et
+      2 et », sans s'arrêter aux barres de mesure.
+    abc: |
+      X:1
+      M:2/4
+      L:1/8
+      K:C
+      BB B2 | BB BB | B4 |]
+  - text: >-
+      Un demi-soupir avant une croche : on se tait sur le clic, et on tape
+      sur le « et ».
+    abc: |
+      X:1
+      M:4/4
+      L:1/8
+      K:C
+      z B B2 z B B2 |]
+  - text: >-
+      Le demi-soupir peut aussi tomber sur le « et » : on tape sur le clic,
+      puis on se tait jusqu'au clic suivant.
+    abc: |
+      X:1
+      M:4/4
+      L:1/8
+      K:C
+      B z B2 B z B2 |]
+exercise:
+  type: tap-rhythm
+  tempo: 66
+  phrases:
+    - |
+      X:1
+      M:2/4
+      L:1/8
+      K:C
+      B2 B2 | BB B2 | BB BB | B4 |]
+    - |
+      X:1
+      M:3/4
+      L:1/8
+      K:C
+      BB B2 B2 | BB BB B2 | B6 |]
+    - |
+      X:1
+      M:4/4
+      L:1/8
+      K:C
+      B z B2 B z B2 | BB B2 B4 |]
+    - |
+      X:1
+      M:4/4
+      L:1/8
+      K:C
+      z B B2 z B B2 | BB B2 B4 |]
+    - |
+      X:1
+      M:4/4
+      L:1/8
+      K:C
+      B2 z B B2 B2 | BB BB B4 |]
+    - |
+      X:1
+      M:2/4
+      L:1/8
+      K:C
+      z B BB | B2 B2 | BB z B | B4 |]

@@ -64,7 +64,12 @@ void main() {
     var count = 0;
     for (final lesson in content.lessons) {
       for (final question in questionsOf(lesson.exercise)) {
-        final card = cardOf(question);
+        // Une phrase tapée n'a pas de carte.
+        if (question is TapQuestion) {
+          expect(cardOf(question), isNull);
+          continue;
+        }
+        final card = cardOf(question)!;
         final back = questionOf(card);
         expect(back, isNotNull, reason: '${lesson.id} : $card');
         expect(back!.answer, question.answer, reason: card);
@@ -84,7 +89,7 @@ void main() {
         accidentals: true,
       );
       for (final question in questionsOf(exercise, seed: staff.index)) {
-        final card = cardOf(question);
+        final card = cardOf(question)!;
         final back = questionOf(card)! as NoteQuestion;
         expect(back.answer, question.answer, reason: card);
         expect(cardOf(back), card);
@@ -152,7 +157,7 @@ void main() {
 
   test('intervalles et oreille : format stocké', () {
     String first(String lessonId) =>
-        cardOf(questionsOf(content.lesson(lessonId)!.exercise).first);
+        cardOf(questionsOf(content.lesson(lessonId)!.exercise).first)!;
     // Do4 puis mi4, lus en clé de sol.
     expect(first('melodic-intervals'), 'interval:melodic:treble:c4+e4');
     expect(first('harmonic-intervals'), 'interval:harmonic:treble:c4+e4');

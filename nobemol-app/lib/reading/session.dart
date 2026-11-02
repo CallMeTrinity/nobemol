@@ -6,6 +6,7 @@ import 'package:nobemol/clock.dart';
 import 'package:nobemol/progress/progress.dart';
 import 'package:nobemol/progress/xp.dart';
 import 'package:nobemol/reading/note_reading.dart';
+import 'package:nobemol/reading/tapping.dart';
 import 'package:nobemol/review/card.dart';
 
 /// Hasard des exercices, remplaçable en test.
@@ -42,6 +43,7 @@ class SessionState {
     this.bestCombo = 0,
     this.lostCombo = 0,
     this.choice,
+    this.taps,
     this.finishedAt,
   });
 
@@ -63,6 +65,10 @@ class SessionState {
 
   /// Réponse donnée à la question en cours, `null` en attente.
   final Enum? choice;
+
+  /// Les touches d'une phrase tapée, jugées : la correction les montre
+  /// note par note. `null` pour les autres questions.
+  final TapGrade? taps;
 
   final DateTime startedAt;
 
@@ -95,7 +101,9 @@ class SessionNotifier extends Notifier<SessionState> {
     );
   }
 
-  void answer(Enum choice) {
+  /// Répond [choice]. Une phrase tapée donne aussi le détail de ses
+  /// touches, [taps].
+  void answer(Enum choice, {TapGrade? taps}) {
     final current = state;
     if (current.phase != SessionPhase.asking) return;
 
@@ -121,6 +129,7 @@ class SessionNotifier extends Notifier<SessionState> {
       bestCombo: max(combo, current.bestCombo),
       lostCombo: right ? 0 : current.combo,
       choice: choice,
+      taps: taps,
       startedAt: current.startedAt,
       askedAt: current.askedAt,
       finishedAt: answers.length == exercise.length ? now : null,

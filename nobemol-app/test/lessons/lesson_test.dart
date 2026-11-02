@@ -135,7 +135,7 @@ exercise:
         14,
         9,
         '« quiz » inconnu (note-reading, identify-note, identify-duration, '
-        'identify-marking, identify-interval, ear-note, ear-interval)',
+        'identify-marking, identify-interval, ear-note, ear-interval, tap-rhythm)',
       ),
     );
     expect(
@@ -832,6 +832,64 @@ $targets''');
           ),
         ),
         fails('de 2 à 8'),
+      );
+    });
+  });
+
+  group('rythme tapé', () {
+    String tap(String phrases, {int tempo = 72}) => withExercise(
+      '  type: tap-rhythm\n  tempo: $tempo\n  phrases:\n$phrases',
+    );
+    String phrase(String music, {String meter = '4/4', String unit = '1/4'}) =>
+        '    - |\n'
+        '      X:1\n'
+        '      M:$meter\n'
+        '      L:$unit\n'
+        '      K:C\n'
+        '      $music\n';
+
+    test('tap-rhythm : phrases et tempo', () {
+      final exercise =
+          parse(tap(phrase('B B B2 | B4 |]') + phrase('B2 z B | B4 |]')))
+                  .exercise
+              as TapRhythmExercise;
+      expect(exercise.tempo, 72);
+      expect(exercise.length, 2);
+      expect(exercise.phrases.first.staves.single.measures, hasLength(2));
+    });
+
+    test('tempo de 40 à 160', () {
+      expect(
+        () => parse(tap(phrase('B4 |]'), tempo: 200)),
+        fails('exercise.tempo'),
+      );
+    });
+
+    test('une portée, en x/4, des notes à taper', () {
+      expect(
+        () => parse(tap(phrase('B3 B3 |]', meter: '6/8', unit: '1/8'))),
+        fails('chiffrage en x/4 attendu'),
+      );
+      expect(() => parse(tap(phrase('z4 |]'))), fails('aucune note à taper'));
+    });
+
+    test('attaques trop rapprochées au tempo : refusées', () {
+      // Croches à la noire à 100 : 300 ms d'écart.
+      expect(
+        () => parse(tap(phrase('B/B/ B3 |]'), tempo: 100)),
+        fails('deux attaques à 300 ms'),
+      );
+      // Les mêmes à 72 : 416 ms, assez.
+      expect(
+        parse(tap(phrase('B/B/ B3 |]'))).exercise,
+        isA<TapRhythmExercise>(),
+      );
+    });
+
+    test('erreur d’ABC située dans la phrase', () {
+      expect(
+        () => parse(tap(phrase('B B B |]'))),
+        error(16, 13, 'exercise.phrases[1] : mesure 1 incomplète'),
       );
     });
   });

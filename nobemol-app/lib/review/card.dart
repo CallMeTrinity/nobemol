@@ -33,8 +33,9 @@ const _clefs = {
   'tenor': Clef.tenor,
 };
 
-/// Carte de [question].
-String cardOf(Question question) => switch (question) {
+/// Carte de [question], `null` pour une phrase tapée : elle ne se lit pas
+/// sans la leçon, et un rythme raté ne se réduit pas à une figure.
+String? cardOf(Question question) => switch (question) {
   NoteQuestion(:final system, :final target, :final pitch, :final answer) =>
     'note:${_clefName(system.staves.elementAt(target.staff).clef)}'
         ':${answer.name}${pitch.octave}',
@@ -54,6 +55,7 @@ String cardOf(Question question) => switch (question) {
         ':${_clefName(system.staves.elementAt(targets.first.staff).clef)}'
         ':${_notes(pitches)}',
   EarNoteQuestion(:final pitch) => 'ear:note:${_keyNote(pitch)}',
+  TapQuestion() => null,
 };
 
 /// Note au clavier et octave : `fSharp5`. La hauteur porte l'altération

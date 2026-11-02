@@ -63,6 +63,14 @@
   title: Lire les doubles croches
   requires: [rhythm.dotted]
 
+- id: rhythm.tap
+  title: Taper un rythme
+  requires: [rhythm.rests, rhythm.eighths]
+
+- id: rhythm.tap-dotted
+  title: Taper les notes pointées et liées
+  requires: [rhythm.tap, rhythm.dotted, rhythm.ties]
+
 - id: terms.dynamics
   title: Lire les nuances
   requires: [note-reading.phrases]

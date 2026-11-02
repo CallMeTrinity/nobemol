@@ -1,0 +1,77 @@
+id: tap-beats
+title: Taper les noires et les blanches
+skills: [rhythm.tap]
+level: 1
+theory:
+  - text: >-
+      Un rythme se lit, puis se tape. Le métronome bat les temps : un clic
+      par noire, plus aigu au début de chaque mesure.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      B B B B | B B B B |]
+  - text: >-
+      Avant la phrase, une mesure de décompte. On écoute les clics sans
+      taper, puis on tape une fois au début de chaque note, sur le grand
+      bouton.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      B B B2 | B4 |]
+  - text: >-
+      Une note longue ne se tape qu'une fois. Une blanche : une touche, puis
+      on laisse passer le temps suivant. Un silence ne se tape pas.
+    abc: |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      B2 z B | B z B2 |]
+  - text: >-
+      Le son et le toucher ont un petit retard, propre à chaque téléphone.
+      Le calage le mesure une fois pour toutes : « Caler le rythme », sous
+      le bouton.
+exercise:
+  type: tap-rhythm
+  tempo: 72
+  phrases:
+    - |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      B B B B | B2 B2 |]
+    - |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      B2 B B | B4 |]
+    - |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      B z B z | B B B2 |]
+    - |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      B B2 B | B2 z2 |]
+    - |
+      X:1
+      M:3/4
+      L:1/4
+      K:C
+      B2 B | B B B | B3 |]
+    - |
+      X:1
+      M:4/4
+      L:1/4
+      K:C
+      B4 | z B B B | B2 B2 |]
