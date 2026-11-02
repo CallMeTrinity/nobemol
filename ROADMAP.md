@@ -28,7 +28,7 @@ Les étapes 13 à 16 viennent de « Plus tard » : le son, puis ce qu'il ouvre (
 | 11 | | Arcade | 1.1.0 |
 | 12 | | Profil, statistiques, succès, sauvegarde | 1.1.0 |
 | 13 | | Son des notes (piano enregistré) | 1.1.0, corrigé ensuite |
-| 14 | Accords | Intervalles et oreille | |
+| 14 | Accords | Intervalles et oreille | Fait, à publier |
 | 15 | N-olets, au besoin | Rythme tapé | |
 | 16 | | Test de positionnement adaptatif | |
 | Plus tard | Liaisons d'expression | Au besoin | |
@@ -416,19 +416,36 @@ Tranché pour la `1.1.0`, toujours valable :
 
 Le son et le moteur avancent ensemble : les intervalles harmoniques demandent des accords.
 
-- [ ] Sous-ensemble ABC étendu avant le code : accords `[CEG]`, durée commune
-- [ ] Moteur : accords (une hampe, secondes décalées, altérations échelonnées), alignement entre portées inchangé
-- [ ] Exercice `identify-interval` : l'intervalle entre deux notes ciblées, mélodique puis harmonique. Vérifié par le validateur
-- [ ] Oreille : entendre deux notes et nommer l'intervalle ; entendre une note après un do de référence et la nommer au clavier
-- [ ] Compétences `intervals.*` et `ear.*`, leçons, cartes de révision
+- [x] Sous-ensemble ABC étendu avant le code : accords `[CEG]`, durée commune après le crochet, du grave à l'aigu ([doc/abc.md](nobemol-app/packages/notation/doc/abc.md#accords))
+- [x] Moteur : `Chord` à côté de `Note` et `Rest`, `Event.pitches` commun. Une hampe (sens donné par la tête la plus éloignée de la ligne du milieu), secondes de part et d'autre de la hampe, altérations échelonnées en colonnes, points décalés, lignes supplémentaires sous les deux têtes. Alignement entre portées inchangé
+- [x] Exercice `identify-interval` : un accord de deux notes (harmonique) ou deux notes avec `to` (mélodique), numéro de l'unisson à l'octave. Vérifié par le validateur ([doc/lessons.md](nobemol-app/doc/lessons.md))
+- [x] Oreille : `ear-interval` (deux notes, à la suite ou ensemble, nommer l'intervalle) et `ear-note` (le do central puis une note, à nommer au clavier). Portée cachée, « Réécouter », portée montrée à la correction
+- [x] Compétences `intervals.melodic`, `intervals.harmonic`, `ear.notes`, `ear.intervals`, `ear.harmonic`, 7 leçons, cartes de révision `interval:` et `ear:`
 
 **Terminé quand** : une leçon d'intervalles harmoniques s'affiche en accords et se joue à l'oreille sur un vrai téléphone.
 
-À trancher avant le code :
+Tranché :
 
-- Intervalles : le numéro seul (seconde à octave) au début, la qualité (majeure, mineure, juste) dans une leçon suivante ?
-- Oreille : un écran sans portée, ou la portée cachée puis montrée à la correction ?
-- Format des cartes d'intervalle et d'oreille (stocké, comme `note:` et `duration:`).
+- **Le numéro seul**, de l'unisson à l'octave : 8 tuiles, comme les durées. La qualité (majeure, mineure, juste) viendra dans une étape ou une leçon suivante. Les altérations ne changent pas le numéro, l'explication le dit.
+- **Oreille : la portée est cachée à sa place**, sous le bouton « Réécouter », et apparaît à la correction : on voit ce qu'on vient d'entendre, et rien ne bouge.
+- **La question d'oreille se joue même son des notes coupé** : c'est elle qu'il faut nommer. La correction, elle, suit le réglage, comme partout.
+- **Cartes** : `interval:melodic:treble:c4+e4` et `interval:harmonic:bass:g2+bFlat2` (lu, notes dans l'ordre de lecture, altération lue), `ear:interval:c4+g4` (entendu, en montant), `ear:chord:c4+e4` (entendu, ensemble), `ear:note:e4` (après le do4). Une carte d'oreille s'affiche en clé de sol.
+- **Un accord n'est pas une note à plusieurs hauteurs** : un type à part, que chaque `switch` doit traiter. Pas de liaison, de ligature ni d'unisson dans un accord (au besoin). Une seule écriture : du grave à l'aigu.
+- **Mélodique : les deux notes sur la même portée**, la seconde après la première, pas forcément voisines. Un intervalle entre les deux portées d'une grande portée : plus tard, la carte ne garde qu'une clé.
+- **Oreille sur les touches blanches** : un fa dièse et un sol bémol sonnent pareil, le clavier demanderait une orthographe que l'oreille ne donne pas. Les intervalles d'oreille partent de do4 à do5, montent en mélodique, et évitent le triton (quarte ou quinte, son numéro ne s'entend pas).
+- **Réponses** : 8 tuiles pour un intervalle lu ; pour l'oreille, les intervalles choisis par l'auteur (`intervals: [3, 5, 8]`), le niveau devient un jeu de paramètres. En révision, les 8.
+- **12 questions par session d'oreille** (20 en lecture) : chacune s'écoute, parfois deux fois.
+- `ear.harmonic` a sa propre compétence : une leçon qui croise `ear.intervals` et `intervals.harmonic` ne compterait pour aucune maîtrise.
+- **Son** : `NotePlayer.play` prend une liste de notes, jouées ensemble. Une suite (intervalle mélodique, do puis note) espace ses notes de 800 ms, une seule suite à la fois : la suivante ou la sortie de l'écran coupe la précédente.
+- Pas de son dans la théorie, pour l'instant : les pages d'oreille décrivent ce qu'on va entendre.
+
+À vérifier :
+
+- Goldens à générer sur la CI (commit `[goldens]`) : `chords_treble`, `chords_grand_staff`, `halo_chord`. Les goldens existants ne devraient pas changer : listes de dessin comparées à `main` sur les 96 systèmes des leçons et des exemples ABC, identiques.
+- Sur un vrai téléphone, en `flutter run --release` : le délai entre le do et la note, l'attaque simultanée d'un accord, « Réécouter » tapé plusieurs fois.
+- Lisibilité des secondes et des altérations échelonnées à la taille d'une phrase.
+- Le design « Touches » des écrans d'intervalles et d'oreille n'a pas pu être relu (pas d'accès au projet Claude Design) : construits avec les composants de l'étape 6.
+- Équilibre : écart de 800 ms, 12 questions, choix des intervalles par leçon. À recaler avec l'usage.
 
 ## Étape 15 : rythme tapé
 

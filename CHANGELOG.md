@@ -6,6 +6,12 @@ Le workflow de release reprend la section de la version comme notes de release :
 
 ## [Non publié]
 
+### Ajouté
+
+- Intervalles : nommer l'écart entre deux notes, à la suite ou jouées ensemble (en accord), de l'unisson à l'octave. On l'entend à la correction.
+- Oreille : reconnaître une note après le do, puis un intervalle, à la suite ou ensemble. La portée reste cachée jusqu'à la correction, « Réécouter » rejoue la question.
+- 7 leçons et 5 compétences (intervalles, oreille). Les intervalles ratés partent en révision.
+
 ### Corrigé
 
 - Son des notes : un vrai piano enregistré (Salamander Grand Piano) remplace le son synthétisé. Chaque réponse fait entendre une note et une seule : plus de note manquante ni de note en double, même en répondant vite en arcade.
